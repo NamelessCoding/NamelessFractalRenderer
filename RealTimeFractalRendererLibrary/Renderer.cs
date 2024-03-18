@@ -151,7 +151,7 @@ namespace RealTimeFractalRendererLibrary
 
         private Vector3 prevCamPos = new Vector3(0.0f, 0.0f, 0.0f);
 
-        private bool enableDebugging = true;
+        private bool enableDebugging = false;
         private bool isEverythingLower = true;
 
         static float ScaleEverything = 1.5f;

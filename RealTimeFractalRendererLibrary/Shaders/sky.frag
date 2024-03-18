@@ -155,7 +155,7 @@ vec3 t1 = BRrgb*accum222 + BMrgb*accum2;
 vec3 t2 = BRrgb*accum + BMrgb*accum1111;
 
 accumulateLight += (exp(-pow(t1*0.0054,vec3(1.)))*exp(-t2*0.028))*length(div*1.)*.0005*(PRRR * BRrgb * 230.  +
-PMMM * 10.  );//*mix(vec3(0.9,0.4,0.2), vec3(0.9), clamp(dot(lig, vec3(0., 0., 1.))*4., 0., 1.));
+PMMM * 10.  )*mix(vec3(0.9,0.4,0.2), vec3(0.9), clamp(dot(lig, vec3(0., 0., 1.))*4., 0., 1.));
 
  //T += exp(-(accum2*boreyleigh(max(dot(d,lig),0.), rayleighS) + 
  //accum3*bommie(max(dot(d,lig),0.), mieS) ));
