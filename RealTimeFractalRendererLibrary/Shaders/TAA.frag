@@ -955,7 +955,7 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r){
 
     }
 
-    return vec4(vec3(0.9,0.2,0.2), volAbs);
+    return vec4(accum*0.4, volAbs);
 }
 
 

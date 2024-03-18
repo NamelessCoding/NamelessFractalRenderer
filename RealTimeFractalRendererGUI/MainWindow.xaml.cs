@@ -146,7 +146,7 @@ namespace RealTimeFractalRendererGUI
 
             //update uniforms
             renderer.SetBrightness(Brightness);
-            renderer.SetContrast(Contrast);
+           // renderer.SetContrast(Contrast);
             renderer.SetLdir(XL, YL, ZL);
             //TODO: add uniforms to update from gui
 

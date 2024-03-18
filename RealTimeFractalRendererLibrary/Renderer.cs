@@ -165,18 +165,14 @@ namespace RealTimeFractalRendererLibrary
 
         public Vector3 ldir = new Vector3(0.0f, 0.1f, -0.9f);
 
-
+        public float bright = 1.0f;
+        
         public void SetBrightness(float value)
         {
             //TODO: demo, use actual uniforms
-            _finalShader.setFloat(value, "brightness");
+            bright = value;
         }
 
-        public void SetContrast(float value)
-        {
-            //TODO: demo, use actual uniforms
-            _finalShader.setFloat(value, "contrast");
-        }
 
         public void SetLdir(float X, float Y, float Z) {
             ldir.X = X; ldir.Y = Y; ldir.Z = Z;
@@ -1659,7 +1655,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             GL.BufferData(BufferTarget.ElementArrayBuffer, quadindices.Length * sizeof(uint), quadindices, BufferUsageHint.StaticDraw);
 
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            int vertexPosition = GL.GetUniformLocation(_testShader.Handle, "aPosition");
+            int vertexPosition = GL.GetAttribLocation(_testShader.Handle, "aPosition");
             GL.EnableVertexAttribArray(vertexPosition);
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
@@ -2554,6 +2550,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _finalShader.setVector3(lpos, "lpos");
             _finalShader.setMatrix4(lightview.Inverted(), "linvview");
             _finalShader.setMatrix4(lightproj.Inverted(), "linvproj");
+            _finalShader.setFloat(bright, "brightness");
             GL.ActiveTexture(TextureUnit.Texture0);
             //GL.BindTexture(TextureTarget.Texture3D, rcpos);
             GL.BindImageTexture(0, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
