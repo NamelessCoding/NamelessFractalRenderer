@@ -1,11 +1,12 @@
 ﻿#version 330
 
 
+layout (location = 0) out vec4 tempwe;
+layout (location = 1) out vec4 templ;
+layout (location = 2) out vec4 temppos;
+layout (location = 3) out vec4 spatw;
+layout (location = 4) out vec4 spatl;
 
-layout (location = 0) out vec4 prevN;
-layout (location = 1) out vec4 prevAcc;
-layout (location = 2) out vec4 prevTAA;
-layout (location = 3) out vec4 prevup;
 
 in vec2 texCoord;
 
@@ -26,7 +27,6 @@ uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D Acc;
 uniform sampler2D TAA;
-uniform sampler2D up;
 
 uniform mat4 view;
 uniform mat4 projection;
@@ -71,6 +71,11 @@ uniform sampler2D spatLO;
 */
 
 
+vec4 a = texture2D(tempWeights, texCoord*1.);
+vec4 a1 = texture2D(tempOutL, texCoord*1.);
+vec4 a2 = texture2D(tempPos, texCoord*1.);
+vec4 a3 = texture2D(spatWe, texCoord*1.);
+vec4 a4 = texture2D(spatLO, texCoord*1.);
 /*
 if(ProjectedCoordinates.x > 1. || ProjectedCoordinates.x < 0. || ProjectedCoordinates.y > 1. || ProjectedCoordinates.y < 0. || length(cameraOffset) > 0.01){
     a = vec4(1.);
@@ -79,14 +84,11 @@ if(ProjectedCoordinates.x > 1. || ProjectedCoordinates.x < 0. || ProjectedCoordi
     a3 = vec4(1.);
     a4 = vec4(0.);
 }*/
-vec2 iResolution = wh;
+tempwe = a;
+templ = a1;
+temppos = a2;
+spatw = a3;
+spatl = a4;
 
-uint seedCam = uint(max(time+1,0));
-vec2 smallOffset = ((vec2(rndf(seedCam), rndf(seedCam)))*2.-1.)/iResolution;
-
-prevN = texture2D(normal, texCoord);
-prevAcc = texture2D(Acc, texCoord);
-prevTAA = texture2D(TAA, texCoord);
-prevup = texture2D(up, texCoord);
 //prevPosition = texture2D(position, texCoord*1.5);
 }

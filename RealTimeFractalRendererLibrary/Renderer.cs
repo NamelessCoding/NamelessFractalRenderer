@@ -3,6 +3,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace RealTimeFractalRendererLibrary
 {
@@ -150,6 +151,7 @@ namespace RealTimeFractalRendererLibrary
 
         private Vector3 prevCamPos = new Vector3(0.0f, 0.0f, 0.0f);
 
+        private bool enableDebugging = true;
         private bool isEverythingLower = true;
 
         static float ScaleEverything = 1.5f;
@@ -181,10 +183,42 @@ namespace RealTimeFractalRendererLibrary
         }
 
 
+        //https://gist.github.com/Vassalware/d47ff5e60580caf2cbbf0f31aa20af5d
+        private static void DebugCallback(DebugSource source,
+            DebugType type,
+            int id,
+            DebugSeverity severity,
+            int length,
+            IntPtr message,
+            IntPtr userParam)
+        {
+            string messageString = Marshal.PtrToStringAnsi(message, length);
+
+            Console.WriteLine($"{severity} {type} | {messageString}");
+
+            if (type == DebugType.DebugTypeError)
+            {
+                throw new Exception(messageString);
+            }
+        }
+
+        private static readonly DebugProc _debugProcCallback = DebugCallback;
+        private static GCHandle _debugProcCallbackHandle;
+
+
         public void Load(Vector2i resolution)
         {
             // glEnable(GL_TEXTURE_3D);
-            GL.Enable(EnableCap.Texture3DExt);
+
+            if (enableDebugging)
+            {
+                _debugProcCallbackHandle = GCHandle.Alloc(_debugProcCallback);
+                GL.DebugMessageCallback(_debugProcCallback, IntPtr.Zero);
+                GL.Enable(EnableCap.DebugOutput);
+                GL.Enable(EnableCap.DebugOutputSynchronous);
+            }
+
+           // GL.Enable(EnableCap.Texture3DExt);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             colortex = GL.GenTexture();
             colortexPosition = GL.GenTexture();
@@ -1648,7 +1682,9 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             // GL.BindTexture(TextureTarget.Texture3D, rcpos);
             GL.BindImageTexture(0, worley, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
-           
+          //  DebugCallback();
+
+
             GL.DispatchCompute(64, 64, 64);
 
             //CursorState = CursorState.Grabbed;
