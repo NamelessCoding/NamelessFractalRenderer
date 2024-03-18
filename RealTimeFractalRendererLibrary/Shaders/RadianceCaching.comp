@@ -1,0 +1,127 @@
+﻿
+
+
+layout(local_size_x = 10, local_size_y = 10, local_size_z = 10) in;
+
+layout(binding = 0, Rgba32f) uniform image3D rcpos; 
+layout(binding = 1, Rgba32f) uniform image3D rcnorm; 
+layout(binding = 2, Rgba32f) uniform image3D rcrad; 
+layout(binding = 3, Rgba32f) uniform image3D rcfog; 
+
+uniform mat4 view;
+uniform mat4 projection;
+uniform mat4 invview;
+uniform mat4 invproj;
+uniform vec2 wh;
+uniform float time;
+uniform float time2;
+
+uniform vec3 viewPos;
+uniform vec3 lastViewPos;
+
+
+vec3 randomSpherePoint(vec2 rand) {
+  float ang1 = (rand.x + 1.0) * 3.14159; // [-1..1) -> [0..2*PI)
+  float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
+  float u2 = u * u;
+  float sqrt1MinusU2 = sqrt(1.0 - u2);
+  float x = sqrt1MinusU2 * cos(ang1);
+  float y = sqrt1MinusU2 * sin(ang1);
+  float z = u;
+  return vec3(x, y, z);
+}
+
+void main() {
+  // base pixel colour for image
+  //vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // get index in global work group i.e x,y position
+  //ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    vec3 delta =  floor(lastViewPos)-floor(viewPos);
+
+
+    
+vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+vec3 prevPos = pos - delta;
+  //uvec3 pos = -delta
+//if(pos.x < 0. || pos.x > 80. ||pos.y < 0. || pos.y > 80. ||pos.z < 0. || pos.z > 80.  ){
+  //  return;
+//}
+
+
+    uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) + uint(pos.z) * uint(9240) + uint(time) * uint(26699)) | uint(1);
+    vec3 N = imageLoad(rcnorm, ivec3(prevPos)).xyz;
+
+    if(length(N) < 0.01){
+        //(p+40.-floor(viewPos))*.9
+       vec3 p = pos-40.;
+       vec3 pcam = p;
+       // vec3 p = (prevPos-40.+floor(viewPos))/0.9;
+      // vec3 p = ivec3((pos+40.-floor(viewPos))*.9);
+     // vec3 p = prevPos;
+        //vec3 pointOnSphere = normalize(vec3(rndf(r), rndf(r), rndf(r))*2.0-1.0);
+vec3 pointOnSphere = randomSpherePoint(vec2(rndf(r)*2.0-1.0, rndf(r)*2.0-1.0));
+        if(trace(p,pointOnSphere)){
+            if(l > 0.01){
+                vec3 currCol = l*cccc*exp(-length(p-pcam)*0.02);
+                vec3 prevCol = imageLoad(rcfog, ivec3(pos)).xzy;
+                imageStore(rcfog, ivec3(pos), vec4(currCol*0.01 + prevCol*0.99,1.));
+            }
+        }
+
+        
+        return;
+    }
+        vec3 prevCol = imageLoad(rcrad, ivec3(prevPos)).xzy;
+
+    vec3 p = imageLoad(rcpos, ivec3(prevPos)).xyz;
+    vec3 dir = angledircos(N.xzy, r).xzy;
+
+    vec3 currCol = vec3(0.);
+    float epsilon = 0.02;
+    p += N*epsilon;
+    if(trace(p,dir)){
+        if(l > 0.01){
+            currCol += l*cccc;
+        }
+        vec3 brdf = cccc/3.14159;
+        vec3 n = norm(p - dir*epsilon);
+        ivec3 newP = ivec3((p+40.-floor(viewPos))*.9);
+        vec3 newNorm = imageLoad(rcnorm, newP).xyz;
+        if(length(newNorm) < 0.01){
+            imageStore(rcpos, newP, vec4(p, 1.));
+            imageStore(rcnorm, newP, vec4(n, 1.));
+            imageStore(rcrad, newP, vec4(0.,0.,0., 1.));
+
+
+        }else{
+          currCol += brdf*imageLoad(rcrad, newP).xyz*0.7;
+        }
+
+        vec3 newdir = ldir.xzy;
+        vec3 newpos = p + N * epsilon;
+        float rough2 = rough;
+        float l2 = l;
+        vec3 cccc2 = cccc;
+        if(!trace(newpos, newdir)){
+            if(l2 < 0.01){
+                 currCol += brdf*max(dot(newdir, n),0.)*2.;
+            }
+        }
+        rough = rough2;
+        l = l2;
+        cccc = cccc2;
+
+    }else{
+        currCol = skyp2(dir.xzy, ldir);
+    }
+
+
+    imageStore(rcrad, ivec3(pos), vec4(currCol*0.01 + prevCol*0.99,1.));
+    
+  //
+  // interesting stuff happens here later
+  //
+  
+  // output to a specific pixel in the image
+  //imageStore(rcnorm, ivec3(pos), vec4(0.1, 0.6, 0.9, 1.));
+}

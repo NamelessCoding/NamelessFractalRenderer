@@ -1,0 +1,45 @@
+﻿<Window x:Class="RealTimeFractalRendererGUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RealTimeFractalRendererGUI"
+        xmlns:opentk="clr-namespace:OpenTK.Wpf;assembly=GLWpfControl"
+        xmlns:uitk="clr-namespace:Xceed.Wpf.Toolkit;assembly=DotNetProjects.Wpf.Extended.Toolkit"
+        mc:Ignorable="d"
+        Title="RealTimeFractalRenderer GUI"
+        Height="1080" Width="1920" WindowState="Maximized"
+        DataContext="{Binding RelativeSource={x:Static RelativeSource.Self}}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="200"/>
+        </Grid.ColumnDefinitions>
+
+        <opentk:GLWpfControl Grid.Column="0"
+            x:Name="display" 
+            SizeChanged="display_SizeChanged"
+            Ready="display_Ready"
+            Render="display_OnRender"
+            MouseWheel="display_MouseWheel"
+            MouseMove="display_MouseMove"
+            MouseDown="display_MouseDown"
+            Focusable="True"/>
+
+        <StackPanel Grid.Column="1" Margin="8">
+            <Label>Brightness</Label>
+            <uitk:SingleUpDown Value="{Binding Brightness}" FormatString="N3"
+                               Minimum="0" Maximum="100" Increment="0.1" />
+            <Label>Camera Yaw</Label>
+            <uitk:SingleUpDown Value="{Binding CameraYaw}" FormatString="N3"
+                               Increment="1"/>
+            <Label Content="Sun Direction"/>
+            <Slider Height="22" Width="116" RenderTransformOrigin="0.864,0.507" Value="{Binding XL}" Minimum="-1" Maximum="1" />
+            <Slider Height="22" Width="116" RenderTransformOrigin="0.864,0.507" Value="{Binding YL}" Minimum="0.01" Maximum="1"/>
+            <Slider Height="22" Width="116" RenderTransformOrigin="0.864,0.507" Value="{Binding ZL}" Minimum="-1" Maximum="1"/>
+            <Label Content="X,Y,Z" Height="28" Width="153"/>
+            <!--TODO: Add more gui elements below to control scene uniforms-->
+        </StackPanel>
+
+    </Grid>
+</Window>
