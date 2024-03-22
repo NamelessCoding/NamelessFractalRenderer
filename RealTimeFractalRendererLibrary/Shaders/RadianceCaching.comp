@@ -1,15 +1,13 @@
 ﻿
 
-
 layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
-layout(binding = 0, Rgba16f) uniform image3D rcpos; 
-layout(binding = 1, Rgba16f) uniform image3D rcnorm; 
-layout(binding = 2, Rgba16f) uniform image3D rcrad; 
-layout(binding = 3, Rgba16f) uniform image3D rcfog; 
+layout(binding = 0, Rgba16f) uniform image3D rcpos;
+layout(binding = 1, Rgba16f) uniform image3D rcnorm;
+layout(binding = 2, Rgba16f) uniform image3D rcrad;
+layout(binding = 3, Rgba16f) uniform image3D rcfog;
 uniform sampler2D skytex;
 uniform sampler2D sunTex;
-
 
 uniform mat4 view;
 uniform mat4 projection;
@@ -27,197 +25,205 @@ uniform mat4 lightview;
 uniform vec3 lpos;
 
 vec3 shadowS(vec3 pos) {
-    vec4 sspace = lightproj * lightview * vec4(pos, 1.);
-            sspace.xyz /= sspace.w;
-    
-    vec3 coords = sspace.xyz * 0.5 + 0.5;
-    
-    
-    //float currDepth = texelFetch(sunTex, ivec2(2048.*coords), 0).r;
-    float currDepth = texture2D(sunTex, coords.xy).r;
-    //vec3 currPos = texture2D(sunTex, coords.xy).xyz;
-    vec3 col = vec3(1.);
-    if(coords.z > currDepth + 0.001 && coords.x >= 0. && coords.x <= 1. && coords.y >= 0. && coords.y <= 1.){
-        col = vec3(0.);
-    }
-    
-    if(length(pos.xz - viewPos.xz) > 90.){
-      //  col = vec3(1.);
-    }
+  vec4 sspace = lightproj * lightview * vec4(pos, 1.);
+  sspace.xyz /= sspace.w;
 
-    return col;
+  vec3 coords = sspace.xyz * 0.5 + 0.5;
+
+  // float currDepth = texelFetch(sunTex, ivec2(2048.*coords), 0).r;
+  float currDepth = texture2D(sunTex, coords.xy).r;
+  // vec3 currPos = texture2D(sunTex, coords.xy).xyz;
+  vec3 col = vec3(1.);
+  if (coords.z > currDepth + 0.001 && coords.x >= 0. && coords.x <= 1. &&
+      coords.y >= 0. && coords.y <= 1.) {
+    col = vec3(0.);
+  }
+
+  if (length(pos.xz - viewPos.xz) > 90.) {
+    //  col = vec3(1.);
+  }
+
+  return col;
 }
 
 void main() {
   // base pixel colour for image
-  //vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
   // get index in global work group i.e x,y position
-  //ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    vec3 delta =  floor(lastViewPos)-floor(viewPos);
+  // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+  vec3 delta = floor(lastViewPos) - floor(viewPos);
 
-
-    
-vec3 pos = vec3(gl_GlobalInvocationID.xyz);
-vec3 prevPos = pos - delta;
-  //uvec3 pos = -delta
-//if(pos.x < 0. || pos.x > 80. ||pos.y < 0. || pos.y > 80. ||pos.z < 0. || pos.z > 80.  ){
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+  vec3 prevPos = pos - delta;
+  // uvec3 pos = -delta
+  // if(pos.x < 0. || pos.x > 80. ||pos.y < 0. || pos.y > 80. ||pos.z < 0. ||
+  // pos.z > 80.  ){
   //  return;
-//}
+  //}
 
+  uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) +
+                uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
+           uint(1);
+  vec3 N = imageLoad(rcnorm, ivec3(prevPos)).xyz;
 
-    uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) + uint(pos.z) * uint(9240) + uint(time) * uint(26699)) | uint(1);
-    vec3 N = imageLoad(rcnorm, ivec3(prevPos)).xyz;
-
-
-  
-    vec4 infoFog = imageLoad(rcfog, ivec3(prevPos)).xyzw;
-    //float bl2 = imageLoad(rcpos, ivec3(prevPos)).w;
+  vec4 infoFog = imageLoad(rcfog, ivec3(prevPos)).xyzw;
+  // float bl2 = imageLoad(rcpos, ivec3(prevPos)).w;
 
   float bl2 = map(pos - 90. + floor(lastViewPos));
 
-    vec4 info = vec4(0.);
+  vec4 info = vec4(0.);
 
-    if((l > 0.5)  ){
-       // info = vec4(pow(imageLoad(cimage1, ivec3(prevPos)).xyz, vec3(2.2)), 20.);
-        imageStore(rcfog, ivec3(prevPos), vec4(cccc*2., 20.));
-    }else if( bl2 < 0.01){
-         imageStore(rcfog, ivec3(prevPos), vec4(0.));
-    }else{
-        
-        vec4 nf1 = imageLoad(rcfog, ivec3(prevPos + vec3(1.,0.,0.))).xyzw;
-        vec4 nf2 = imageLoad(rcfog, ivec3(prevPos + vec3(-1.,0.,0.))).xyzw;
-        vec4 nf3 = imageLoad(rcfog, ivec3(prevPos + vec3(0.,1.,0.))).xyzw;
-        vec4 nf4 = imageLoad(rcfog, ivec3(prevPos + vec3(0.,-1.,0.))).xyzw;
-        vec4 nf5 = imageLoad(rcfog, ivec3(prevPos + vec3(0.,0.,1.))).xyzw;
-        vec4 nf6 = imageLoad(rcfog, ivec3(prevPos + vec3(0.,0.,-1.))).xyzw;
+  if ((l > 0.5)) {
+    // info = vec4(pow(imageLoad(cimage1, ivec3(prevPos)).xyz, vec3(2.2)), 20.);
+    imageStore(rcfog, ivec3(prevPos), vec4(cccc * 2., 20.));
+  } else if (bl2 < 0.01) {
+    imageStore(rcfog, ivec3(prevPos), vec4(0.));
+  } else {
 
-        float mixd = max((nf1.w + nf2.w + nf3.w + nf4.w + nf5.w + nf6.w)/6. - 0.035, 0.);
-        vec3 mixdN = (nf1.xyz + nf2.xyz + nf3.xyz + nf4.xyz + nf5.xyz + nf6.xyz)/6.;
+    vec4 nf1 = imageLoad(rcfog, ivec3(prevPos + vec3(1., 0., 0.))).xyzw;
+    vec4 nf2 = imageLoad(rcfog, ivec3(prevPos + vec3(-1., 0., 0.))).xyzw;
+    vec4 nf3 = imageLoad(rcfog, ivec3(prevPos + vec3(0., 1., 0.))).xyzw;
+    vec4 nf4 = imageLoad(rcfog, ivec3(prevPos + vec3(0., -1., 0.))).xyzw;
+    vec4 nf5 = imageLoad(rcfog, ivec3(prevPos + vec3(0., 0., 1.))).xyzw;
+    vec4 nf6 = imageLoad(rcfog, ivec3(prevPos + vec3(0., 0., -1.))).xyzw;
 
-        
-        if(mixd < 0.1){
-            mixdN = vec3(0.);
-        }
-        imageStore(rcfog, ivec3(pos), vec4(mixdN.xyz, mixd));
+    float mixd =
+        max((nf1.w + nf2.w + nf3.w + nf4.w + nf5.w + nf6.w) / 6. - 0.035, 0.);
+    vec3 mixdN =
+        (nf1.xyz + nf2.xyz + nf3.xyz + nf4.xyz + nf5.xyz + nf6.xyz) / 6.;
+
+    if (mixd < 0.1) {
+      mixdN = vec3(0.);
     }
+    imageStore(rcfog, ivec3(pos), vec4(mixdN.xyz, mixd));
+  }
 
-    if(length(N) < 0.01){
-        //(p+40.-floor(viewPos))*.9
-     //  vec3 p = ( pos - 40.  ) ;
-      // vec3 pcam = p;
-       // vec3 p = (prevPos-40.+floor(viewPos))/0.9;
-      // vec3 p = ivec3((pos+40.-floor(viewPos))*.9);
-     // vec3 p = prevPos;
-        //vec3 pointOnSphere = normalize(vec3(rndf(r), rndf(r), rndf(r))*2.0-1.0);
-/*vec3 pointOnSphere = randomSpherePoint(vec2(rndf(r)*2.0-1.0, rndf(r)*2.0-1.0));
-pointOnSphere = ldir.xzy;
-        if(!trace(p,pointOnSphere)){
-          //  if(true){
-                vec3 currCol = vec3(1.)*exp(-length(p-pcam)*0.02);
-                vec3 prevCol = imageLoad(rcfog, ivec3(prevPos)).xzy;
-                imageStore(rcfog, ivec3(pos), vec4(currCol*0.1 + prevCol*0.9,1.));
-          //  }
-        }
+  if (length(N) < 0.01) {
+    //(p+40.-floor(viewPos))*.9
+    //  vec3 p = ( pos - 40.  ) ;
+    // vec3 pcam = p;
+    // vec3 p = (prevPos-40.+floor(viewPos))/0.9;
+    // vec3 p = ivec3((pos+40.-floor(viewPos))*.9);
+    // vec3 p = prevPos;
+    // vec3 pointOnSphere = normalize(vec3(rndf(r), rndf(r), rndf(r))*2.0-1.0);
+    /*vec3 pointOnSphere = randomSpherePoint(vec2(rndf(r)*2.0-1.0,
+    rndf(r)*2.0-1.0)); pointOnSphere = ldir.xzy; if(!trace(p,pointOnSphere)){
+              //  if(true){
+                    vec3 currCol = vec3(1.)*exp(-length(p-pcam)*0.02);
+                    vec3 prevCol = imageLoad(rcfog, ivec3(prevPos)).xzy;
+                    imageStore(rcfog, ivec3(pos), vec4(currCol*0.1 +
+    prevCol*0.9,1.));
+              //  }
+            }
 
-        */
-          vec4 rest = vec4(0.);
-         // imageStore(rcrad, ivec3(pos), rest);
-        //  imageStore(rcpos, ivec3(pos), rest);
-         // imageStore(rcnorm, ivec3(pos), rest);
-          //imageStore(rcfog, ivec3(pos), rest);
+            */
+    vec4 rest = vec4(0.);
+    // imageStore(rcrad, ivec3(pos), rest);
+    //  imageStore(rcpos, ivec3(pos), rest);
+    // imageStore(rcnorm, ivec3(pos), rest);
+    // imageStore(rcfog, ivec3(pos), rest);
 
+    return;
+  }
+  vec3 prevCol = imageLoad(rcrad, ivec3(prevPos)).xyz;
 
-
-        return;
-    }
-        vec3 prevCol = imageLoad(rcrad, ivec3(prevPos)).xyz;
-
-    vec3 p = imageLoad(rcpos, ivec3(prevPos)).xyz;
-    vec3 dir = angledircos(N.xzy, r).xzy;
-    vec3 shd = vec3(0.);
-    vec3 currCol = vec3(0.);
-    p += N*epsilon*2.;
-    vec3 pd = p;
-    float isEM = 0.;
-            vec3 cmmm = p;
-////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool renderWat, inout bool hitswat){
+  vec3 p = imageLoad(rcpos, ivec3(prevPos)).xyz;
+  vec3 dir = angledircos(N.xzy, r).xzy;
+  vec3 shd = vec3(0.);
+  vec3 currCol = vec3(0.);
+  p += N * epsilon * 2.;
+  vec3 pd = p;
+  float isEM = 0.;
+  vec3 cmmm = p;
+  ////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
+  ///renderWat, inout bool hitswat){
   vec3 wp = vec3(0.);
-    vec3 wn = vec3(0.);
+  vec3 wn = vec3(0.);
   bool hitswat = false;
-    if(trace(p,dir, wp, wn, false, hitswat)){
-          
-        
-        vec3 n = norm(p-dir*epsilon*2.);
-        if(mapPl(p) < 0.){
-                cccc *= vec3(0.2, 0.6, 0.9);
-            }
-        vec3 brdf = cccc;
+  if (trace(p, dir, wp, wn, false, hitswat)) {
 
-        if(l > 0.01){
-            currCol += l*cccc;
-            isEM = 1.;
-        }
-       // p += n * epsilon*2.;
-       
+    vec3 n = norm(p - dir * epsilon * 2.);
+    if (mapPl(p) < 0.) {
+      cccc *= vec3(0.2, 0.6, 0.9);
+    }
+    vec3 brdf = cccc;
 
-        ivec3 newP = ivec3((p+90.-floor(viewPos)));
-       // if(length(newNorm) < 0.01){
-            
+    if (l > 0.01) {
+      currCol += l * cccc;
+      isEM = 1.;
+    }
+    // p += n * epsilon*2.;
 
-       // }else{
-        if(newP.x != prevPos.x || newP.y != prevPos.y || newP.z != prevPos.z){
-              imageStore(rcpos, newP, vec4(p, isEM));
-              imageStore(rcnorm, newP, vec4(n, 1.));
-              //imageStore(rcrad, newP, vec4(0.,0.,0., 1.));
-                      vec3 newNorm = imageLoad(rcnorm, newP).xyz;
+    ivec3 newP = ivec3((p + 90. - floor(viewPos)));
+    // if(length(newNorm) < 0.01){
 
-              if(length(newNorm) > 0.01){
-                  currCol += brdf*imageLoad(rcrad, newP).xyz*0.5;
-              }
-          // }
-          
-              vec3 newdir = normalize(ldir);
-            vec3 newposZ = p + n * epsilon * 2.;
-          float l2 = l;
-            if(renderSkyAndSun && dot(normalize(ldir), n) > 0. && ldir.y > 0.){
-             // if(!trace(newposZ, newdir)){
-             //     if(l2 < 0.01){
-                      currCol += shadowS(newposZ + n *0.1)*brdf*max(dot(newdir, n),0.)*sunStrength*mix(vec3(0.9, 0.7, 0.5), vec3(0.9,0.85, 0.8), max(ldir.y,0.))*pow(max(dot(normalize(ldir), vec3(0., 1., 0.)),0.),3.);///max(length(p-cmmm)*length(p-cmmm),0.1);
-             //     }
-             // }
-            }
-        }
-        /*
-        if(renderSkyAndSun && dot(ldir.xzy, n) > 0. && length(cmmm-newposZ) > 1.){
+    // }else{
+    if (newP.x != prevPos.x || newP.y != prevPos.y || newP.z != prevPos.z) {
+      imageStore(rcpos, newP, vec4(p, isEM));
+      imageStore(rcnorm, newP, vec4(n, 1.));
+      // imageStore(rcrad, newP, vec4(0.,0.,0., 1.));
+      vec3 newNorm = imageLoad(rcnorm, newP).xyz;
 
-                        if(!trace(newposZ, ldir.xzy)){
-                            if(l2 < 0.01 ){
-//           finalColor += GetShadow( VoxelSpaceToSceneSpace(WorldSpaceToVoxelSpace(pos2 )))*10.*max(dot(ldir, sunN),0.)*tt*glassColSun*(sunCol/3.14159)*max(dot(ldir, vec3(0., 1., 0.)),0.0);
+      if (length(newNorm) > 0.01) {
+        currCol += brdf * imageLoad(rcrad, newP).xyz * 0.5;
+      }
+      // }
 
-                                col += tt*max(dot(ldir.xzy, n),0.)*sunStrength*sunColor*pow(max(dot(ldir, vec3(0.,0.,1.)),0.), 2.);
-                            }
-                        }
-                    }
-        */
-    
-    }else{
-      if(renderSkyAndSun){
-        //currCol = (cccc)*skyp2(dir.xzy, ldir)*skyStrength;
-        //currCol += sky(vec3(0.), dir.xzy, normalize(ldir).xzy)* max(dot(normalize(ldir).xzy, vec3(0.,0.,1.)),0.34)*skyStrength;
-                vec3 rayDirection = dir.xzy;
-                rayDirection = normalize(rayDirection);
-                vec2 TX = vec2((atan(rayDirection.z, rayDirection.x) / 6.283185307179586476925286766559) + 0.5, acos(rayDirection.y) / 3.1415926535897932384626433832795);
-                currCol += texture2D(skytex, TX).rgb* max(dot(normalize(ldir).xzy, vec3(0.,0.,1.)),0.34)*skyStrength;
+      vec3 newdir = normalize(ldir);
+      vec3 newposZ = p + n * epsilon * 2.;
+      float l2 = l;
+      if (renderSkyAndSun && dot(normalize(ldir), n) > 0. && ldir.y > 0.) {
+        // if(!trace(newposZ, newdir)){
+        //     if(l2 < 0.01){
+        currCol +=
+            shadowS(newposZ + n * 0.1) * brdf * max(dot(newdir, n), 0.) *
+            sunStrength *
+            mix(vec3(0.9, 0.7, 0.5), vec3(0.9, 0.85, 0.8), max(ldir.y, 0.)) *
+            pow(max(dot(normalize(ldir), vec3(0., 1., 0.)), 0.),
+                3.); /// max(length(p-cmmm)*length(p-cmmm),0.1);
+        //     }
+        // }
       }
     }
+    /*
+    if(renderSkyAndSun && dot(ldir.xzy, n) > 0. && length(cmmm-newposZ) > 1.){
 
+                    if(!trace(newposZ, ldir.xzy)){
+                        if(l2 < 0.01 ){
+//           finalColor += GetShadow(
+VoxelSpaceToSceneSpace(WorldSpaceToVoxelSpace(pos2 )))*10.*max(dot(ldir,
+sunN),0.)*tt*glassColSun*(sunCol/3.14159)*max(dot(ldir, vec3(0., 1., 0.)),0.0);
 
-    imageStore(rcrad, ivec3(pos), vec4(currCol*0.05 + prevCol*0.95,1.));
-    
+                            col += tt*max(dot(ldir.xzy,
+n),0.)*sunStrength*sunColor*pow(max(dot(ldir, vec3(0.,0.,1.)),0.), 2.);
+                        }
+                    }
+                }
+    */
+
+  } else {
+    if (renderSkyAndSun) {
+      // currCol = (cccc)*skyp2(dir.xzy, ldir)*skyStrength;
+      // currCol += sky(vec3(0.), dir.xzy, normalize(ldir).xzy)*
+      // max(dot(normalize(ldir).xzy, vec3(0.,0.,1.)),0.34)*skyStrength;
+      vec3 rayDirection = dir.xzy;
+      rayDirection = normalize(rayDirection);
+      vec2 TX = vec2((atan(rayDirection.z, rayDirection.x) /
+                      6.283185307179586476925286766559) +
+                         0.5,
+                     acos(rayDirection.y) / 3.1415926535897932384626433832795);
+      currCol += texture2D(skytex, TX).rgb *
+                 max(dot(normalize(ldir).xzy, vec3(0., 0., 1.)), 0.34) *
+                 skyStrength;
+    }
+  }
+
+  imageStore(rcrad, ivec3(pos), vec4(currCol * 0.05 + prevCol * 0.95, 1.));
+
   //
   // interesting stuff happens here later
   //
-  
+
   // output to a specific pixel in the image
-  //imageStore(rcnorm, ivec3(pos), vec4(0.1, 0.6, 0.9, 1.));
+  // imageStore(rcnorm, ivec3(pos), vec4(0.1, 0.6, 0.9, 1.));
 }

@@ -1,11 +1,9 @@
 ﻿#version 330
 
-
-
-layout (location = 0) out vec4 prevN;
-layout (location = 1) out vec4 prevAcc;
-layout (location = 2) out vec4 prevTAA;
-layout (location = 3) out vec4 prevup;
+layout(location = 0) out vec4 prevN;
+layout(location = 1) out vec4 prevAcc;
+layout(location = 2) out vec4 prevTAA;
+layout(location = 3) out vec4 prevup;
 
 in vec2 texCoord;
 
@@ -41,52 +39,44 @@ uniform vec3 viewPos;
 uniform vec3 lastViewPos;
 uniform vec3 ldir;
 
-//NOT MY CODE///////////////
-uint wang_hash(inout uint seed)
-{
-    seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
-    seed *= uint(9);
-    seed = seed ^ (seed >> 4);
-    seed *= uint(0x27d4eb2d);
-    seed = seed ^ (seed >> 15);
-    return seed;
+// NOT MY CODE///////////////
+uint wang_hash(inout uint seed) {
+  seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
+  seed *= uint(9);
+  seed = seed ^ (seed >> 4);
+  seed *= uint(0x27d4eb2d);
+  seed = seed ^ (seed >> 15);
+  return seed;
 }
- 
-float rndf(inout uint state)
-{
-    return float(wang_hash(state)) / 4294967296.0;
-}
+
+float rndf(inout uint state) { return float(wang_hash(state)) / 4294967296.0; }
 ///////////////////////////
 
+void main() {
 
-void main()
-{
-   
-/*
-uniform sampler2D tempWeights;
-uniform sampler2D tempOutL;
-uniform sampler2D tempPos;
-uniform sampler2D spatWe;
-uniform sampler2D spatLO;
-*/
+  /*
+  uniform sampler2D tempWeights;
+  uniform sampler2D tempOutL;
+  uniform sampler2D tempPos;
+  uniform sampler2D spatWe;
+  uniform sampler2D spatLO;
+  */
 
+  /*
+  if(ProjectedCoordinates.x > 1. || ProjectedCoordinates.x < 0. ||
+  ProjectedCoordinates.y > 1. || ProjectedCoordinates.y < 0. ||
+  length(cameraOffset) > 0.01){ a = vec4(1.); a1 = vec4(0.); a2 = vec4(0.); a3 =
+  vec4(1.); a4 = vec4(0.);
+  }*/
+  vec2 iResolution = wh;
 
-/*
-if(ProjectedCoordinates.x > 1. || ProjectedCoordinates.x < 0. || ProjectedCoordinates.y > 1. || ProjectedCoordinates.y < 0. || length(cameraOffset) > 0.01){
-    a = vec4(1.);
-    a1 = vec4(0.);
-    a2 = vec4(0.);
-    a3 = vec4(1.);
-    a4 = vec4(0.);
-}*/
-vec2 iResolution = wh;
+  uint seedCam = uint(max(time + 1, 0));
+  vec2 smallOffset =
+      ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
 
-uint seedCam = uint(max(time+1,0));
-vec2 smallOffset = ((vec2(rndf(seedCam), rndf(seedCam)))*2.-1.)/iResolution;
-
-prevN = texture2D(normal, texCoord);
-prevAcc = texture2D(Acc, texCoord);
-prevTAA = texture2D(TAA, texCoord);
-prevup = texture2D(up, texCoord);
-//prevPosition = texture2D(position, texCoord*1.5);
+  prevN = texture2D(normal, texCoord);
+  prevAcc = texture2D(Acc, texCoord);
+  prevTAA = texture2D(TAA, texCoord);
+  prevup = texture2D(up, texCoord);
+  // prevPosition = texture2D(position, texCoord*1.5);
 }
