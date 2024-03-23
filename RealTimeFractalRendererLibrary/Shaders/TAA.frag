@@ -25,7 +25,7 @@ uniform sampler2D den1;
 uniform sampler2D var1;
 uniform sampler2D prevTAA;
 uniform sampler2D reflAlb;
-uniform sampler2D inf;
+uniform sampler2D inf; //TODO: inf and holdinfo sample the same texture
 uniform sampler2D colorfog;
 uniform sampler2D reflnorm;
 uniform sampler2D colortexFog;

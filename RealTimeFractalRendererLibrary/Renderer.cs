@@ -2180,100 +2180,77 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
 
             ///==========================================================
+            
+            SetupTextureBindings();//TODO: remove@@@@@@@
+
+
+            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
+            GL.Disable(EnableCap.DepthTest);
+            _denoiseShader.Use();
+            GL.BindVertexArray(quadVAO);
+            // _testShader.SetMatrix4(model, "model");
+            _denoiseShader.setMatrix4(view, "view");
+            _denoiseShader.setMatrix4(projection, "projection");
+            _denoiseShader.setMatrix4(view.Inverted(), "invview");
+            _denoiseShader.setMatrix4(projection.Inverted(), "invproj");
+            _denoiseShader.setMatrix4(prevView, "prevview");
+            _denoiseShader.setMatrix4(prevProjection, "prevproj");
+
+            _denoiseShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _denoiseShader.setFloat(iFrame, "time");
+            _denoiseShader.setVector3(_camera.Position, "viewPos");
+            _denoiseShader.setVector3(prevCamPos, "lastViewPos");
+            _denoiseShader.setVector3(ldir, "ldir");
+
+            //TODO: move to load()
+            _denoiseShader.SetInt("color", 1);
+            _denoiseShader.SetInt("position", 2);
+            _denoiseShader.SetInt("normal", 3);
+            _denoiseShader.SetInt("albedo", 4);
+            _denoiseShader.SetInt("secondpos", 5);
+            _denoiseShader.SetInt("weigth", 6);
+            _denoiseShader.SetInt("outgoingr", 7);
+            _denoiseShader.SetInt("weightS", 8);
+            _denoiseShader.SetInt("outgoingrS", 9);
+            _denoiseShader.SetInt("prevN", 22);
+            _denoiseShader.SetInt("ACC", 10);
+            _denoiseShader.SetInt("reflN", 28);
+            _denoiseShader.SetInt("reflectionAlb", 25);
+            _denoiseShader.SetInt("holdinfo", 26);
+            _denoiseShader.SetInt("watpos", 19);
+            _denoiseShader.SetInt("watnorm", 0);
 
             for (int i = 0; i < 7; i++)
             {
                 if (i % 2 == 0)
                 {
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, den1buff);
+                    //TODO: hack, no remaining texture unit for den2..
+                    GL.ActiveTexture(TextureUnit.Texture11);
+                    GL.BindTexture(TextureTarget.Texture2D, den1);
+                    _denoiseShader.SetInt("den1", 11);
+                    _denoiseShader.SetInt("var1", 12);
+                    _denoiseShader.SetInt("colorfog", 27);
                 }
                 else
                 {
                     GL.BindFramebuffer(FramebufferTarget.Framebuffer, den2buff);
-                }
-
-                GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
-                GL.Disable(EnableCap.DepthTest);
-                _denoiseShader.Use();
-
-                GL.BindVertexArray(quadVAO);
-                // _testShader.SetMatrix4(model, "model");
-                _denoiseShader.setMatrix4(view, "view");
-                _denoiseShader.setMatrix4(projection, "projection");
-                _denoiseShader.setMatrix4(view.Inverted(), "invview");
-                _denoiseShader.setMatrix4(projection.Inverted(), "invproj");
-                _denoiseShader.setMatrix4(prevView, "prevview");
-                _denoiseShader.setMatrix4(prevProjection, "prevproj");
-
-                _denoiseShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-                _denoiseShader.setFloat(iFrame, "time");
-                _denoiseShader.setVector3(_camera.Position, "viewPos");
-                _denoiseShader.setVector3(prevCamPos, "lastViewPos");
-                _denoiseShader.setVector3(ldir, "ldir");
-
-
-                GL.ActiveTexture(TextureUnit.Texture0);
-                GL.BindTexture(TextureTarget.Texture2D, colortex);
-                GL.ActiveTexture(TextureUnit.Texture1);
-                GL.BindTexture(TextureTarget.Texture2D, colortexPosition);
-                GL.ActiveTexture(TextureUnit.Texture2);
-                GL.BindTexture(TextureTarget.Texture2D, colortexNormal);
-                GL.ActiveTexture(TextureUnit.Texture3);
-                GL.BindTexture(TextureTarget.Texture2D, colortexAlbedo);
-                GL.ActiveTexture(TextureUnit.Texture4);
-                GL.BindTexture(TextureTarget.Texture2D, colortexSecondPosition);
-                GL.ActiveTexture(TextureUnit.Texture5);
-                GL.BindTexture(TextureTarget.Texture2D, temporalWeigths);
-                GL.ActiveTexture(TextureUnit.Texture6);
-                GL.BindTexture(TextureTarget.Texture2D, temporalOutgoingRadiance);
-                GL.ActiveTexture(TextureUnit.Texture7);
-                GL.BindTexture(TextureTarget.Texture2D, spatialWeigths);
-                GL.ActiveTexture(TextureUnit.Texture8);
-                GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadiance);
-                GL.ActiveTexture(TextureUnit.Texture9);
-                GL.BindTexture(TextureTarget.Texture2D, prevNormalDepth);
-                GL.ActiveTexture(TextureUnit.Texture10);
-                GL.BindTexture(TextureTarget.Texture2D, tempAccum);
-                if (i % 2 == 0)
-                {
-                    GL.ActiveTexture(TextureUnit.Texture11);
-                    GL.BindTexture(TextureTarget.Texture2D, den1);
-                    GL.ActiveTexture(TextureUnit.Texture12);
-                    GL.BindTexture(TextureTarget.Texture2D, var1);
-                }
-                else
-                {
+                    //TODO: hack, no remaining texture unit for den2..
                     GL.ActiveTexture(TextureUnit.Texture11);
                     GL.BindTexture(TextureTarget.Texture2D, den2);
-                    GL.ActiveTexture(TextureUnit.Texture12);
-                    GL.BindTexture(TextureTarget.Texture2D, var2);
+                    _denoiseShader.SetInt("den1", 11);
+                    _denoiseShader.SetInt("var1", 23);
+                    _denoiseShader.SetInt("colorfog", 14);
                 }
-                GL.ActiveTexture(TextureUnit.Texture13);
-                GL.BindTexture(TextureTarget.Texture2D, colortexReflection);
-                GL.ActiveTexture(TextureUnit.Texture14);
-                GL.BindTexture(TextureTarget.Texture2D, colortexSecondAlbedo);
 
 
-                if (i % 2 == 0)
-                {
-                    GL.ActiveTexture(TextureUnit.Texture15);
-                    GL.BindTexture(TextureTarget.Texture2D, colorfog);
-                }
-                else
-                {
-                    GL.ActiveTexture(TextureUnit.Texture15);
-                    GL.BindTexture(TextureTarget.Texture2D, colorfog2);
-                }
-                GL.ActiveTexture(TextureUnit.Texture16);
-                GL.BindTexture(TextureTarget.Texture2D, colortexHoldInfo);
-                GL.ActiveTexture(TextureUnit.Texture17);
-                GL.BindTexture(TextureTarget.Texture2D, watpos);
-                GL.ActiveTexture(TextureUnit.Texture18);
-                GL.BindTexture(TextureTarget.Texture2D, watnorm);
                 GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
                 GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
             }
+
             ///==========================================================
+
+            SetupTextureBindings();//TODO: remove
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, TAAbuff);
 
@@ -2299,76 +2276,45 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _TAAShader.setMatrix4(lightproj, "lightproj");
             _TAAShader.setMatrix4(lightview, "lightview");
 
-            GL.ActiveTexture(TextureUnit.Texture0);
-            //GL.BindTexture(TextureTarget.Texture3D, rcpos);
-            GL.BindImageTexture(0, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-            //GL.ActiveTexture(TextureUnit.Texture0);
-            //GL.BindTexture(TextureTarget.Texture2D, colortex);
-            GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2D, colortexPosition);
-            GL.ActiveTexture(TextureUnit.Texture2);
-            GL.BindTexture(TextureTarget.Texture2D, colortexNormal);
-            GL.ActiveTexture(TextureUnit.Texture3);
-            GL.BindTexture(TextureTarget.Texture2D, colortexAlbedo);
-            GL.ActiveTexture(TextureUnit.Texture4);
-            GL.BindTexture(TextureTarget.Texture2D, colortexSecondPosition);
-            GL.ActiveTexture(TextureUnit.Texture5);
-            GL.BindTexture(TextureTarget.Texture2D, temporalWeigths);
-            GL.ActiveTexture(TextureUnit.Texture6);
-            GL.BindTexture(TextureTarget.Texture2D, temporalOutgoingRadiance);
-            GL.ActiveTexture(TextureUnit.Texture7);
-            GL.BindTexture(TextureTarget.Texture2D, spatialWeigths);
-            GL.ActiveTexture(TextureUnit.Texture8);
-            GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadiance);
-            GL.ActiveTexture(TextureUnit.Texture9);
-            GL.BindTexture(TextureTarget.Texture2D, tempAccum);
-            GL.ActiveTexture(TextureUnit.Texture10);
-            GL.BindTexture(TextureTarget.Texture2D, den2);
-            GL.ActiveTexture(TextureUnit.Texture11);
-            GL.BindTexture(TextureTarget.Texture2D, var2);
-            GL.ActiveTexture(TextureUnit.Texture12);
-            GL.BindTexture(TextureTarget.Texture2D, prevTAA);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
-
+            //TODO: to load()
+            //_TAAShader.SetInt("color", 1); //TODO: review. This was commented out.
+            _TAAShader.SetInt("position", 2);
+            _TAAShader.SetInt("normal", 3);
+            _TAAShader.SetInt("albedo", 4);
+            _TAAShader.SetInt("secondpos", 5);
+            _TAAShader.SetInt("weigth", 6);
+            _TAAShader.SetInt("outgoingr", 7);
+            _TAAShader.SetInt("weightS", 8);
+            _TAAShader.SetInt("outgoingrS", 9);
+            _TAAShader.SetInt("Acc", 10);
+            _TAAShader.SetInt("den1", 11);//den2 bound here
+            _TAAShader.SetInt("var1", 23);//var2 bound here
+            _TAAShader.SetInt("prevTAA", 24);
+            _TAAShader.SetInt("reflAlb", 25);//=colortexSecondAlbedo
+            _TAAShader.SetInt("inf", 26);//holdinfo
+            _TAAShader.SetInt("colorfog", 27);
+            _TAAShader.SetInt("reflnorm", 28);
+            _TAAShader.SetInt("colortexFog", 29);
+            _TAAShader.SetInt("colortexFogP", 15);
+            _TAAShader.SetInt("spatfog", 16);
+            _TAAShader.SetInt("spatfogLO", 30);
+            _TAAShader.SetInt("holdinfo", 26);//TODO: this 'holdinfo' is the same as 'inf'
+            _TAAShader.SetInt("sunTex", 18);
+            _TAAShader.SetInt("skyTex", 31);
+            _TAAShader.SetInt("watpos", 19);
+            _TAAShader.SetInt("watnorm", 0);
+            //TODO: hack, we ran out of texture units..
+            _TAAShader.SetInt("worl", 13);
             GL.ActiveTexture(TextureUnit.Texture13);
-            GL.BindTexture(TextureTarget.Texture2D, colortexSecondAlbedo);
-            GL.ActiveTexture(TextureUnit.Texture14);
-            GL.BindTexture(TextureTarget.Texture2D, colortexHoldInfo);
-            GL.ActiveTexture(TextureUnit.Texture15);
-            GL.BindTexture(TextureTarget.Texture2D, colorfog);
-            GL.ActiveTexture(TextureUnit.Texture16);
-            GL.BindTexture(TextureTarget.Texture2D, colortexReflection);
-            GL.ActiveTexture(TextureUnit.Texture17);
-            GL.BindTexture(TextureTarget.Texture2D, colortexFog);
-            GL.ActiveTexture(TextureUnit.Texture18);
-            GL.BindTexture(TextureTarget.Texture2D, colortexFogPrev);
-            GL.ActiveTexture(TextureUnit.Texture19);
-            GL.BindTexture(TextureTarget.Texture2D, spatialWeigthsFog) ;
-            GL.ActiveTexture(TextureUnit.Texture20);
-            GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadianceFog);
-            GL.ActiveTexture(TextureUnit.Texture21);
-            GL.BindTexture(TextureTarget.Texture2D, colortexHoldInfo);
-            GL.ActiveTexture(TextureUnit.Texture22);
-            GL.BindTexture(TextureTarget.Texture2D, suntex);
-            GL.ActiveTexture(TextureUnit.Texture23);
-            GL.BindTexture(TextureTarget.Texture2D, skytex);
-            GL.ActiveTexture(TextureUnit.Texture24);
-            GL.BindTexture(TextureTarget.Texture2D, watpos);
-            GL.ActiveTexture(TextureUnit.Texture25);
-            GL.BindTexture(TextureTarget.Texture2D, watnorm);
-            GL.ActiveTexture(TextureUnit.Texture26);
             GL.BindTexture(TextureTarget.Texture3D, worley);
+            //
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
-
-            /*_upscale.Use();
-            _upscale.SetInt("TAA", 0);
-            _upscale.SetInt("upbefore", 1);
-*/
-
-            SetupTextureBindings();//TODO: remove
+            //TODO: revert the hack
+            GL.ActiveTexture(TextureUnit.Texture13);
+            GL.BindTexture(TextureTarget.Texture3D, upscale);
+            //
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleBuff);
 
@@ -2558,9 +2504,10 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
 
         private void SetupTextureBindings()
         {
+            GL.BindImageTexture(0, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindImageTexture(0, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindTexture(TextureTarget.Texture2D, watnorm);
             GL.ActiveTexture(TextureUnit.Texture1);
             GL.BindTexture(TextureTarget.Texture2D, colortex);
             GL.ActiveTexture(TextureUnit.Texture2);
@@ -2610,6 +2557,25 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
             GL.ActiveTexture(TextureUnit.Texture22);
             GL.BindTexture(TextureTarget.Texture2D, prevNormalDepth);
+            GL.ActiveTexture(TextureUnit.Texture23);
+            GL.BindTexture(TextureTarget.Texture2D, var2);
+            GL.ActiveTexture(TextureUnit.Texture24);
+            GL.BindTexture(TextureTarget.Texture2D, prevTAA);
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+            GL.ActiveTexture(TextureUnit.Texture25);
+            GL.BindTexture(TextureTarget.Texture2D, colortexSecondAlbedo);
+            GL.ActiveTexture(TextureUnit.Texture26);
+            GL.BindTexture(TextureTarget.Texture2D, colortexHoldInfo);
+            GL.ActiveTexture(TextureUnit.Texture27);
+            GL.BindTexture(TextureTarget.Texture2D, colorfog);
+            GL.ActiveTexture(TextureUnit.Texture28);
+            GL.BindTexture(TextureTarget.Texture2D, colortexReflection);
+            GL.ActiveTexture(TextureUnit.Texture29);
+            GL.BindTexture(TextureTarget.Texture2D, colortexFog);
+            GL.ActiveTexture(TextureUnit.Texture30);
+            GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadianceFog);
+            GL.ActiveTexture(TextureUnit.Texture31);
+            GL.BindTexture(TextureTarget.Texture2D, skytex);
         }
     }
 }
