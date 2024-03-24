@@ -18,7 +18,7 @@ _testShader.SetInt("position ", 1);
             _testShader.SetInt("normal", 2);
             _testShader.SetInt("albedo", 3);
 */
-layout(binding = 5, Rgba16f) uniform image3D rcrad;
+layout(binding = 2, Rgba16f) uniform image3D rcrad;
 
 uniform sampler2D position;
 uniform sampler2D normal;

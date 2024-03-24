@@ -13,7 +13,7 @@ in vec2 texCoord;
 uniform sampler2D color;
 uniform sampler2D position;
 uniform sampler2D normal;
-uniform sampler2D albedo;
+//uniform sampler2D albedo;
 uniform sampler2D secondpos;
 uniform sampler2D prevW;
 uniform sampler2D prevL;
@@ -22,11 +22,12 @@ uniform sampler2D prevN;
 uniform sampler2D reflAlb;
 uniform sampler2D prevPosition;
 uniform sampler2D prevSecondPosition;
-uniform sampler2D tempFog;
-uniform sampler2D LOFog;
-uniform sampler2D fog;
-uniform sampler2D fogsecpos;
-uniform sampler2D tempfogpos;
+//uniform sampler2D tempFog;
+//uniform sampler2D LOFog;
+//uniform sampler2D fog;
+//uniform sampler2D fogsecpos;
+//uniform sampler2D tempfogpos;
+
 /*
 _TemporalRestirShader.SetInt("tempFog", 12);
             _TemporalRestirShader.SetInt("LOFog", 13);

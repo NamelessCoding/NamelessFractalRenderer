@@ -1,5 +1,5 @@
 ﻿
-layout(binding = 0, Rgba16f) uniform image2D sun;
+layout(binding = 4, Rgba16f) uniform image2D sun;
 
 // layout (location = 0) out vec4 sun;
 

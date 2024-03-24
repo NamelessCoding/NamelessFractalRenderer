@@ -34,12 +34,12 @@ uniform sampler2D reflAlb;
 uniform sampler2D prevPosition;
 uniform sampler2D prevSecondPosition;
 
-uniform sampler2D tempfog;
-uniform sampler2D tempLofog;
-uniform sampler2D temppos2;
-uniform sampler2D wightfog;
-uniform sampler2D Lofog;
-uniform sampler2D fosecg;
+//uniform sampler2D tempfog;
+//uniform sampler2D tempLofog;
+//uniform sampler2D temppos2;
+//uniform sampler2D wightfog;
+//uniform sampler2D Lofog;
+//uniform sampler2D fosecg;
 
 // fosecg
 /*
