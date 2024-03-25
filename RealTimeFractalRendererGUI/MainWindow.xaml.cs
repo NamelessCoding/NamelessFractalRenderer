@@ -19,7 +19,7 @@ namespace RealTimeFractalRendererGUI
         private readonly KeyboardHelper input = default!;
         private bool _firstMove = true;
         private Point _lastPos;
-        private float keepDelta;
+        //private float keepDelta;
         const float cameraSpeed = 15.5f;
         const float sensitivity = 0.2f;
         private readonly Timer renderTimer = new(TimeSpan.FromSeconds(1.0/60.0));
@@ -27,10 +27,10 @@ namespace RealTimeFractalRendererGUI
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private float realYaw = 0.0f;
-        private float smoothedYaw = 0.0f;
+        //private float smoothedYaw = 0.0f;
 
         private float realPitch = 0.0f;
-        private float smoothedPitch = 0.0f;
+        //private float smoothedPitch = 0.0f;
 
 
         public float Brightness { get; set; } = 1.0f;
@@ -73,7 +73,7 @@ namespace RealTimeFractalRendererGUI
         }
 
         //setup renderer resources after display is ready to take GL calls
-        private void display_Ready()
+        private void Display_Ready()
         {
             renderer = new Renderer();
             renderer.Load(new Vector2i(display.FrameBufferWidth, display.FrameBufferHeight));
@@ -81,7 +81,7 @@ namespace RealTimeFractalRendererGUI
             renderTimer.Start();
         }
 
-        private void display_OnRender(TimeSpan delta)
+        private void Display_OnRender(TimeSpan delta)
         {
             if(isRendererInitialized)
             {
@@ -94,18 +94,18 @@ namespace RealTimeFractalRendererGUI
                 }
 
                 UpdateFrame((float)delta.TotalSeconds);
-                keepDelta = (float)delta.TotalSeconds;
+                //keepDelta = (float)delta.TotalSeconds;
                 renderer.RenderFrame();
                 isRendering = false;
             }
         }
 
-        private void display_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void Display_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             resolutionChanged = true;
         }
 
-        private void display_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        private void Display_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
         {
             renderer.Camera.Fov -= e.Delta / 10.0f;
         }
@@ -152,7 +152,7 @@ namespace RealTimeFractalRendererGUI
 
         }
 
-        private void display_MouseMove(object sender, MouseEventArgs e)
+        private void Display_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
             {
@@ -195,7 +195,7 @@ namespace RealTimeFractalRendererGUI
         /// <summary>
         /// Takes keyboard focus away from other gui elements.
         /// </summary>
-        private void display_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void Display_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             Keyboard.ClearFocus();
             Keyboard.Focus(display);

@@ -1,19 +1,17 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Collections.Generic;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using System.Xml.Linq;
 
 namespace LearnOpenTK.Common
 {
     // A simple class meant to help create shaders.
-    public class Shader
+    public class Shader : IDisposable
     {
         public readonly int Handle;
         public string Name;
-        private readonly Dictionary<string, int> _uniformLocations;
+        private readonly Dictionary<string, int> _uniformLocations = [];
 
         // This is how you create a simple shader.
         // Shaders are written in GLSL, which is a language very similar to C in its semantics.
@@ -78,9 +76,6 @@ namespace LearnOpenTK.Common
 
             // First, we have to get the number of active uniforms in the shader.
             GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
-
-            // Next, allocate the dictionary to hold the locations.
-            _uniformLocations = new Dictionary<string, int>();
 
             // Loop over all the uniforms,
             for (var i = 0; i < numberOfUniforms; i++)
@@ -147,9 +142,6 @@ namespace LearnOpenTK.Common
             // First, we have to get the number of active uniforms in the shader.
             GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
 
-            // Next, allocate the dictionary to hold the locations.
-            _uniformLocations = new Dictionary<string, int>();
-
             // Loop over all the uniforms,
             for (var i = 0; i < numberOfUniforms; i++)
             {
@@ -206,24 +198,24 @@ namespace LearnOpenTK.Common
             return GL.GetAttribLocation(Handle, attribName);
         }
 
-        public void setMatrix4(Matrix4 matrix, string name)
+        public void SetMatrix4(Matrix4 matrix, string name)
         {
             int location = GL.GetUniformLocation(Handle, name);
             GL.UniformMatrix4(location, false, ref matrix);
         }
 
-        public void setFloat(float num, string name)
+        public void SetFloat(float num, string name)
         {
             int location = GL.GetUniformLocation(Handle, name);
             GL.Uniform1(location, num);
         }
-        public void setVector3(Vector3 vec, string name)
+        public void SetVector3(Vector3 vec, string name)
         {
             int location = GL.GetUniformLocation(Handle, name);
             GL.Uniform3(location, vec.X, vec.Y, vec.Z);
         }
 
-        public void setVector2(Vector2 vec, string name)
+        public void SetVector2(Vector2 vec, string name)
         {
             int location = GL.GetUniformLocation(Handle, name);
             GL.Uniform2(location, vec.X, vec.Y);
