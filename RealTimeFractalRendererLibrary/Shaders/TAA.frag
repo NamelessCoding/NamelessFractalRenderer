@@ -934,6 +934,58 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
   return vec4(accum * pow(1. - ldir.y, 4.), volAbs);
 }
 
+vec4 fog2(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
+  vec3 cam = viewPos;
+  vec3 finPos = cam;
+  float mov = 1.;
+
+  if (texture2D(albedo, TC).w > 0.5) {
+    pos = cam + dir * 20.;
+  }
+
+  vec3 accum = vec3(0.);
+  vec3 direction = (pos - cam) / 20.;
+  vec3 reversePos = pos;
+  vec3 volCol = vec3(0.), volAbs = vec3(1.);
+  vec3 stepAbs = vec3(1.) * exp(-0.05 * length(direction));
+
+  vec3 stepCol = (vec3(1.) - stepAbs);
+  vec3 stepCol2 = (vec3(1.) - stepAbs);
+  float octave = 0.;
+
+  float absorb = 1.;
+
+  float acci = 0.;
+  for (int i = 0; i < 20; i++) {
+    finPos += direction * max(rndf(r), 0.5);
+    reversePos -= direction * max(rndf(r), 0.5);
+    float pm2 = (PM(max(dot(dir, ldir), 0.), 0.76) +
+                 PM(max(dot(dir, ldir), 0.), pow(0.9, octave))) *
+                1.;
+    // float pm2 = PM(max(dot(d,lig),0.),0.76);
+    float dens = max(texture(worl, reversePos * .01).x - 0.7, 0.);
+    dens = clamp(dens, 0., 1.);
+    dens = 1.0 - pow(1.0 - dens, 4.);
+    acci += dens;
+    float pr2 = PR(max(dot(dir, ldir), 0.));
+    // accum += shadowS(finPos);
+
+    float accum2 = length(cam - finPos);
+    float heigh = exp(-max(reversePos.y - (mov + 1.), 0.) * .4);
+    accum += stepCol * volAbs * .004 * dens * 1.5 * exp(-acci * 5.);
+
+    accum += stepCol * volAbs * .0005 * dens * 1. * heigh;
+
+    // volAbs *= exp(-length(finPos - cam)*.025);
+    volAbs *= exp(-max(dens, 0.05) * heigh * length(finPos - cam) * .01);
+
+    absorb *= 1.0 - exp(-0.7 * (1.0 - max(dot(ldir, vec3(0., 1., 0.)), 0.)) *
+                        length(finPos - cam));
+  }
+
+  return vec4(accum, volAbs);
+}
+
 void main() {
   vec2 iResolution = wh;
   vec2 fragCoord = texCoord * wh;
@@ -1067,9 +1119,10 @@ void main() {
   // TC).xyz/3.14159); col += texture2D(reflnorm, TC).www*vec3(0.9,0.7,0.2)*0.4;
   // texture2D(albedo, TC).w > 0.5 ||
 
-  if (texture2D(albedo, TC - smallOffset).w > 0.5 ||
-      texture2D(position, TC - smallOffset).w > 0.5) {
-    col = texture2D(albedo, TC - smallOffset).xyz;
+  if ((texture2D(albedo, TC - smallOffset2).w > 0.5 ||
+       texture2D(position, TC - smallOffset2).w > 0.5) &&
+      wp.w < 0.5) {
+    col = texture2D(albedo, TC - smallOffset2).xyz;
   }
   ind = col;
 
@@ -1190,8 +1243,8 @@ void main() {
   blendFactor *= exp(-length(velocity) * 0.9) * 0.6 + 0.3;
 
   // if(texture2D(color, TC).w > 0.5){
-  if (texture2D(albedo, TC - smallOffset).w < 0.5 &&
-      texture2D(position, TC - smallOffset).w < 0.5) {
+  if (texture2D(albedo, TC - smallOffset2).w < 0.5 &&
+      texture2D(position, TC - smallOffset2).w < 0.5) {
     col = mix(col, prevCol, clamp(blendFactor, 0.0, 1.));
   }
   //}

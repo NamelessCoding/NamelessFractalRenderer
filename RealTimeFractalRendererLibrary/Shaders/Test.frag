@@ -369,7 +369,7 @@ void main() {
   ivec3 prevPos = ivec3((p + 90. - floor(viewPos)));
   float normalLength = 160.;
   ////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
-  ///renderWat, inout bool hitswat){
+  /// renderWat, inout bool hitswat){
   vec3 wpzz = vec3(0.);
   vec3 wnzz = vec3(0.);
   bool hitswat = false;
@@ -509,7 +509,7 @@ void main() {
     cosT = 1.;
     vec3 reflcam = p;
     ////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
-    ///renderWat, inout bool hitswat){
+    /// renderWat, inout bool hitswat){
     vec3 wps = vec3(0.);
     vec3 wns = vec3(0.);
     bool hitswat = false;

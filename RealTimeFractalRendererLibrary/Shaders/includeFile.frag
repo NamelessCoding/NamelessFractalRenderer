@@ -693,15 +693,15 @@ float map(vec3 p) {
   // float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
   //  float final = min(min(aa,aa),min(aa3, min(sphere, min(sphere2,
   //  min(sphere3, sceneDist)))));
-  float final = min(aa, min(aa3, min(sphere, sphere)));
+  float final = min(aa3, min(aa3, min(sphere, sphere)));
   // float final = min(aa3, sphere);
   // if(final == b2)l = 3.;
   // if(final == c1)c = vec3(0.9,0.1,0.1);
   // if(final == c2)c = vec3(0.1,0.9,0.1);
-  if (final == aa) {
-    rough = 1.0;
-    cccc = pal(escape * 2., vec3(0.8, 0.4, 0.4));
-  }
+  //   if (final == aa) {
+  //     rough = 1.0;
+  //     cccc = pal(escape * 2., vec3(0.8, 0.4, 0.4));
+  //   }
   if (final == aa3) {
     rough = 1.0;
     cccc = pal(escape333, vec3(0.4, 0.4, 0.8));

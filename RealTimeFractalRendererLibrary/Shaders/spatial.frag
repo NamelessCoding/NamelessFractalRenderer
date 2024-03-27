@@ -305,7 +305,7 @@ uniform sampler2D tempL;
     vec4 info = texture2D(normal, TexCoords);
     vec4 info2 = texture2D(normal, finn);
 
-    if (dot(normalize(info.xyz), normalize(info2.xyz)) < 0.9) {
+    if (dot(normalize(info.xyz), normalize(info2.xyz)) < 0.996) {
       continue;
     }
     if ((info.w) > 1.1 * (info2.w) || (info.w) < 0.9 * (info2.w)) {
@@ -405,7 +405,7 @@ uniform sampler2D tempL;
     vec4 info = texture2D(normal, TexCoords);
     vec4 info2 = texture2D(normal, finn);
 
-    if (dot(normalize(info.xyz), normalize(info2.xyz)) < 0.9) {
+    if (dot(normalize(info.xyz), normalize(info2.xyz)) < 0.996) {
       continue;
     }
     if ((info.w) > 1.1 * (info2.w) || (info.w) < 0.9 * (info2.w)) {

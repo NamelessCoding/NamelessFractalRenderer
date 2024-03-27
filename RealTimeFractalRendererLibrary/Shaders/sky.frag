@@ -19,6 +19,19 @@ uniform vec3 lpos2;
 uniform mat4 lightproj2;
 uniform mat4 lightview2;
 
+// NOT MY CODE///////////////
+uint wang_hash(inout uint seed) {
+  seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
+  seed *= uint(9);
+  seed = seed ^ (seed >> 4);
+  seed *= uint(0x27d4eb2d);
+  seed = seed ^ (seed >> 15);
+  return seed;
+}
+
+float rndf(inout uint state) { return float(wang_hash(state)) / 4294967296.0; }
+///////////////////////////
+
 float ph(float h, float H) { return exp(-(abs(h) / H)); }
 float PM(float cost, float g) {
   float a = 3. / (8. * 3.14159);
@@ -287,7 +300,7 @@ float fbm(vec3 p, vec3 cam) {
   // b-= a.w;
   // b = max(b-1.2-max(1.-a.w*a.x,0.), 0.);
   b *= (a.w + mr.y) * 0.5;
-  b = max(b - 1.6, 0.);
+  b = max(b - 1.4, 0.);
   // float b = texture3D(worl, p*22.).x;
   // b += max(fbmcc(p*.05)-0.4,0.);
   float Srb = clamp(
@@ -562,8 +575,14 @@ const int bayerFilter[BAYER_LIMIT] =
 void main() {
 
   vec3 ldir2 = vec3(ldir.xy, ldir.z * -1.);
+
+  vec2 iResolution = wh;
+  uint seedCam = uint(time);
+  vec2 smallOffset =
+      ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
+
   vec2 thetaphi =
-      ((texCoord * 2.0) - vec2(1.0)) * vec2(3.1415926535897932384626433832795,
+      (((texCoord)*2.0) - vec2(1.0)) * vec2(3.1415926535897932384626433832795,
                                             1.5707963267948966192313216916398);
   vec3 rayDirection = vec3(cos(thetaphi.y) * cos(thetaphi.x), sin(thetaphi.y),
                            cos(thetaphi.y) * sin(thetaphi.x));

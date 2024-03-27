@@ -210,10 +210,10 @@ vec3 blur3(vec2 p, float centerDepth, float focalLength, vec2 iResolution,
   float CoCSize = cocSizeS;
   vec3 cul = texture2D(fogLO, p / iResolution).rgb;
 
-  for (int i = 0; i < 150; i++) {
+  for (int i = 0; i < 40; i++) {
     float k = 0.73;
     // for(int i = 0; i < 150; i++){
-    float m = sqrt(float(i) / 150.);
+    float m = sqrt(float(i) / 40.);
     float r = 2. * 3.14159 * k * float(i);
     vec2 coords = vec2(m * cos(r), m * sin(r)) * CoCSize;
     // float round = (float(i)/11.)*2.-1.;
@@ -1238,5 +1238,6 @@ void main() {
 
   // col = shadowS(texture2D(position, texCoord).rgb + texture2D(normal,
   // texCoord).xyz*0.1);
+
   outputColor = vec4(gamma_correct(col), 1.);
 }

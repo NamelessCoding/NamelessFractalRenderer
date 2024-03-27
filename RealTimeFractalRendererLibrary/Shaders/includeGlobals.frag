@@ -230,6 +230,63 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   return false;
 }
 
+// https://www.shadertoy.com/view/llKfD1
+bool tracefast(inout vec3 ro, vec3 rd) {
+
+  float w = 1.2;
+  float dw = 1.8;
+  float prevF = 0.0;
+  float prevDt = 0.0;
+  bool relaxed = true;
+  float eps2 = epsilon;
+  vec3 p = ro;
+
+  float t = map(p);
+  float dt = 0.0;
+  float stepCtr = 0.0;
+  for (int i = 0; i < 132; i++) {
+    p = ro + rd * t;
+    float f = map(p);
+    dt = f * w;
+    if (prevF + f < prevDt &&
+        relaxed) // Reset to fallback position on excessive relaxation
+    {
+      relaxed = false;
+      t += prevDt * (1.0 - w);
+      p = ro + rd * t;
+      f = map(p);
+      dt = f * w;
+    }
+    if (t > 380.) {
+      ro = p;
+      return false;
+    }
+    if (t < eps2) {
+      ro = p;
+      return true;
+    }
+
+    if (f < eps2) {
+      ro = p;
+      return true;
+    } else {
+      t += dt;
+      prevF = f;
+      prevDt = dt;
+      if (relaxed) {
+        w = mod(fract(w) * dw, 1.0) + 1.0;
+      } // Escalate step scaling after each relaxation
+      else {
+        w = 1.2;
+      }              // Otherwise re-set [w]
+      eps2 *= 1.125; // Potential for further research here...
+    }
+    stepCtr += 1.0;
+  }
+  ro = p;
+  return false;
+}
+
 bool traceSun(inout vec3 p, vec3 d, float maxDist) {
   vec3 cam = p;
   // p += d*epsilon*2.;

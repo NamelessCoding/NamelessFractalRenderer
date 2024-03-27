@@ -136,7 +136,7 @@ void main() {
   float isEM = 0.;
   vec3 cmmm = p;
   ////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
-  ///renderWat, inout bool hitswat){
+  /// renderWat, inout bool hitswat){
   vec3 wp = vec3(0.);
   vec3 wn = vec3(0.);
   bool hitswat = false;
