@@ -202,6 +202,62 @@ namespace RealTimeFractalRendererLibrary
         private static GCHandle _debugProcCallbackHandle;
 
 
+        float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        void setupTex2D(int texture, bool scaleTexture = true, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
+            TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
+            TextureWrapMode wrapMode = TextureWrapMode.MirroredRepeat, bool customSize = false, int sizeX = 0, int sizeY = 0) {
+            GL.BindTexture(TextureTarget.Texture2D, texture);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)wrapMode);
+            if (scaleTexture && !customSize)
+            {
+                GL.TexImage2D(TextureTarget.Texture2D, 0,
+                format,
+                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
+                PixelType.UnsignedByte, IntPtr.Zero);
+            }
+            else if (!customSize)
+            {
+                GL.TexImage2D(TextureTarget.Texture2D, 0,
+                format,
+                (int)(size.X), (int)(size.Y), 0, PixelFormat.Rgba,
+                PixelType.UnsignedByte, IntPtr.Zero);
+            }
+            else {
+                GL.TexImage2D(TextureTarget.Texture2D, 0,
+                    format,
+                    (int)(sizeX), (int)(sizeY), 0, PixelFormat.Rgba,
+                    PixelType.UnsignedByte, IntPtr.Zero);
+            }
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
+        }
+
+        void setupTex3D(int texture, int sizeX, int sizeY, int sizeZ, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
+            TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
+            TextureWrapMode wrapMode = TextureWrapMode.Repeat) {
+            GL.BindTexture(TextureTarget.Texture3D, texture);
+            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+
+            // GL.BindImageTexture(0, rcpos, 0, );
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)minFilter);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)magFilter);
+
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)wrapMode);
+
+            GL.TexImage3D(TextureTarget.Texture3D, 0,
+                format,
+                sizeX, sizeY, sizeZ, 0, PixelFormat.Rgba,
+                PixelType.UnsignedByte, IntPtr.Zero);
+
+            GL.BindImageTexture(0, texture, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+
+        }
+
         public void Load(Vector2i resolution)
         {
             // glEnable(GL_TEXTURE_3D);
@@ -256,374 +312,30 @@ namespace RealTimeFractalRendererLibrary
                 ScaleEverything = 1.0f;
             }
 
-            GL.BindTexture(TextureTarget.Texture2D, colorfog2);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, colorfog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, watnorm);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, watpos);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-
-            GL.BindTexture(TextureTarget.Texture2D, skytex);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-           /* GL.BindTexture(TextureTarget.Texture2D, suntex);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)shadowScale, (int)shadowScale, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-           */
-
-            GL.BindTexture(TextureTarget.Texture2D, suntex);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToBorder);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToBorder);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                shadowScale, shadowScale, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            /*
-             glBindTexture(GL_TEXTURE_3D, texname);
-glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_Nearest);
-glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_Nearest);
-glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB, 
-             GL_UNSIGNED_BYTE, texels);
-             */
-
-
-            //glGenTextures(1, &HeightMap);
-            //glBindTexture(GL_TEXTURE_2D, HeightMap);
-            //glTexImage2D(GL_TEXTURE_2D, 0, GL_Rgba16f, 513, 513, 0, GL_RGBA, GL_FLOAT, 0);
-            //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_Nearest);
-            //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_Nearest);
-            //glGenerateMipmap(GL_TEXTURE_2D);
-
-            GL.BindTexture(TextureTarget.Texture3D, worley);
-            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-            // GL.BindImageTexture(0, rcpos, 0, );
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)TextureWrapMode.Repeat);
-
-            GL.TexImage3D(TextureTarget.Texture3D, 0,
-                PixelInternalFormat.Rgba16f,
-                512, 512, 512, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindImageTexture(0, worley, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-
-
-            GL.BindTexture(TextureTarget.Texture3D, rcpos);
-            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-            // GL.BindImageTexture(0, rcpos, 0, );
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)TextureWrapMode.MirroredRepeat);
-
-            GL.TexImage3D(TextureTarget.Texture3D, 0,
-                PixelInternalFormat.Rgba16f,
-                180, 180, 180, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-
-            GL.BindTexture(TextureTarget.Texture3D, rcfog);
-            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-            // GL.BindImageTexture(0, rcpos, 0, );
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)TextureWrapMode.MirroredRepeat);
-
-            GL.TexImage3D(TextureTarget.Texture3D, 0,
-                PixelInternalFormat.Rgba16f,
-                180, 180, 180, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindImageTexture(0, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-
-
-
-            GL.BindTexture(TextureTarget.Texture3D, rcnorm);
-            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-            // GL.BindImageTexture(0, rcpos, 0, );
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)TextureWrapMode.MirroredRepeat);
-
-            GL.TexImage3D(TextureTarget.Texture3D, 0,
-                PixelInternalFormat.Rgba16f,
-                180, 180, 180, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindImageTexture(0, rcnorm, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-
-            GL.BindTexture(TextureTarget.Texture3D, rcrad);
-            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-            // GL.BindImageTexture(0, rcpos, 0, );
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)TextureWrapMode.MirroredRepeat);
-
-            GL.TexImage3D(TextureTarget.Texture3D, 0,
-                PixelInternalFormat.Rgba16f,
-                180, 180, 180, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindImageTexture(0, rcrad, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
-
-            // GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-
-            GL.BindTexture(TextureTarget.Texture2D, colortex);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexPosition);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, colortexFog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X), (int)(size.Y), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, colortexFogPos);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X), (int)(size.Y), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, colortexFogPrev);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            //====================================================================
-
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexHoldInfo);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexNormal);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexAlbedo);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexSecondPosition);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexReflection);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, colortexSecondAlbedo);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X), (int)(size.Y), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
+           
+            setupTex2D(colorfog2);          
+            setupTex2D(colorfog);
+            setupTex2D(watnorm);
+            setupTex2D(watpos);
+            setupTex2D(skytex, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            setupTex2D(suntex, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder,
+                true, shadowScale, shadowScale);
+            setupTex3D(worley, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            setupTex3D(rcpos, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcfog, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcnorm, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcrad, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex2D(colortex, false);
+            setupTex2D(colortexPosition, true, PixelInternalFormat.Rgba32f);
+            setupTex2D(colortexFog, false);
+            setupTex2D(colortexFogPos, false);
+            setupTex2D(colortexFogPrev);
+            setupTex2D(colortexHoldInfo);
+            setupTex2D(colortexNormal, true, PixelInternalFormat.Rgba32f);
+            setupTex2D(colortexAlbedo);
+            setupTex2D(colortexSecondPosition, true, PixelInternalFormat.Rgba32f);
+            setupTex2D(colortexReflection, false);
+            setupTex2D(colortexSecondAlbedo, false);
 
             //====================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, skybuff);
@@ -714,18 +426,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             ,  DrawBuffersEnum.ColorAttachment4,  DrawBuffersEnum.ColorAttachment5};
             GL.DrawBuffers(6, atts);
 
-            /*
-                        private Shader _TemporalRestirShader;
-                    int temporalbuff;
-                    int temporalWeigths;
-                    int temporalOutgoingRadiance;
-                    int temporalPosition;
 
-                    private Shader _SpatialRestirShader;
-                    int spatialbuff;
-                    int spatialWeigths;
-                    int SpatialOutgoingRadiance;
-            */
             temporalWeigths = GL.GenTexture();
             temporalOutgoingRadiance = GL.GenTexture();
             temporalPosition = GL.GenTexture();
@@ -735,115 +436,18 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             temporalbuff = GL.GenFramebuffer();
             prevPosition = GL.GenTexture();
 
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, temporalWeigths);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            
+            setupTex2D(temporalWeigths, false);
+            setupTex2D(temporalWeigthsFog, false);
+            setupTex2D(temporalOutgoingRadianceFog, false);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, temporalWeigthsFog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, temporalOutgoingRadianceFog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
+            setupTex2D(prevPosition, true, PixelInternalFormat.Rgba32f);
+            setupTex2D(prevSecondPosition, true, PixelInternalFormat.Rgba32f);
+            setupTex2D(temporalOutgoingRadiance, false);
+            setupTex2D(temporalPosition, false, PixelInternalFormat.Rgba32f);
+            setupTex2D(temporalPositionFog, false);
 
 
-            GL.BindTexture(TextureTarget.Texture2D, prevPosition);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, prevSecondPosition);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, temporalOutgoingRadiance);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, temporalPosition);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, temporalPositionFog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
             //====================================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, temporalbuff);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -885,61 +489,11 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             spatialOutgoingRadianceFog = GL.GenTexture();
             spatialbuff = GL.GenFramebuffer();
 
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, spatialWeigths);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, spatialWeigthsFog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadianceFog);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadiance);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
+            
+            setupTex2D(spatialWeigths, false);
+            setupTex2D(spatialWeigthsFog, false);
+            setupTex2D(spatialOutgoingRadianceFog, false);
+            setupTex2D(spatialOutgoingRadiance, false);
 
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialbuff);
@@ -962,27 +516,13 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             DrawBuffersEnum[] att4 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
             GL.DrawBuffers(4, att4);
 
-            /*
-             private Shader _TAAShader;
-        int TAAbuff;
-        int TAA; 
-              */
+   
             TAA = GL.GenTexture();
             TAAbuff = GL.GenFramebuffer();
 
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, TAA);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            
+            setupTex2D(TAA, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
             //====================================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, TAAbuff);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -1005,42 +545,10 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             DrawBuffersEnum[] att10 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
             GL.DrawBuffers(4, att10);
 
-            /*
-             private Shader _SpatialRestirShader;
-        int spatialbuff;
-        int spatialWeigths;
-        int spatialOutgoingRadiance; 
-             */
-            /*
-             private Shader _upscale;
-        int upscale;
-        int upscaleBuff;
-             */
+ 
+            setupTex2D(upscale, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
+            setupTex2D(upscale2, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
 
-            GL.BindTexture(TextureTarget.Texture2D, upscale);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * KeepScale), (int)(size.Y * KeepScale), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            GL.BindTexture(TextureTarget.Texture2D, upscale2);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
             //====================================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleBuff);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -1060,128 +568,30 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             prevTAA = GL.GenTexture();
             swapbuff = GL.GenFramebuffer();
             swapbuff2 = GL.GenFramebuffer();
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevTemporalWeigths);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+           
+            setupTex2D(prevTemporalWeigths, false);
+            
+            setupTex2D(prevTemporalOutgoingRadiance, false);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevTemporalOutgoingRadiance);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevTemporalPosition);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevSpatialWeigths);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevSpatialOutgoingRadiance);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)size.X, (int)size.Y, 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevNormalDepth);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba32f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
+           
+            setupTex2D(prevTemporalPosition, false);
 
 
-            //prevPosition
-            //====================================================================
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevAcc);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            setupTex2D(prevSpatialWeigths, false);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
+    
+            setupTex2D(prevSpatialOutgoingRadiance, false);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, prevTAA);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            setupTex2D(prevNormalDepth, true, PixelInternalFormat.Rgba32f);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            //====================================================================
-            /*
-             prevTemporalWeigths = GL.GenTexture();
-            prevTemporalOutgoingRadiance = GL.GenTexture();
-            prevTemporalPosition = GL.GenTexture();
-            prevSpatialWeigths = GL.GenTexture();
-            prevSpatialOutgoingRadiance = GL.GenTexture();
-            swapbuff = GL.GenFramebuffer();
-             */
+           
+            setupTex2D(prevAcc, true);
+
+
+            setupTex2D(prevTAA, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+
+  
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff);
 
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -1244,60 +654,13 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             den2buff = GL.GenFramebuffer();
             var1 = GL.GenTexture();
             var2 = GL.GenTexture();
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, den1);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+       
+            setupTex2D(den1, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            setupTex2D(den2, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
+            setupTex2D(var1, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-            GL.BindTexture(TextureTarget.Texture2D, den2);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, var1);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-
-
-            GL.BindTexture(TextureTarget.Texture2D, var2);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
+            setupTex2D(var2, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
 
 
             //====================================================================
@@ -1349,19 +712,9 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             //==========================================================-=
             tempAccum = GL.GenTexture();
             tempAccumbuff = GL.GenFramebuffer();
-            //====================================================================
-            GL.BindTexture(TextureTarget.Texture2D, tempAccum);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+         
+            setupTex2D(tempAccum);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0,
-                PixelInternalFormat.Rgba16f,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
             //====================================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, tempAccumbuff);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,

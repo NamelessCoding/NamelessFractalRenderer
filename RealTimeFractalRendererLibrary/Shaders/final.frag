@@ -1134,7 +1134,7 @@ void main() {
   // upscaleIndirect(vec2 iResolution, vec2 texcc){
 
   // color2 =  upscaleIndirect(wh, texCoord);/
-  // color2 = texture2D(fogLO, texCoord).xyz;
+   color2 = texture2D(fogLO, texCoord).xyz;
 
   // vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale, vec2
   // uPixelSize) color2 = depthOfField(texCoord, depthCenter, 8., 1./wh);
