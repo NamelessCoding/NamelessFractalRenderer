@@ -2,7 +2,6 @@
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace RealTimeFractalRendererLibrary
@@ -13,19 +12,19 @@ namespace RealTimeFractalRendererLibrary
         int quadVAO;
         int quadEBO;
 
-        float[] quad =
-        {
+        readonly float[] quad =
+        [
             //Position          Texture coordinates
             1.0f,  1.0f, 0.0f, 1.0f, 1.0f, // top right
             1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom right
             -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom left
             -1.0f,  1.0f, 0.0f, 0.0f, 1.0f  // top left
-        };
+        ];
 
-        uint[] quadindices = {  // note that we start from 0!
+        readonly uint[] quadindices = [  // note that we start from 0!
             0, 1, 3,   // first triangle
             1, 2, 3    // second triangle
-        };
+        ];
 
         int colortex;
         int colortexHoldInfo;
@@ -45,19 +44,19 @@ namespace RealTimeFractalRendererLibrary
         int watnorm;
 
         int colorbuff2;
-        private Shader _initShader;
+        private Shader _initShader = default!;
         int colorfog;
         int colorfog2;
 
         int colorbuff;
-        Stopwatch stopWatch;
+        Stopwatch stopWatch = default!;
 
         float iFrame = 0.0f;
 
-        private Shader _testShader;
-        private Shader _finalShader;
+        private Shader _testShader = default!;
+        private Shader _finalShader = default!;
 
-        private Shader _TemporalRestirShader;
+        private Shader _TemporalRestirShader = default!;
         int temporalbuff;
         int temporalWeigths;
         int temporalOutgoingRadiance;
@@ -67,7 +66,7 @@ namespace RealTimeFractalRendererLibrary
         int temporalPosition;
         int temporalPositionFog;
 
-        private Shader _SpatialRestirShader;
+        private Shader _SpatialRestirShader = default!;
         int spatialbuff;
         int spatialWeigths;
         int spatialOutgoingRadiance;
@@ -75,10 +74,10 @@ namespace RealTimeFractalRendererLibrary
         int spatialWeigthsFog;
         int spatialOutgoingRadianceFog;
 
-        private Shader _swapShader;
+        private Shader _swapShader = default!;
         int swapbuff;
 
-        private Shader _swapShader2;
+        private Shader _swapShader2 = default!;
         int swapbuff2;
 
         int prevTemporalWeigths;
@@ -93,23 +92,23 @@ namespace RealTimeFractalRendererLibrary
         int prevAcc;
         int prevTAA;
 
-        private Shader _tempAccumShader;
+        private Shader _tempAccumShader = default!;
         int tempAccumbuff;
         int tempAccum;
 
-        private Shader _upscale;
+        private Shader _upscale = default!;
         int upscale;
         int upscale2;
 
         int upscaleBuff;
 
 
-        private Shader _TAAShader;
+        private Shader _TAAShader = default!;
         int TAAbuff;
         int TAA;
 
-        private Shader _denoiseShader;
-        private Shader _denoiseShader2;
+        private Shader _denoiseShader = default!;
+        //private Shader _denoiseShader2 = default!;
         int den1;
         int den2;
         int den1buff;
@@ -122,26 +121,26 @@ namespace RealTimeFractalRendererLibrary
         int rcrad;
         int rcfog;
 
-        private Shader _skyShader;
+        private Shader _skyShader = default!;
 
         int skybuff;
         int skytex;
 
-        private Shader _sunShader;
+        private Shader _sunShader = default!;
 
         int sunbuff;
         int suntex;
 
 
-        private Shader _RC;
+        private Shader _RC = default!;
 
         int worley;
 
-        private Shader _worl;
+        private Shader _worl = default!;
 
 
 
-        private Camera _camera;
+        private Camera _camera = default!;
         public Camera Camera => _camera;
 
         /// <summary>
@@ -149,21 +148,22 @@ namespace RealTimeFractalRendererLibrary
         /// </summary>
         public int TargetFramebuffer { get; set; } = 0;
 
-        private Vector3 prevCamPos = new Vector3(0.0f, 0.0f, 0.0f);
+        private Vector3 prevCamPos = new(0.0f, 0.0f, 0.0f);
 
-        private bool enableDebugging = false;
-        private bool isEverythingLower = true;
+        private readonly bool enableDebugging = false;
+        private readonly bool isEverythingLower = true;
 
-        static float ScaleEverything = 1.5f;
-        static int shadowScale = 2048;
-        static float KeepScale = ScaleEverything;
+        private const float KeepScale = 1.5f; //the default scale
+        private static float ScaleEverything = KeepScale;
 
-        private Vector2 size = new Vector2(1920.0f / ScaleEverything, 1080.0f / ScaleEverything);
+        private const int shadowScale = 2048;
+
+        private Vector2 size = new(1920.0f / ScaleEverything, 1080.0f / ScaleEverything);
 
         private Matrix4 prevView;
         private Matrix4 prevProjection;
 
-        public Vector3 ldir = new Vector3(0.0f, 0.1f, -0.9f);
+        public Vector3 ldir = new(0.0f, 0.1f, -0.9f);
 
         public float bright = 1.0f;
         
@@ -201,6 +201,7 @@ namespace RealTimeFractalRendererLibrary
         private static readonly DebugProc _debugProcCallback = DebugCallback;
         private static GCHandle _debugProcCallbackHandle;
 
+        private bool isInitialized = false;
 
         public void Load(Vector2i resolution)
         {
@@ -266,7 +267,7 @@ namespace RealTimeFractalRendererLibrary
                 PixelInternalFormat.Rgba16f,
                 (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
                 PixelType.UnsignedByte, IntPtr.Zero);
-            float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+            float[] borderColor = [1.0f, 1.0f, 1.0f, 1.0f];
 
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
 
@@ -633,7 +634,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 TextureTarget.Texture2D, skytex, 0
                 );
 
-            DrawBuffersEnum[] attx = { DrawBuffersEnum.ColorAttachment0 };
+            DrawBuffersEnum[] attx = [DrawBuffersEnum.ColorAttachment0];
             GL.DrawBuffers(1, attx);
 
             //=======================================================
@@ -644,7 +645,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 TextureTarget.Texture2D, suntex, 0
                 );
 
-            DrawBuffersEnum[] attxs = { DrawBuffersEnum.ColorAttachment0 };
+            DrawBuffersEnum[] attxs = [DrawBuffersEnum.ColorAttachment0];
             GL.DrawBuffers(1, attxs);
             //====================================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
@@ -677,9 +678,9 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 FramebufferAttachment.ColorAttachment6,
                 TextureTarget.Texture2D, watnorm, 0
                 );
-            DrawBuffersEnum[] att = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
+            DrawBuffersEnum[] att = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
                 DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4,
-             DrawBuffersEnum.ColorAttachment5, DrawBuffersEnum.ColorAttachment6};
+             DrawBuffersEnum.ColorAttachment5, DrawBuffersEnum.ColorAttachment6];
             GL.DrawBuffers(7, att);
 
 
@@ -709,9 +710,9 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 FramebufferAttachment.ColorAttachment5,
                 TextureTarget.Texture2D, colortexFogPos, 0
                 );
-            DrawBuffersEnum[] atts = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
+            DrawBuffersEnum[] atts = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
                 DrawBuffersEnum.ColorAttachment2,  DrawBuffersEnum.ColorAttachment3
-            ,  DrawBuffersEnum.ColorAttachment4,  DrawBuffersEnum.ColorAttachment5};
+            ,  DrawBuffersEnum.ColorAttachment4,  DrawBuffersEnum.ColorAttachment5];
             GL.DrawBuffers(6, atts);
 
             /*
@@ -870,8 +871,8 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 FramebufferAttachment.ColorAttachment5,
                 TextureTarget.Texture2D, temporalPositionFog, 0
                 );
-            DrawBuffersEnum[] att2 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2
-            , DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4, DrawBuffersEnum.ColorAttachment5};
+            DrawBuffersEnum[] att2 = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2
+            , DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4, DrawBuffersEnum.ColorAttachment5];
             GL.DrawBuffers(6, att2);
 
             //private Shader _swapShader;
@@ -959,7 +960,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 FramebufferAttachment.ColorAttachment3,
                 TextureTarget.Texture2D, spatialOutgoingRadianceFog, 0
                 );
-            DrawBuffersEnum[] att4 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att4 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att4);
 
             /*
@@ -1002,7 +1003,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, colortexFogPrev, 0
                );
-            DrawBuffersEnum[] att10 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att10 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att10);
 
             /*
@@ -1047,7 +1048,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 FramebufferAttachment.ColorAttachment0,
                 TextureTarget.Texture2D, upscale, 0
                 );
-            DrawBuffersEnum[] att11 = { DrawBuffersEnum.ColorAttachment0 };
+            DrawBuffersEnum[] att11 = [DrawBuffersEnum.ColorAttachment0];
             GL.DrawBuffers(1, att11);
 
             prevTemporalWeigths = GL.GenTexture();
@@ -1200,7 +1201,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, upscale2, 0
                );
-            DrawBuffersEnum[] att3 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att3 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att3);
 
 
@@ -1228,8 +1229,8 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 TextureTarget.Texture2D, prevSpatialOutgoingRadiance, 0
                 );
 
-            DrawBuffersEnum[] att3s = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2,
-                DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4};
+            DrawBuffersEnum[] att3s = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2,
+                DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4];
             GL.DrawBuffers(5, att3s);
 
 
@@ -1318,7 +1319,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, colortexSecondAlbedo, 0
                );
-            DrawBuffersEnum[] att8 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att8 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att8);
 
 
@@ -1341,7 +1342,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, colortexSecondAlbedo, 0
                );
-            DrawBuffersEnum[] att9 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att9 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att9);
 
 
@@ -1376,7 +1377,7 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
                 FramebufferAttachment.ColorAttachment2,
                 TextureTarget.Texture2D, var1, 0
                 );
-            DrawBuffersEnum[] att5 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2 };
+            DrawBuffersEnum[] att5 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2];
             GL.DrawBuffers(3, att5);
 
 
@@ -1684,16 +1685,20 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             GL.DispatchCompute(64, 64, 64);
 
             //CursorState = CursorState.Grabbed;
+
+            isInitialized = true;
         }
 
 
         public void RenderFrame()
         {
+            if (!isInitialized) throw new InvalidOperationException("Unable to render frame before successful initialization.");
+
             //GL.Clear(ClearBufferMask.ColorBufferBit);
 
             ldir = Vector3.Normalize(ldir);
 
-            Vector3 lpos = new Vector3( _camera.Position.X + ldir.X * 270.0f, ldir.Y * 270.0f, _camera.Position.Z + ldir.Z * 270.0f );
+            Vector3 lpos = new( _camera.Position.X + ldir.X * 270.0f, ldir.Y * 270.0f, _camera.Position.Z + ldir.Z * 270.0f );
 
             Matrix4 lightview = Matrix4.LookAt(
                 lpos,
@@ -1708,9 +1713,9 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             //    );
             Matrix4 lightproj = Matrix4.CreateOrthographic(200.0f, 200.0f, 0.0f, 127.5f);
 
-            Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
+            //Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
 
-             Vector3 lpos2 = new Vector3(_camera.Position.X + ldir.X * 360.0f, ldir.Y * 360.0f, _camera.Position.Z + ldir.Z * 360.0f);
+             Vector3 lpos2 = new(_camera.Position.X + ldir.X * 360.0f, ldir.Y * 360.0f, _camera.Position.Z + ldir.Z * 360.0f);
             //lpos2 = lpos;
             //Vector3 lpos2 = ldir * 8200.0f;
            // Vector3 lpos2 = new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z) + nm * 8200.0f;
@@ -1736,19 +1741,19 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _initShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _initShader.setMatrix4(view, "view");
-            _initShader.setMatrix4(projection, "projection");
-            _initShader.setMatrix4(view.Inverted(), "invview");
-            _initShader.setMatrix4(projection.Inverted(), "invproj");
+            _initShader.SetMatrix4(view, "view");
+            _initShader.SetMatrix4(projection, "projection");
+            _initShader.SetMatrix4(view.Inverted(), "invview");
+            _initShader.SetMatrix4(projection.Inverted(), "invproj");
 
-            _initShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _initShader.setFloat(iFrame, "time");
-            _initShader.setFloat(stopWatch.ElapsedMilliseconds, "time2");
+            _initShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _initShader.SetFloat(iFrame, "time");
+            _initShader.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
 
-            _initShader.setVector3(_camera.Position, "viewPos");
-            _initShader.setVector3(prevCamPos, "lastViewPos");
+            _initShader.SetVector3(_camera.Position, "viewPos");
+            _initShader.SetVector3(prevCamPos, "lastViewPos");
 
-            _initShader.setVector3(ldir, "ldir");
+            _initShader.SetVector3(ldir, "ldir");
 
             GL.ActiveTexture(TextureUnit.Texture0);
             // GL.BindTexture(TextureTarget.Texture3D, rcpos);
@@ -1773,14 +1778,14 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _skyShader.Use();
-            _skyShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _skyShader.setFloat(iFrame, "time");
-            _skyShader.setVector3(ldir, "ldir");
-            _skyShader.setVector3(_camera.Position, "viewPos");
-            _skyShader.setVector3(lpos2, "lpos2");
+            _skyShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _skyShader.SetFloat(iFrame, "time");
+            _skyShader.SetVector3(ldir, "ldir");
+            _skyShader.SetVector3(_camera.Position, "viewPos");
+            _skyShader.SetVector3(lpos2, "lpos2");
 
-            _skyShader.setMatrix4(lightproj2, "lightproj2");
-            _skyShader.setMatrix4(lightview2, "lightview2");
+            _skyShader.SetMatrix4(lightproj2, "lightproj2");
+            _skyShader.SetMatrix4(lightview2, "lightview2");
 
             GL.BindVertexArray(quadVAO);
 
@@ -1805,31 +1810,31 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _sunShader.Use();
-            _sunShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _sunShader.setFloat(iFrame, "time");
-            _sunShader.setVector3(ldir, "ldir");
+            _sunShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _sunShader.SetFloat(iFrame, "time");
+            _sunShader.SetVector3(ldir, "ldir");
 
-            _sunShader.setVector3(lpos, "lpos");
+            _sunShader.SetVector3(lpos, "lpos");
 
-            _sunShader.setMatrix4(lightproj, "lightproj");
-            _sunShader.setMatrix4(lightview, "lightview");
-
-
-            _sunShader.setMatrix4(lightview.Inverted(), "invview");
-            _sunShader.setMatrix4(lightproj.Inverted(), "invproj");
-            _sunShader.setFloat((float)shadowScale, "scale");
-            _sunShader.setVector3(_camera.Position, "viewPos");
-
-            _sunShader.setMatrix4(lightview2.Inverted(), "invview2");
-            _sunShader.setMatrix4(lightproj2.Inverted(), "invproj2");
+            _sunShader.SetMatrix4(lightproj, "lightproj");
+            _sunShader.SetMatrix4(lightview, "lightview");
 
 
+            _sunShader.SetMatrix4(lightview.Inverted(), "invview");
+            _sunShader.SetMatrix4(lightproj.Inverted(), "invproj");
+            _sunShader.SetFloat((float)shadowScale, "scale");
+            _sunShader.SetVector3(_camera.Position, "viewPos");
+
+            _sunShader.SetMatrix4(lightview2.Inverted(), "invview2");
+            _sunShader.SetMatrix4(lightproj2.Inverted(), "invproj2");
 
 
-            _sunShader.setVector3(lpos2, "lpos2");
 
-            _sunShader.setMatrix4(lightproj2, "lightproj2");
-            _sunShader.setMatrix4(lightview2, "lightview2");
+
+            _sunShader.SetVector3(lpos2, "lpos2");
+
+            _sunShader.SetMatrix4(lightproj2, "lightproj2");
+            _sunShader.SetMatrix4(lightview2, "lightview2");
             GL.BindVertexArray(quadVAO);
 
             //GL.ActiveTexture(TextureUnit.Texture0);
@@ -1850,21 +1855,21 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _RC.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _RC.setMatrix4(view, "view");
-            _RC.setMatrix4(projection, "projection");
-            _RC.setMatrix4(view.Inverted(), "invview");
-            _RC.setMatrix4(projection.Inverted(), "invproj");
+            _RC.SetMatrix4(view, "view");
+            _RC.SetMatrix4(projection, "projection");
+            _RC.SetMatrix4(view.Inverted(), "invview");
+            _RC.SetMatrix4(projection.Inverted(), "invproj");
 
-            _RC.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y* KeepScale), "wh");
-            _RC.setFloat(iFrame, "time");
-            _RC.setFloat(stopWatch.ElapsedMilliseconds, "time2");
+            _RC.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y* KeepScale), "wh");
+            _RC.SetFloat(iFrame, "time");
+            _RC.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
 
-            _RC.setVector3(_camera.Position, "viewPos");
-            _RC.setVector3(prevCamPos, "lastViewPos");
-            _RC.setVector3(ldir, "ldir");
-            _RC.setMatrix4(lightproj, "lightproj");
-            _RC.setMatrix4(lightview, "lightview");
-            _RC.setVector3(lpos, "lpos");
+            _RC.SetVector3(_camera.Position, "viewPos");
+            _RC.SetVector3(prevCamPos, "lastViewPos");
+            _RC.SetVector3(ldir, "ldir");
+            _RC.SetMatrix4(lightproj, "lightproj");
+            _RC.SetMatrix4(lightview, "lightview");
+            _RC.SetVector3(lpos, "lpos");
 
 
             GL.ActiveTexture(TextureUnit.Texture0);
@@ -1908,20 +1913,20 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _testShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _testShader.setMatrix4(view, "view");
-            _testShader.setMatrix4(projection, "projection");
-            _testShader.setMatrix4(view.Inverted(), "invview");
-            _testShader.setMatrix4(projection.Inverted(), "invproj");
+            _testShader.SetMatrix4(view, "view");
+            _testShader.SetMatrix4(projection, "projection");
+            _testShader.SetMatrix4(view.Inverted(), "invview");
+            _testShader.SetMatrix4(projection.Inverted(), "invproj");
 
-            _testShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _testShader.setFloat(iFrame, "time");
-            _testShader.setFloat(stopWatch.ElapsedMilliseconds, "time2");
+            _testShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _testShader.SetFloat(iFrame, "time");
+            _testShader.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
 
-            _testShader.setVector3(_camera.Position, "viewPos");
-            _testShader.setVector3(ldir, "ldir");
-            _testShader.setMatrix4(lightproj, "lightproj");
-            _testShader.setMatrix4(lightview, "lightview");
-            _testShader.setVector3(lpos, "lpos");
+            _testShader.SetVector3(_camera.Position, "viewPos");
+            _testShader.SetVector3(ldir, "ldir");
+            _testShader.SetMatrix4(lightproj, "lightproj");
+            _testShader.SetMatrix4(lightview, "lightview");
+            _testShader.SetVector3(lpos, "lpos");
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, colortexPosition);
@@ -1958,18 +1963,18 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _TemporalRestirShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _TemporalRestirShader.setMatrix4(view, "view");
-            _TemporalRestirShader.setMatrix4(projection, "projection");
-            _TemporalRestirShader.setMatrix4(view.Inverted(), "invview");
-            _TemporalRestirShader.setMatrix4(projection.Inverted(), "invproj");
-            _TemporalRestirShader.setMatrix4(prevView, "prevview");
-            _TemporalRestirShader.setMatrix4(prevProjection, "prevproj");
+            _TemporalRestirShader.SetMatrix4(view, "view");
+            _TemporalRestirShader.SetMatrix4(projection, "projection");
+            _TemporalRestirShader.SetMatrix4(view.Inverted(), "invview");
+            _TemporalRestirShader.SetMatrix4(projection.Inverted(), "invproj");
+            _TemporalRestirShader.SetMatrix4(prevView, "prevview");
+            _TemporalRestirShader.SetMatrix4(prevProjection, "prevproj");
 
-            _TemporalRestirShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _TemporalRestirShader.setFloat(iFrame, "time");
-            _TemporalRestirShader.setVector3(_camera.Position, "viewPos");
-            _TemporalRestirShader.setVector3(prevCamPos, "lastViewPos");
-            _TemporalRestirShader.setVector3(ldir, "ldir");
+            _TemporalRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _TemporalRestirShader.SetFloat(iFrame, "time");
+            _TemporalRestirShader.SetVector3(_camera.Position, "viewPos");
+            _TemporalRestirShader.SetVector3(prevCamPos, "lastViewPos");
+            _TemporalRestirShader.SetVector3(ldir, "ldir");
 
             /*
               _TemporalRestirShader.SetInt("prevW", 5);
@@ -2024,20 +2029,20 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _SpatialRestirShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _SpatialRestirShader.setMatrix4(view, "view");
-            _SpatialRestirShader.setMatrix4(projection, "projection");
-            _SpatialRestirShader.setMatrix4(view.Inverted(), "invview");
-            _SpatialRestirShader.setMatrix4(projection.Inverted(), "invproj");
-            _SpatialRestirShader.setMatrix4(prevView, "prevview");
-            _SpatialRestirShader.setMatrix4(prevProjection, "prevproj");
+            _SpatialRestirShader.SetMatrix4(view, "view");
+            _SpatialRestirShader.SetMatrix4(projection, "projection");
+            _SpatialRestirShader.SetMatrix4(view.Inverted(), "invview");
+            _SpatialRestirShader.SetMatrix4(projection.Inverted(), "invproj");
+            _SpatialRestirShader.SetMatrix4(prevView, "prevview");
+            _SpatialRestirShader.SetMatrix4(prevProjection, "prevproj");
 
-            _SpatialRestirShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _SpatialRestirShader.setFloat(iFrame, "time");
-            _SpatialRestirShader.setFloat(stopWatch.ElapsedMilliseconds, "time2");
+            _SpatialRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _SpatialRestirShader.SetFloat(iFrame, "time");
+            _SpatialRestirShader.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
 
-            _SpatialRestirShader.setVector3(_camera.Position, "viewPos");
-            _SpatialRestirShader.setVector3(prevCamPos, "lastViewPos");
-            _SpatialRestirShader.setVector3(ldir, "ldir");
+            _SpatialRestirShader.SetVector3(_camera.Position, "viewPos");
+            _SpatialRestirShader.SetVector3(prevCamPos, "lastViewPos");
+            _SpatialRestirShader.SetVector3(ldir, "ldir");
 
             /*
               _TemporalRestirShader.SetInt("prevW", 5);
@@ -2122,19 +2127,19 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _tempAccumShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _tempAccumShader.setMatrix4(view, "view");
-            _tempAccumShader.setMatrix4(projection, "projection");
-            _tempAccumShader.setMatrix4(view.Inverted(), "invview");
-            _tempAccumShader.setMatrix4(projection.Inverted(), "invproj");
-            _tempAccumShader.setMatrix4(prevView, "prevview");
-            _tempAccumShader.setMatrix4(prevProjection, "prevproj");
+            _tempAccumShader.SetMatrix4(view, "view");
+            _tempAccumShader.SetMatrix4(projection, "projection");
+            _tempAccumShader.SetMatrix4(view.Inverted(), "invview");
+            _tempAccumShader.SetMatrix4(projection.Inverted(), "invproj");
+            _tempAccumShader.SetMatrix4(prevView, "prevview");
+            _tempAccumShader.SetMatrix4(prevProjection, "prevproj");
 
-            _tempAccumShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _tempAccumShader.setFloat(iFrame, "time");
-            _tempAccumShader.setVector3(_camera.Position, "viewPos");
-            _tempAccumShader.setVector3(prevCamPos, "lastViewPos");
+            _tempAccumShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _tempAccumShader.SetFloat(iFrame, "time");
+            _tempAccumShader.SetVector3(_camera.Position, "viewPos");
+            _tempAccumShader.SetVector3(prevCamPos, "lastViewPos");
 
-            _tempAccumShader.setVector3(ldir, "ldir");
+            _tempAccumShader.SetVector3(ldir, "ldir");
 
             /*
               _TemporalRestirShader.SetInt("prevW", 5);
@@ -2197,18 +2202,18 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
 
                 GL.BindVertexArray(quadVAO);
                 // _testShader.SetMatrix4(model, "model");
-                _denoiseShader.setMatrix4(view, "view");
-                _denoiseShader.setMatrix4(projection, "projection");
-                _denoiseShader.setMatrix4(view.Inverted(), "invview");
-                _denoiseShader.setMatrix4(projection.Inverted(), "invproj");
-                _denoiseShader.setMatrix4(prevView, "prevview");
-                _denoiseShader.setMatrix4(prevProjection, "prevproj");
+                _denoiseShader.SetMatrix4(view, "view");
+                _denoiseShader.SetMatrix4(projection, "projection");
+                _denoiseShader.SetMatrix4(view.Inverted(), "invview");
+                _denoiseShader.SetMatrix4(projection.Inverted(), "invproj");
+                _denoiseShader.SetMatrix4(prevView, "prevview");
+                _denoiseShader.SetMatrix4(prevProjection, "prevproj");
 
-                _denoiseShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-                _denoiseShader.setFloat(iFrame, "time");
-                _denoiseShader.setVector3(_camera.Position, "viewPos");
-                _denoiseShader.setVector3(prevCamPos, "lastViewPos");
-                _denoiseShader.setVector3(ldir, "ldir");
+                _denoiseShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+                _denoiseShader.SetFloat(iFrame, "time");
+                _denoiseShader.SetVector3(_camera.Position, "viewPos");
+                _denoiseShader.SetVector3(prevCamPos, "lastViewPos");
+                _denoiseShader.SetVector3(ldir, "ldir");
 
 
                 GL.ActiveTexture(TextureUnit.Texture0);
@@ -2282,21 +2287,21 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _TAAShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _TAAShader.setMatrix4(view, "view");
-            _TAAShader.setMatrix4(projection, "projection");
-            _TAAShader.setMatrix4(view.Inverted(), "invview");
-            _TAAShader.setMatrix4(projection.Inverted(), "invproj");
-            _TAAShader.setMatrix4(prevView, "prevview");
-            _TAAShader.setMatrix4(prevProjection, "prevproj");
+            _TAAShader.SetMatrix4(view, "view");
+            _TAAShader.SetMatrix4(projection, "projection");
+            _TAAShader.SetMatrix4(view.Inverted(), "invview");
+            _TAAShader.SetMatrix4(projection.Inverted(), "invproj");
+            _TAAShader.SetMatrix4(prevView, "prevview");
+            _TAAShader.SetMatrix4(prevProjection, "prevproj");
 
-            _TAAShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _TAAShader.setFloat(iFrame, "time");
-            _TAAShader.setVector3(_camera.Position, "viewPos");
-            _TAAShader.setVector3(prevCamPos, "lastViewPos");
-            _TAAShader.setVector3(ldir, "ldir");
-            _TAAShader.setVector3(lpos, "lpos");
-            _TAAShader.setMatrix4(lightproj, "lightproj");
-            _TAAShader.setMatrix4(lightview, "lightview");
+            _TAAShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _TAAShader.SetFloat(iFrame, "time");
+            _TAAShader.SetVector3(_camera.Position, "viewPos");
+            _TAAShader.SetVector3(prevCamPos, "lastViewPos");
+            _TAAShader.SetVector3(ldir, "ldir");
+            _TAAShader.SetVector3(lpos, "lpos");
+            _TAAShader.SetMatrix4(lightproj, "lightproj");
+            _TAAShader.SetMatrix4(lightview, "lightview");
 
             GL.ActiveTexture(TextureUnit.Texture0);
             //GL.BindTexture(TextureTarget.Texture3D, rcpos);
@@ -2376,18 +2381,18 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _upscale.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _upscale.setMatrix4(view, "view");
-            _upscale.setMatrix4(projection, "projection");
-            _upscale.setMatrix4(view.Inverted(), "invview");
-            _upscale.setMatrix4(projection.Inverted(), "invproj");
-            _upscale.setMatrix4(prevView, "prevview");
-            _upscale.setMatrix4(prevProjection, "prevproj");
+            _upscale.SetMatrix4(view, "view");
+            _upscale.SetMatrix4(projection, "projection");
+            _upscale.SetMatrix4(view.Inverted(), "invview");
+            _upscale.SetMatrix4(projection.Inverted(), "invproj");
+            _upscale.SetMatrix4(prevView, "prevview");
+            _upscale.SetMatrix4(prevProjection, "prevproj");
 
-            _upscale.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _upscale.setFloat(iFrame, "time");
-            _upscale.setVector3(_camera.Position, "viewPos");
-            _upscale.setVector3(prevCamPos, "lastViewPos");
-            _upscale.setVector3(ldir, "ldir");
+            _upscale.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _upscale.SetFloat(iFrame, "time");
+            _upscale.SetVector3(_camera.Position, "viewPos");
+            _upscale.SetVector3(prevCamPos, "lastViewPos");
+            _upscale.SetVector3(ldir, "ldir");
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, TAA);
@@ -2435,18 +2440,18 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
               */
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _swapShader.setMatrix4(view, "view");
-            _swapShader.setMatrix4(projection, "projection");
-            _swapShader.setMatrix4(view.Inverted(), "invview");
-            _swapShader.setMatrix4(projection.Inverted(), "invproj");
-            _swapShader.setMatrix4(prevView, "prevview");
-            _swapShader.setMatrix4(prevProjection, "prevproj");
+            _swapShader.SetMatrix4(view, "view");
+            _swapShader.SetMatrix4(projection, "projection");
+            _swapShader.SetMatrix4(view.Inverted(), "invview");
+            _swapShader.SetMatrix4(projection.Inverted(), "invproj");
+            _swapShader.SetMatrix4(prevView, "prevview");
+            _swapShader.SetMatrix4(prevProjection, "prevproj");
 
-            _swapShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _swapShader.setFloat(iFrame, "time");
-            _swapShader.setVector3(_camera.Position, "viewPos");
-            _swapShader.setVector3(prevCamPos, "lastViewPos");
-            _swapShader.setVector3(ldir, "ldir");
+            _swapShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _swapShader.SetFloat(iFrame, "time");
+            _swapShader.SetVector3(_camera.Position, "viewPos");
+            _swapShader.SetVector3(prevCamPos, "lastViewPos");
+            _swapShader.SetVector3(ldir, "ldir");
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, temporalWeigths);
@@ -2490,18 +2495,18 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
               */
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _swapShader2.setMatrix4(view, "view");
-            _swapShader2.setMatrix4(projection, "projection");
-            _swapShader2.setMatrix4(view.Inverted(), "invview");
-            _swapShader2.setMatrix4(projection.Inverted(), "invproj");
-            _swapShader2.setMatrix4(prevView, "prevview");
-            _swapShader2.setMatrix4(prevProjection, "prevproj");
+            _swapShader2.SetMatrix4(view, "view");
+            _swapShader2.SetMatrix4(projection, "projection");
+            _swapShader2.SetMatrix4(view.Inverted(), "invview");
+            _swapShader2.SetMatrix4(projection.Inverted(), "invproj");
+            _swapShader2.SetMatrix4(prevView, "prevview");
+            _swapShader2.SetMatrix4(prevProjection, "prevproj");
 
-            _swapShader2.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _swapShader2.setFloat(iFrame, "time");
-            _swapShader2.setVector3(_camera.Position, "viewPos");
-            _swapShader2.setVector3(prevCamPos, "lastViewPos");
-            _swapShader2.setVector3(ldir, "ldir");
+            _swapShader2.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _swapShader2.SetFloat(iFrame, "time");
+            _swapShader2.SetVector3(_camera.Position, "viewPos");
+            _swapShader2.SetVector3(prevCamPos, "lastViewPos");
+            _swapShader2.SetVector3(ldir, "ldir");
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, temporalWeigths);
@@ -2536,21 +2541,21 @@ glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, WIDTH, HEIGHT, DEPTH, 0, GL_RGB,
             _finalShader.Use();
             GL.BindVertexArray(quadVAO);
             // _testShader.SetMatrix4(model, "model");
-            _finalShader.setMatrix4(view, "view");
-            _finalShader.setMatrix4(projection, "projection");
-            _finalShader.setMatrix4(view.Inverted(), "invview");
-            _finalShader.setMatrix4(projection.Inverted(), "invproj");
+            _finalShader.SetMatrix4(view, "view");
+            _finalShader.SetMatrix4(projection, "projection");
+            _finalShader.SetMatrix4(view.Inverted(), "invview");
+            _finalShader.SetMatrix4(projection.Inverted(), "invproj");
 
-            _finalShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _finalShader.setFloat(iFrame, "time");
-            _finalShader.setVector3(_camera.Position, "viewPos");
-            _finalShader.setVector3(ldir, "ldir");
-            _finalShader.setMatrix4(lightproj, "lightproj");
-            _finalShader.setMatrix4(lightview, "lightview");
-            _finalShader.setVector3(lpos, "lpos");
-            _finalShader.setMatrix4(lightview.Inverted(), "linvview");
-            _finalShader.setMatrix4(lightproj.Inverted(), "linvproj");
-            _finalShader.setFloat(bright, "brightness");
+            _finalShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _finalShader.SetFloat(iFrame, "time");
+            _finalShader.SetVector3(_camera.Position, "viewPos");
+            _finalShader.SetVector3(ldir, "ldir");
+            _finalShader.SetMatrix4(lightproj, "lightproj");
+            _finalShader.SetMatrix4(lightview, "lightview");
+            _finalShader.SetVector3(lpos, "lpos");
+            _finalShader.SetMatrix4(lightview.Inverted(), "linvview");
+            _finalShader.SetMatrix4(lightproj.Inverted(), "linvproj");
+            _finalShader.SetFloat(bright, "brightness");
             GL.ActiveTexture(TextureUnit.Texture0);
             //GL.BindTexture(TextureTarget.Texture3D, rcpos);
             GL.BindImageTexture(0, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);

@@ -10,7 +10,7 @@ namespace RealTimeFractalRendererGUI
     {
         public IReadOnlySet<Key> PressedKeys => _pressedKeys;
 
-        private readonly HashSet<Key> _pressedKeys;
+        private readonly HashSet<Key> _pressedKeys = [];
         private readonly object _pressedKeysLock = new();
 
         public KeyboardHelper(UIElement c)
@@ -18,7 +18,6 @@ namespace RealTimeFractalRendererGUI
             c.LostFocus += LostFocus;
             c.KeyDown += WinKeyDown;
             c.KeyUp += WinKeyUp;
-            _pressedKeys = new HashSet<Key>();
         }
 
         private void LostFocus(object sender, RoutedEventArgs e)

@@ -10,7 +10,7 @@ namespace LearnOpenTK.Common
 
     // TL;DR: This is just one of many ways in which we could have set up the camera.
     // Check out the web version if you don't know why we are doing a specific thing or want to know more about the code.
-    public class Camera
+    public class Camera(Vector3 position, float aspectRatio)
     {
         // Those vectors are directions pointing outwards from the camera to define how it rotated.
         private Vector3 _front = -Vector3.UnitZ;
@@ -28,17 +28,11 @@ namespace LearnOpenTK.Common
         // The field of view of the camera (radians)
         private float _fov = MathHelper.PiOver2;
 
-        public Camera(Vector3 position, float aspectRatio)
-        {
-            Position = position;
-            AspectRatio = aspectRatio;
-        }
-
         // The position of the camera
-        public Vector3 Position { get; set; }
+        public Vector3 Position { get; set; } = position;
 
         // This is simply the aspect ratio of the viewport, used for the projection matrix.
-        public float AspectRatio { private get; set; }
+        public float AspectRatio { private get; set; } = aspectRatio;
 
         public Vector3 Front => _front;
 

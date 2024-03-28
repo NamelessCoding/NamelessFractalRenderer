@@ -1,6 +1,4 @@
 ﻿using OpenTK.Graphics.OpenGL4;
-using System.Drawing;
-using System.Drawing.Imaging;
 using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 using StbImageSharp;
 using System.IO;
@@ -8,9 +6,9 @@ using System.IO;
 namespace LearnOpenTK.Common
 {
     // A helper class, much like Shader, meant to simplify loading textures.
-    public class Texture
+    public class Texture(int glHandle)
     {
-        public readonly int Handle;
+        public readonly int Handle = glHandle;
 
         public static Texture LoadFromFile(string path)
         {
@@ -71,11 +69,6 @@ namespace LearnOpenTK.Common
             GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
 
             return new Texture(handle);
-        }
-
-        public Texture(int glHandle)
-        {
-            Handle = glHandle;
         }
 
         // Activate texture
