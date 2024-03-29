@@ -148,34 +148,7 @@ void main() {
     float rough2 = rough;
     float l2 = l;
     vec3 cccc2 = cccc;
-    /* if(!trace(newpos, newdir)){
-         if(l2 < 0.01){
-             float pdf2 = max(dot(newdir, n),0.)/3.14159;
-             vec3 brdf2 = vec3(1.)/3.14159;
-             if(rough2 < 0.5){
-                 pdf2 = ggx_pdf(reflect(wi,n),newdir,firstRough);
-             }
-             vec3 d2 = newdir;
-             vec3 h = normalize(-wi + d2);
 
-             float D2=ggx_D(reflect(wi,n),d2,firstRough);
-             float G2 = ggx_G2(h,n,wi,d2,firstRough);//cook torrance based
-     geometry term vec3 F2 = ggx_F(vec3(0.04), max(dot(-wi, n), 0.));//schlicks
-     approx to the fresnel term vec3 specular2 =
-     (D2*G2*F2)/max(4.*max(dot(-wi,n),0.)*max(dot(d2,n),0.6),0.0001);
-             if(firstRough < 0.5){
-                 brdf2 = specular2;
-                 brdf2 *=  (1.0+2.*(1.-firstRough)*max(dot(d2,n),0.));
-
-             }
-
-             pdf2 = max(pdf2, 0.001);
-             shadow = tt*brdf2*max(dot(newdir, n),0.)/pdf2;
-             //col += (tt*brdf2*max(dot(newdir,
-     n),0.)/pdf2)*vec3(0.9,0.8,0.7)*0.5;
-         }
-
-     }*/
     rough = rough2;
     l = l2;
     cccc = cccc2;

@@ -171,16 +171,7 @@ void main() {
                 uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
            uint(1);
   vec2 iResolution = wh;
-  // vec2 smallOffset = ((vec2(rndf(r), rndf(r)))*2.-1.)/iResolution;
-  /*
-  vec2 iResolution = wh;
-      uint seedCam = uint(time);
-      vec2 smallOffset = ((vec2(rndf(seedCam),
-  rndf(seedCam)))*2.-1.)/iResolution;
-  //+jitter()
-      vec4 p22 = vec4(((texCoord+smallOffset) * 2.0 - 1.0), 0.0, 1.0);
 
-  */
   uint seedCam = uint(time);
   vec2 smallOffset =
       ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
@@ -204,21 +195,7 @@ void main() {
   vec3 holdp = p;
 
   vec3 forgum = vec3(0.);
-  /*
-      for(int i = 0; i < 10; i++){
-          vec3 currCam = camera + direc*rndf(r)*float(i+1);
-          if(!trace2(currCam, ldir.xzy)){
-              accumFog += 0.5*PM(max(dot(wi.xzy, ldir),0.), 0.76);
-          }
-      }
-  // */
-  // vec3 fogtt = vec3(1.);
-  // vec3 secpFog = camera;
-  // float isLight = 1.;
-  //     if(traceVolume(camera, holdwi, r, fogtt, secpFog, isLight)){
-  //             forgum += cccc*l*fogtt;
-  //     }
-  // colortexFogp = vec4(secpFog, isLight);
+
   vec3 n = texture2D(normal, texCoord).xyz;
   float rou = texture2D(holdinfo, texCoord).w;
   if (texture2D(position, texCoord).w > 0.5) {
@@ -329,33 +306,7 @@ void main() {
   dir = angledircos(n.xzy, r).xzy;
   float pdf = max(dot(dir, n), 0.) / 3.14159;
   vec3 brdf = cccc / 3.14159;
-  /*float prob = rough;
-  specIS = rndf(r) > prob;
-  if(specIS){
-      dir = ggx_S(reflect(wi,n).xzy,r,rough).xzy;
-      cosT = max(dot(dir, n),0.);
-      pdf = ggx_pdf(reflect(wi,n),dir,rough);
-  }
-  //pdf = mix(ggx_pdf(reflect(wi,n),dir,rough), pdf, rough);
 
-  vec3 d = dir;
-  vec3 h = normalize(-wi + d);
-
-  float D=ggx_D(reflect(wi,n),d,rough);
-  float G = ggx_G2(h,n,wi,d,rough);//cook torrance based geometry term
-  vec3 F = ggx_F(vec3(1.-rough), max(dot(-wi, n), 0.));//schlicks approx to the
-  fresnel term
-  //vec3 F = fresnelSchlick(vec3(metalAlb), vec3(1.-rough), max(dot(-wi, n),
-  0.)); vec3 specular =
-  (D*G*F)/max(4.*max(dot(-wi,n),0.)*max(dot(d,n),0.),0.0001); if(specIS){ brdf =
-  specular*1.;
-  }
-  //brdf = mix(specular*3., brdf, rough);
-
-                    //  brdf *=  (1.0+2.*(1.-rough)*max(dot(d,n),0.));
-
-
-*/
   pdf = max(pdf, 0.001);
   tt *= brdf * max(dot(dir, n), 0.) / pdf;
 
@@ -369,7 +320,7 @@ void main() {
   ivec3 prevPos = ivec3((p + 90. - floor(viewPos)));
   float normalLength = 160.;
   ////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
-  ///renderWat, inout bool hitswat){
+  /// renderWat, inout bool hitswat){
   vec3 wpzz = vec3(0.);
   vec3 wnzz = vec3(0.);
   bool hitswat = false;
@@ -509,7 +460,7 @@ void main() {
     cosT = 1.;
     vec3 reflcam = p;
     ////bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
-    ///renderWat, inout bool hitswat){
+    /// renderWat, inout bool hitswat){
     vec3 wps = vec3(0.);
     vec3 wns = vec3(0.);
     bool hitswat = false;
