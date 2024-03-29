@@ -872,14 +872,13 @@ namespace RealTimeFractalRendererLibrary
 
             _TAAShader.Use();
             //_TAAShader.SetInt("color", 1); //TODO: review. This was commented out.
+
+
+
             _TAAShader.SetInt("position", 2);
             _TAAShader.SetInt("normal", 3);
             _TAAShader.SetInt("albedo", 4);
             _TAAShader.SetInt("secondpos", 5);
-            _TAAShader.SetInt("weigth", 6);
-            _TAAShader.SetInt("outgoingr", 7);
-            _TAAShader.SetInt("weightS", 8);
-            _TAAShader.SetInt("outgoingrS", 9);
             _TAAShader.SetInt("Acc", 10);
             _TAAShader.SetInt("den1", 11);//den2 bound here
             _TAAShader.SetInt("var1", 23);//var2 bound here
@@ -887,12 +886,6 @@ namespace RealTimeFractalRendererLibrary
             _TAAShader.SetInt("reflAlb", 25);
             _TAAShader.SetInt("inf", 26);//holdinfo
             _TAAShader.SetInt("colorfog", 27);
-            _TAAShader.SetInt("reflnorm", 28);
-            //colortexFog
-            _TAAShader.SetInt("colortexFog", 29);
-            _TAAShader.SetInt("colortexFogP", 15);
-            _TAAShader.SetInt("spatfog", 16);
-            _TAAShader.SetInt("spatfogLO", 30);
             _TAAShader.SetInt("holdinfo", 26);//TODO: this 'holdinfo' is the same as 'inf'
             _TAAShader.SetInt("sunTex", 18);
             _TAAShader.SetInt("skyTex", 31);
