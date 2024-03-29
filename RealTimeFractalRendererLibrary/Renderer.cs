@@ -1074,9 +1074,7 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture3D, worley);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            GL.BindTexture(TextureTarget.Texture2D, skytex);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+            GL.GenerateTextureMipmap(skytex);
 
             GL.ActiveTexture(TextureUnit.Texture13);//restore hack
             GL.BindTexture(TextureTarget.Texture2D, upscale);
@@ -1377,6 +1375,7 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture3D, worley);
             
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(TAA);
 
             //TODO: revert the hack
             GL.ActiveTexture(TextureUnit.Texture13);
@@ -1404,6 +1403,7 @@ namespace RealTimeFractalRendererLibrary
             _upscale.setVector3(ldir, "ldir");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+            //GL.GenerateTextureMipmap(!isEverythingLower ? upscale2 : upscale); //TODO: review, this seems intended but causes a "ghost" sky effect
 
             ///=========================================================
 
@@ -1435,6 +1435,8 @@ namespace RealTimeFractalRendererLibrary
             _swapShader.setVector3(ldir, "ldir");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(prevTAA);
+            GL.GenerateTextureMipmap(upscale2);
 
             ///==========================================================
 
@@ -1544,7 +1546,6 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture2D, var1);
             GL.ActiveTexture(TextureUnit.Texture13);
             GL.BindTexture(TextureTarget.Texture2D, upscale);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
             GL.ActiveTexture(TextureUnit.Texture14);
             GL.BindTexture(TextureTarget.Texture2D, colorfog2);
             //colortexFog
@@ -1554,7 +1555,6 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture2D, spatialWeigthsFog);
             GL.ActiveTexture(TextureUnit.Texture17);
             GL.BindTexture(TextureTarget.Texture2D, TAA);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
             GL.ActiveTexture(TextureUnit.Texture18);
             GL.BindTexture(TextureTarget.Texture2D, suntex);
             GL.ActiveTexture(TextureUnit.Texture19);
@@ -1564,14 +1564,12 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture2D, temporalPosition);
             GL.ActiveTexture(TextureUnit.Texture21);
             GL.BindTexture(TextureTarget.Texture2D, upscale2);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
             GL.ActiveTexture(TextureUnit.Texture22);
             GL.BindTexture(TextureTarget.Texture2D, prevNormalDepth);
             GL.ActiveTexture(TextureUnit.Texture23);
             GL.BindTexture(TextureTarget.Texture2D, var2);
             GL.ActiveTexture(TextureUnit.Texture24);
             GL.BindTexture(TextureTarget.Texture2D, prevTAA);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
             GL.ActiveTexture(TextureUnit.Texture25);
             GL.BindTexture(TextureTarget.Texture2D, colortexSecondAlbedo);
             GL.ActiveTexture(TextureUnit.Texture26);
@@ -1586,7 +1584,6 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadianceFog);
             GL.ActiveTexture(TextureUnit.Texture31);
             GL.BindTexture(TextureTarget.Texture2D, skytex);
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
         }
     }
 }
