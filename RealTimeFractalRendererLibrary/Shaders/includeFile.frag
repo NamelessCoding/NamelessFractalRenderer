@@ -642,7 +642,7 @@ float mapPl(vec3 p) {
 
   // return deWATER(p/0.6)*0.6;
 }
-
+/*
 float map(vec3 p) {
   float ls = 0.;
   p = p.xzy;
@@ -657,10 +657,10 @@ float map(vec3 p) {
 
   float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p.xzy) / 10.) * 10.;
   float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
-   float sphere = mb(p/15.).x*15.;
-  //float sphere = length(p) - 3.5;
-   float sphere2 = length(vec3(0., 25., 0.)-p)-3.5;
-   float sphere3 = length(vec3(0., 10., 10.)-p)-3.5;
+  float sphere = mb(p / 15.).x * 15.;
+  // float sphere = length(p) - 3.5;
+  float sphere2 = length(vec3(0., 25., 0.) - p) - 3.5;
+  float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
 
   // float tree = deT(p);
 
@@ -683,7 +683,7 @@ float map(vec3 p) {
               rough = 1.;
 
               //hitPointSurfaceType = WOOD;
-          }*/
+          }
 
   // return sceneDist;
   ///////////////////////
@@ -691,9 +691,9 @@ float map(vec3 p) {
   // float sphere = mandelbox(p/2.)*2.;
 
   // float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-    float final = min(min(aa,aa),min(aa3, min(sphere, min(sphere2,
-    min(sphere3, sphere3)))));
-  //float final = min(aa, min(aa3, min(sphere, sphere)));
+  float final = min(min(aa, aa),
+                    min(aa3, min(sphere, min(sphere2, min(sphere3, sphere3)))));
+  // float final = min(aa, min(aa3, min(sphere, sphere)));
   // float final = min(aa3, sphere);
   // if(final == b2)l = 3.;
   // if(final == c1)c = vec3(0.9,0.1,0.1);
@@ -711,15 +711,23 @@ float map(vec3 p) {
     l = 0.;
     cccc = vec3(0.9);
   }
-   if(final == sphere2 ){rough = 1.;l = 3.; cccc = vec3(0.9);}
-   if(final == sphere3 ){rough = 1.;l = 3.; cccc = vec3(0.2, 0.2, 0.8);}
+  if (final == sphere2) {
+    rough = 1.;
+    l = 3.;
+    cccc = vec3(0.9);
+  }
+  if (final == sphere3) {
+    rough = 1.;
+    l = 3.;
+    cccc = vec3(0.2, 0.2, 0.8);
+  }
 
   // if(final == plane){}
 
   return final;
 
   // return fractal_de46(p/5.)*5.;
-}
+}*/
 
 /*
 float map(vec3 p){
@@ -1615,28 +1623,27 @@ float de333(vec3 p) {
 
   return sceneDist;
 }
-/*
-float map(vec3 p){
-    //p = p.xzy;
-    p.y += 45.;
-    //p.z *= -1.;
-   cccc = vec3(0.9,0.8,0.6);
-    rough = 0.2;
-    l = 0.;
-    //float a = box(vec3(0.,4.,-5.)-p, vec3(10.,10.,0.2));
-    //float b = box(vec3(0.,4.,5.)-p, vec3(10.,10.,0.2));
-    //float c1 = box(vec3(7.,4.,0.)-p, vec3(0.2,10.,10.));
-    //float c2 = box(vec3(-7.,4.,0.)-p, vec3(0.2,10.,10.));
-    //float c3 = box(vec3(0.,9.,0.)-p, vec3(10.,0.2,10.));
-    float a = de333(p/10.)*10.;
-    cccc = hitPointColor;
-    if(hitPointSurfaceType == EMISSIVE){
-        l = 14.;
-    }
-    return a;
 
+float map(vec3 p) {
+  // p = p.xzy;
+  p.y += 45.;
+  // p.z *= -1.;
+  cccc = vec3(0.9, 0.8, 0.6);
+  rough = 0.2;
+  l = 0.;
+  // float a = box(vec3(0.,4.,-5.)-p, vec3(10.,10.,0.2));
+  // float b = box(vec3(0.,4.,5.)-p, vec3(10.,10.,0.2));
+  // float c1 = box(vec3(7.,4.,0.)-p, vec3(0.2,10.,10.));
+  // float c2 = box(vec3(-7.,4.,0.)-p, vec3(0.2,10.,10.));
+  // float c3 = box(vec3(0.,9.,0.)-p, vec3(10.,0.2,10.));
+  float a = de333(p / 10.) * 10.;
+  cccc = hitPointColor;
+  if (hitPointSurfaceType == EMISSIVE) {
+    l = 14.;
+  }
+  return a;
 }
-*/
+
 /*
 float map(vec3 p){
     p = p.xzy;

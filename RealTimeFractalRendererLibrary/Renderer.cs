@@ -756,15 +756,7 @@ namespace RealTimeFractalRendererLibrary
 
             _upscale = new Shader("Shaders/upscale.vert", "Shaders/upscale.frag");
 
-            /*
-              private Shader _upscale;
-    int upscale;
-    int upscaleBuff;
-             */
-            /*
-                private Shader _denoiseShader;
-                private Shader _denoiseShader2;
-            */
+
             //tempAccum
             quadVBO = GL.GenBuffer();
             quadVAO = GL.GenVertexArray();

@@ -8,22 +8,6 @@ layout(location = 3) out vec4 secalb;
 
 in vec2 texCoord;
 
-/*
-_denoiseShader.Use();
-            _denoiseShader.SetInt("color", 0);
-            _denoiseShader.SetInt("position", 1);
-            _denoiseShader.SetInt("normal", 2);
-            _denoiseShader.SetInt("albedo", 3);
-            _denoiseShader.SetInt("secondpos", 4);
-            _denoiseShader.SetInt("weigth", 5);
-            _denoiseShader.SetInt("outgoingr", 6);
-            _denoiseShader.SetInt("weightS", 7);
-            _denoiseShader.SetInt("outgoingrS", 8);
-            _denoiseShader.SetInt("prevN", 9);
-            _denoiseShader.SetInt("ACC", 10);
-            _denoiseShader.SetInt("den1", 11);
-
-*/
 uniform sampler2D color;
 uniform sampler2D position;
 uniform sampler2D normal;

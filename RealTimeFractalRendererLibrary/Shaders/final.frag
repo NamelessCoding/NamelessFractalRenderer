@@ -64,7 +64,6 @@ vec3 tonemap_uchimura2(vec3 v) {
 }
 //////////////////////////////////
 
-
 /*
 CoC = abs(aperture * (focallength * (objectdistance - planeinfocus)) /
 (objectdistance * (planeinfocus - focallength)))
@@ -266,7 +265,6 @@ vec3 ACESFilm(vec3 x) {
   float e = 0.14;
   return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0., 1.);
 }
-
 
 float AgXScale(float x_pivot, float y_pivot, float slope_pivot, float power) {
   return pow(pow((slope_pivot * x_pivot), -power) *
@@ -631,7 +629,7 @@ void main() {
   //*texture2D(albedo, texCoord).xyz;
   float RW = texture2D(weightS, texCoord).z;
   vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
-  
+
   vec2 fragCoord = texCoord * wh;
   uint r = uint(uint(fragCoord.x) * uint(1973) +
                 uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
@@ -674,7 +672,7 @@ void main() {
   }
   color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen);
 
-   //color2 = texture2D(fogLO, texCoord).xyz;
+  // color2 = texture2D(fogLO, texCoord).xyz;
 
   // vec3 lodbloom(vec2 iResolution, float lod){
   vec3 blm = lodbloom(wh, 2.);

@@ -20,7 +20,7 @@ uniform sampler2D Acc;
 uniform sampler2D den1;
 uniform sampler2D prevTAA;
 uniform sampler2D reflAlb;
-uniform sampler2D inf; //TODO: inf and holdinfo sample the same texture
+uniform sampler2D inf; // TODO: inf and holdinfo sample the same texture
 uniform sampler2D colorfog;
 
 uniform sampler2D holdinfo;
@@ -57,7 +57,6 @@ uint wang_hash(inout uint seed) {
 
 float rndf(inout uint state) { return float(wang_hash(state)) / 4294967296.0; }
 
-
 vec3 angledircos(vec3 n, inout uint r) {
   float r1 = rndf(r);
   float r2 = rndf(r);
@@ -87,7 +86,6 @@ vec3 ClipAABB(vec3 q, vec3 aabb_min, vec3 aabb_max) {
   else
     return q;
 }
-
 
 #define RESOLUTION 0.5
 const float phi2 = 1.32471795724474602596;
@@ -134,7 +132,6 @@ vec3 pickbetween3(vec3 a, vec3 b, vec3 c) {
 
   return a;
 }
-
 
 vec3 median3(vec2 uv, vec2 iResolution, float offsetMult) {
   // vec3 arrayCol[9];
@@ -547,8 +544,11 @@ void main() {
            clamp(texture2D(reflAlb, TC).xyz, 0., 10.) * 0.1) *
               (1. - F22) * exp(-DP * 2.5) * 2. * watCol +
           clamp(spec * F22, 0., 1000.);
-  }
 
+    if (wn.w > 0.5) {
+      col = vec3(0.);
+    }
+  }
 
   if (texture2D(albedo, TC - smallOffset).w > 0.5 ||
       texture2D(position, TC - smallOffset).w > 0.5) {
@@ -561,8 +561,7 @@ void main() {
   vec4 fogs = fog(watPOS, wi, TC, r);
   col = col * fogs.w + pow(fogs.xyz * max(ldir.y * ldir.y, 0.5), vec3(1.));
 
-
-  ///Keep for possible emissive volumetrics
+  /// Keep for possible emissive volumetrics
   /*
   vec3 PP = texture2D(position, TC).xyz;
   vec3 cam = viewPos;
@@ -591,10 +590,8 @@ void main() {
   col = col*volAbs.x + accum*0.2;
   */
 
-
   float depth = texture2D(normal, TC).w;
 
- 
   vec3 prevCol = clamp(texture2D(prevTAA, ProjectedCoordinates).xyz, 0., 10.);
   vec3 minCol = (vec3(9999.));
   vec3 maxCol = (vec3(0.));
@@ -633,7 +630,6 @@ void main() {
                             texture2D(prevTAA, ProjectedCoordinates).w * 0.9,
                         0., 0.99));
 
-  
   prevPosition = texture2D(position, TC);
   prevSecondPosition = texture2D(secondpos, TC);
 }

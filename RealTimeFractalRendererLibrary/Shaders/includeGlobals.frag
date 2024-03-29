@@ -171,22 +171,24 @@ float t = 0.01;
         t += h;
 */
 bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
-           bool renderWat, inout bool hitswat, bool stopatwat = false) {
+           bool renderWat, inout bool hitswat, bool stopatwat = false,
+           float isk2 = 0.) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   bool hitWat = false;
   watp = cam;
   watn = vec3(0.);
   hitswat = false;
-
+  isk2 = 0.;
   vec3 keepWP = cam;
   for (int i = 0; i < 280; i++) {
     // p = cam + d*t;
 
     float A = map(p);
-    float B = mapPl(p);
     float dist = A;
     if (!hitWat && renderWat) {
+      float B = mapPl(p);
+
       dist = min(dist, B);
     }
     // float precis = 0.001 * t;
@@ -214,7 +216,8 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
 
     if (length(cam - p) > 260.) {
       if (hitWat && renderWat) {
-        p = keepWP;
+        isk2 = 1.;
+        // p = keepWP;
         return true;
       }
       return false;
@@ -223,10 +226,13 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     // t += dist;
     p += d * dist;
   }
+
   if (hitWat && renderWat) {
-    p = keepWP;
+    isk2 = 1.;
+    // p = keepWP;
     return true;
   }
+
   return false;
 }
 

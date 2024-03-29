@@ -126,8 +126,9 @@ void main() {
   bool iswat = false;
   vec3 watP = vec3(0.);
   vec3 watN = vec3(0.);
+  float iskwater = 0.;
 
-  if (trace(pos, dir, watP, watN, removeWater, iswat)) {
+  if (trace(pos, dir, watP, watN, removeWater, iswat, false, iskwater)) {
 
     vec3 n = norm(pos - dir * epsilon * 2.);
 
@@ -215,6 +216,6 @@ void main() {
     iswat = false;
   }
   watpos = vec4(watP, (iswat) ? 1. : 0.);
-  watnorm = vec4(watN, length(watP - cam));
+  watnorm = vec4(watN, iskwater);
   // reflectionAlb = vec4(clamp(shadow,0., 100.), 1.);
 }
