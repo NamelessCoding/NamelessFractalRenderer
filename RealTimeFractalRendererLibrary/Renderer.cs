@@ -935,24 +935,21 @@ namespace RealTimeFractalRendererLibrary
 
             _finalShader.Use();
             _finalShader.SetInt("color", 1);
-            _finalShader.SetInt("position", 2);
             _finalShader.SetInt("normal", 3);
             _finalShader.SetInt("albedo", 4);
-            _finalShader.SetInt("secondpos", 5);
             _finalShader.SetInt("weigth", 6);
             _finalShader.SetInt("outgoingr", 7);
             _finalShader.SetInt("weightS", 8);
             _finalShader.SetInt("outgoingrS", 9);
-            _finalShader.SetInt("Acc", 10);
             _finalShader.SetInt("den1", 11); //TODO: review. "den1" sampler is bound to "den2" here.
             _finalShader.SetInt("var1", 12);
             _finalShader.SetInt("TAA", 13); //TODO: review. "TAA" sampler is bound to "upscale" here.
-            _finalShader.SetInt("colorfog", 14); //colorfog2
-            _finalShader.SetInt("colortexFog", 15); //colortexFogPrev
-            _finalShader.SetInt("fogw", 16); //spatialWeigthsFog
             _finalShader.SetInt("fogLO", 17); //TAA
             _finalShader.SetInt("sunTex", 18);
             _finalShader.SetInt("watpos", 19);
+
+ 
+
 
             GL.BindVertexArray(quadVAO);
             //Seclect the VertexBufferObject
