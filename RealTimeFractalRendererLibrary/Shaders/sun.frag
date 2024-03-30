@@ -9,27 +9,27 @@ in vec2 texCoord;
 // uniform sampler2D texture0;
 
 uniform sampler2D sunprev;
-uniform sampler3D worl;
+//uniform sampler3D worl;
 
-uniform vec2 wh;
-uniform float time;
+//uniform vec2 wh;
+//uniform float time;
 uniform vec3 ldir;
 uniform vec3 lpos;
-uniform vec3 viewPos;
+//uniform vec3 viewPos;
 
 uniform mat4 lightproj;
 uniform mat4 lightview;
 
-uniform vec3 lpos2;
+//uniform vec3 lpos2;
 
-uniform mat4 lightproj2;
-uniform mat4 lightview2;
+//uniform mat4 lightproj2;
+//uniform mat4 lightview2;
 
-uniform mat4 invview;
-uniform mat4 invproj;
+//uniform mat4 invview;
+//uniform mat4 invproj;
 
-uniform mat4 invview2;
-uniform mat4 invproj2;
+//uniform mat4 invview2;
+//uniform mat4 invproj2;
 uniform float scale;
 
 #define BAYER_LIMIT 16
@@ -55,6 +55,7 @@ float random3d(vec3 p) {
                cos(p.x * 42. + p.y * 41.2 + p.z * 32.) * 10.);
 }
 
+/*
 float fbm(vec3 p, vec3 cam) {
 
   vec4 a = vec4(0.);
@@ -74,6 +75,7 @@ float fbm(vec3 p, vec3 cam) {
 
   return clamp(((Srb)*b), 0., 1.);
 }
+*/
 
 vec2 boxIntersection(in vec3 ro, in vec3 rd, vec3 boxSize) {
   vec3 m = 1.0 / rd;
@@ -99,6 +101,7 @@ vec2 sphereIntersection(in vec3 ro, in vec3 rd, float ra) {
   return vec2(-b - h, -b + h);
 }
 
+/*
 vec3 cloudsPos(vec3 p, vec3 d, inout float dist) {
 
   vec2 tts =
@@ -148,16 +151,17 @@ vec3 cloudsPos(vec3 p, vec3 d, inout float dist) {
   }
   return cam;
 }
+*/
 
 void main() {
   vec4 p22 = vec4((clamp(texCoord, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
 
-  vec3 dirnear = (invproj2 * p22).xyz / (invproj2 * p22).w;
-  dirnear = normalize(mat3(invview2) * dirnear);
+  //vec3 dirnear = (invproj2 * p22).xyz / (invproj2 * p22).w;
+  //dirnear = normalize(mat3(invview2) * dirnear);
 
   ivec2 iFragCoord = ivec2(texCoord * scale);
 
-  int index = int(time) % BAYER_LIMIT;
+  //int index = int(time) % BAYER_LIMIT;
   int prevIndex = int(texture2D(sunprev, texCoord).w);
 
   int iCoord = (iFragCoord.x + BAYER_LIMIT_H * iFragCoord.y) % BAYER_LIMIT;

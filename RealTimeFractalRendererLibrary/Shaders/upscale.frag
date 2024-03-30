@@ -7,11 +7,11 @@ layout(location = 0) out vec4 upp;
 in vec2 texCoord;
 
 uniform sampler2D TAA;
-uniform sampler2D upbefore;
-uniform sampler2D position;
-uniform sampler2D normal;
-uniform sampler2D prevN;
-uniform sampler2D albedo;
+//uniform sampler2D upbefore;
+//uniform sampler2D position;
+//uniform sampler2D normal;
+//uniform sampler2D prevN;
+//uniform sampler2D albedo;
 
 /*
    _upscale.SetInt("normal", 3);
@@ -23,18 +23,18 @@ _TAAShader.SetInt("spatfog", 19);
 
 */
 
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 invview;
-uniform mat4 invproj;
-uniform mat4 prevview;
-uniform mat4 prevproj;
+//uniform mat4 view;
+//uniform mat4 projection;
+//uniform mat4 invview;
+//uniform mat4 invproj;
+//uniform mat4 prevview;
+//uniform mat4 prevproj;
 
 uniform vec2 wh;
-uniform float time;
-uniform vec3 viewPos;
-uniform vec3 lastViewPos;
-uniform vec3 ldir;
+//uniform float time;
+//uniform vec3 viewPos;
+//uniform vec3 lastViewPos;
+//uniform vec3 ldir;
 
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
@@ -131,12 +131,14 @@ void main() {
   // upbefore
   // vec2 currJitter = jitter();
 
+  /*
   vec3 View = texture2D(position, texCoord).xyz;
   vec4 Projected = vec4(View.xyz, 1.); // + vec4(cameraOffset, 0.);
   Projected = prevview * Projected;
   Projected = prevproj * Projected;
   Projected /= Projected.w;
   vec2 ProjectedCoordinates = Projected.xy * 0.5 + 0.5;
+  */
 
   // vec3 lodbloom(vec2 iResolution, float lod){
 

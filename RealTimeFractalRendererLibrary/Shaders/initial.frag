@@ -18,17 +18,17 @@ layout(binding = 0, Rgba16f) uniform image3D rcpos;
 layout(binding = 1, Rgba16f) uniform image3D rcnorm;
 uniform sampler2D skytex;
 
-uniform mat4 view;
-uniform mat4 projection;
+//uniform mat4 view;
+//uniform mat4 projection;
 uniform mat4 invview;
 uniform mat4 invproj;
 uniform vec2 wh;
 uniform float time;
-uniform float time2;
+//uniform float time2;
 
 uniform vec3 viewPos;
-uniform vec3 lastViewPos;
-uniform vec3 ldir;
+//uniform vec3 lastViewPos;
+//uniform vec3 ldir;
 
 const float phi2 = 1.32471795724474602596;
 const vec2 a = vec2(1.0 / phi2, 1.0 / (phi2 * phi2));
@@ -144,7 +144,7 @@ void main() {
     secp = pos;
     firstRough = rough;
     cccc = vec3(1.);
-    vec3 newdir = ldir.xzy;
+    //vec3 newdir = ldir.xzy;
     vec3 newpos = pos + n * epsilon * 2.;
     float rough2 = rough;
     float l2 = l;
@@ -201,7 +201,7 @@ void main() {
 
   //}
   // rcnorm
-  vec3 delta = lastViewPos - viewPos;
+  //vec3 delta = lastViewPos - viewPos;
   imageStore(rcpos, ivec3((positions + normals * 0. + 90.0 - floor(viewPos))),
              vec4(positions, isEM));
   imageStore(rcnorm, ivec3((positions + normals * 0. + 90.0 - floor(viewPos))),

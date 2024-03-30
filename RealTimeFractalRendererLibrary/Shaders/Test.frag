@@ -24,26 +24,26 @@ uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
 uniform sampler2D holdinfo;
-uniform sampler2D colorfog;
+//uniform sampler2D colorfog;
 uniform sampler2D skytex;
-uniform sampler2D sunTex;
+uniform sampler2D suntex;
 uniform sampler2D watpos;
 uniform sampler2D watnorm;
 
-uniform mat4 view;
-uniform mat4 projection;
+//uniform mat4 view;
+//uniform mat4 projection;
 uniform mat4 invview;
 uniform mat4 invproj;
 uniform vec2 wh;
 uniform float time;
-uniform float time2;
+//uniform float time2;
 
 uniform vec3 viewPos;
 
 uniform vec3 ldir;
 uniform mat4 lightproj;
 uniform mat4 lightview;
-uniform vec3 lpos;
+//uniform vec3 lpos;
 
 vec3 shadowS(vec3 pos) {
   vec4 sspace = lightproj * lightview * vec4(pos, 1.);
@@ -51,9 +51,9 @@ vec3 shadowS(vec3 pos) {
 
   vec3 coords = sspace.xyz * 0.5 + 0.5;
 
-  // float currDepth = texelFetch(sunTex, ivec2(2048.*coords), 0).r;
-  float currDepth = texture2D(sunTex, coords.xy).r;
-  // vec3 currPos = texture2D(sunTex, coords.xy).xyz;
+  // float currDepth = texelFetch(suntex, ivec2(2048.*coords), 0).r;
+  float currDepth = texture2D(suntex, coords.xy).r;
+  // vec3 currPos = texture2D(suntex, coords.xy).xyz;
   vec3 col = vec3(1.);
   if (coords.z > currDepth + 0.001 && coords.x >= 0. && coords.x <= 1. &&
       coords.y >= 0. && coords.y <= 1.) {

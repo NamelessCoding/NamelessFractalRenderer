@@ -21,23 +21,23 @@ uniform sampler2D tempOutL;
 uniform sampler2D tempPos;
 uniform sampler2D spatWe;
 uniform sampler2D spatLO;
-uniform sampler2D position;
-uniform sampler2D normal;
-uniform sampler2D Acc;
-uniform sampler2D TAA;
+//uniform sampler2D position;
+//uniform sampler2D normal;
+//uniform sampler2D Acc;
+//uniform sampler2D TAA;
 
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 invview;
-uniform mat4 invproj;
-uniform mat4 prevview;
-uniform mat4 prevproj;
+//uniform mat4 view;
+//uniform mat4 projection;
+//uniform mat4 invview;
+//uniform mat4 invproj;
+//uniform mat4 prevview;
+//uniform mat4 prevproj;
 
-uniform vec2 wh;
-uniform float time;
-uniform vec3 viewPos;
-uniform vec3 lastViewPos;
-uniform vec3 ldir;
+//uniform vec2 wh;
+//uniform float time;
+//uniform vec3 viewPos;
+//uniform vec3 lastViewPos;
+//uniform vec3 ldir;
 
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {

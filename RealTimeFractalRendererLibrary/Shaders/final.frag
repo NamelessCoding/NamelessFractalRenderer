@@ -4,37 +4,37 @@ in vec2 texCoord;
 
 layout(binding = 0, Rgba16f) uniform image3D rcpos;
 
-uniform sampler2D color;
+//uniform sampler2D color;
 uniform sampler2D normal;
 uniform sampler2D albedo;
 
-uniform sampler2D outgoingr;
-uniform sampler2D weightS;
-uniform sampler2D outgoingrS;
-uniform sampler2D den1;
-uniform sampler2D var1;
+//uniform sampler2D outgoingr;
+//uniform sampler2D weightS;
+//uniform sampler2D outgoingrS;
+//uniform sampler2D den1;
+//uniform sampler2D var1;
 uniform sampler2D TAA;
 
 uniform sampler2D fogLO;
-uniform sampler2D sunTex;
-uniform sampler2D watpos;
+//uniform sampler2D suntex;
+//uniform sampler2D watpos;
 
-uniform mat4 view;
+//uniform mat4 view;
 uniform mat4 projection;
-uniform mat4 invview;
-uniform mat4 invproj;
+//uniform mat4 invview;
+//uniform mat4 invproj;
 uniform vec2 wh;
 uniform float time;
-uniform vec3 viewPos;
+//uniform vec3 viewPos;
 
 uniform float brightness;
-uniform vec3 ldir;
-uniform mat4 lightproj;
-uniform mat4 lightview;
-uniform vec3 lpos;
+//uniform vec3 ldir;
+//uniform mat4 lightproj;
+//uniform mat4 lightview;
+//uniform vec3 lpos;
 
-uniform mat4 linvview;
-uniform mat4 linvproj;
+//uniform mat4 linvview;
+//uniform mat4 linvproj;
 
 vec3 tonemap_uchimura2(vec3 v) {
   const float P = 1.0;  // max display brightness
@@ -536,15 +536,16 @@ vec2 DistortPosition(in vec2 position) {
   return position / DistortionFactor;
 }
 
+/*
 vec3 shadowS(vec3 pos) {
   vec4 sspace = lightproj * lightview * vec4(pos, 1.);
   sspace.xyz /= sspace.w;
 
   vec3 coords = sspace.xyz * 0.5 + 0.5;
 
-  // float currDepth = texelFetch(sunTex, ivec2(2048.*coords), 0).r;
-  float currDepth = texture2D(sunTex, coords.xy).r;
-  // vec3 currPos = texture2D(sunTex, coords.xy).xyz;
+  // float currDepth = texelFetch(suntex, ivec2(2048.*coords), 0).r;
+  float currDepth = texture2D(suntex, coords.xy).r;
+  // vec3 currPos = texture2D(suntex, coords.xy).xyz;
   vec3 col = vec3(1.);
   if (coords.z > currDepth + 0.001 && coords.x >= 0. && coords.x <= 1. &&
       coords.y >= 0. && coords.y <= 1.) {
@@ -557,6 +558,7 @@ vec3 shadowS(vec3 pos) {
 
   return col;
 }
+*/
 
 vec3 mul3(in mat3 m, in vec3 v) {
   return vec3(dot(v, m[0]), dot(v, m[1]), dot(v, m[2]));
@@ -627,8 +629,8 @@ vec3 lodbloom(vec2 iResolution, float lod) {
 
 void main() {
   //*texture2D(albedo, texCoord).xyz;
-  float RW = texture2D(weightS, texCoord).z;
-  vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
+  //float RW = texture2D(weightS, texCoord).z;
+  //vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
 
   vec2 fragCoord = texCoord * wh;
   uint r = uint(uint(fragCoord.x) * uint(1973) +
@@ -636,14 +638,14 @@ void main() {
            uint(1);
 
   vec4 p22 = vec4((texCoord)*2.0 - 1.0, 0.0, 1.0);
-  vec3 dir = (invproj * p22).xyz / (invproj * p22).w;
-  dir = normalize(mat3(invview) * dir);
-  vec3 wi = dir;
+//  vec3 dir = (invproj * p22).xyz / (invproj * p22).w;
+//  dir = normalize(mat3(invview) * dir);
+//  vec3 wi = dir;
 
   float depth = texture2D(normal, texCoord).w;
   float depthCenter = texture2D(normal, vec2(0.5)).w;
 
-  vec3 color2 = col;
+  //vec3 color2 = col;
 
   float f = 1.0 - exp(-pow(abs(depth - depthCenter), 4.) * 0.01);
   float C = 2. * ((depth - depthCenter) / depth);
@@ -660,7 +662,7 @@ void main() {
 
   f = percent;
 
-  vec4 wp = texture2D(watpos, texCoord);
+  //vec4 wp = texture2D(watpos, texCoord);
   float fov = 2. * atan(1. / projection[1][1]);
   // 2 * atan(1 / projMatrix[1][1])
   float fc = .1;
@@ -670,7 +672,7 @@ void main() {
     fc = 4.;
     mixen = true;
   }
-  color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen);
+  vec3 color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen);
 
   // color2 = texture2D(fogLO, texCoord).xyz;
 
@@ -679,7 +681,7 @@ void main() {
   // color2 = mix(color2, pow(blm, vec3(1.2))*2., 0.2);
   color2 += clamp(pow(blm, vec3(1.5)) * 0.6, 0., 10.);
 
-  col = color2;
+  vec3 col = color2;
 
   vec2 iResolution = wh;
   vec3 N = texture2D(normal, texCoord).xyz;

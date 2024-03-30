@@ -7,17 +7,17 @@ in vec2 texCoord;
 
 uniform sampler2D skyprev;
 uniform sampler3D worl;
-uniform sampler2D suns;
+//uniform sampler2D suns;//TODO: use or remove
 
 uniform vec2 wh;
 uniform float time;
 uniform vec3 ldir;
-uniform vec3 viewPos;
+//uniform vec3 viewPos;
 
-uniform vec3 lpos2;
+//uniform vec3 lpos2;
 
-uniform mat4 lightproj2;
-uniform mat4 lightview2;
+//uniform mat4 lightproj2;
+//uniform mat4 lightview2;
 
 float ph(float h, float H) { return exp(-(abs(h) / H)); }
 float PM(float cost, float g) {
@@ -378,15 +378,16 @@ vec2 sphereIntersection(in vec3 ro, in vec3 rd, float ra) {
   return vec2(-b - h, -b + h);
 }
 
+/*
 vec3 shadowS(vec3 pos) {
   vec4 sspace = lightproj2 * lightview2 * vec4(pos.xzy, 1.);
   sspace.xyz /= sspace.w;
 
   vec3 coords = sspace.xyz * 0.5 + 0.5;
 
-  // float currDepth = texelFetch(sunTex, ivec2(2048.*coords), 0).r;
+  // float currDepth = texelFetch(suntex, ivec2(2048.*coords), 0).r;
   float currDepth = texture2D(suns, coords.xy).b;
-  // vec3 currPos = texture2D(sunTex, coords.xy).xyz;
+  // vec3 currPos = texture2D(suntex, coords.xy).xyz;
   vec3 col = vec3(0.);
   if (coords.z < currDepth + 0.001 && coords.x >= 0. && coords.x <= 1. &&
       coords.y >= 0. && coords.y <= 1.) {
@@ -399,6 +400,7 @@ vec3 shadowS(vec3 pos) {
 
   return col;
 }
+*/
 
 vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 waves = vec3(0.00000519673, 0.0000121427, 0.0000296453);

@@ -9,16 +9,16 @@ layout(location = 3) out vec4 secalb;
 in vec2 texCoord;
 
 uniform sampler2D color;
-uniform sampler2D position;
+//uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
 uniform sampler2D secondpos;
-uniform sampler2D weigth;
-uniform sampler2D outgoingr;
-uniform sampler2D weightS;
-uniform sampler2D outgoingrS;
-uniform sampler2D prevN;
-uniform sampler2D ACC;
+//uniform sampler2D weigth;
+//uniform sampler2D outgoingr;
+//uniform sampler2D weightS;
+//uniform sampler2D outgoingrS;
+//uniform sampler2D prevN;
+//uniform sampler2D ACC;
 uniform sampler2D den1;
 uniform sampler2D var1;
 uniform sampler2D reflN;
@@ -34,18 +34,18 @@ _TemporalRestirShader.SetInt("prevW", 5);
             _TemporalRestirShader.SetInt("prevP", 7);
              */
 
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 invview;
-uniform mat4 invproj;
-uniform mat4 prevview;
-uniform mat4 prevproj;
+//uniform mat4 view;
+//uniform mat4 projection;
+//uniform mat4 invview;
+//uniform mat4 invproj;
+//uniform mat4 prevview;
+//uniform mat4 prevproj;
 uniform vec2 wh;
-uniform float time;
-uniform vec3 viewPos;
-uniform vec3 lastViewPos;
+//uniform float time;
+//uniform vec3 viewPos;
+//uniform vec3 lastViewPos;
 
-uniform vec3 ldir;
+//uniform vec3 ldir;
 
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
@@ -86,15 +86,16 @@ float g3x3(vec2 coords, vec2 iResolution) {
 
 void main() {
   vec2 fragCoord = texCoord * wh;
-  uint r = uint(uint(fragCoord.x) * uint(1973) +
-                uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
-           uint(1);
+//  uint r = uint(uint(fragCoord.x) * uint(1973) +
+//                uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
+//           uint(1);
   if (texture2D(albedo, texCoord).w > 0.5) {
     return;
   }
   vec3 InitSampleLO = texture2D(color, texCoord).xyz;
   vec4 pst = texture2D(secondpos, texCoord).xyzw;
 
+  /*
   vec3 cameraOffset = viewPos - lastViewPos;
   vec3 View = texture2D(position, texCoord).xyz;
   vec4 Projected = vec4(View.xyz, 1.); // + vec4(cameraOffset, 0.);
@@ -102,6 +103,7 @@ void main() {
   Projected = prevproj * Projected;
   Projected /= Projected.w;
   vec2 ProjectedCoordinates = Projected.xy * 0.5 + 0.5;
+  */
 
   vec2 iResolution = wh;
 
@@ -138,9 +140,9 @@ const float atrous_kernel_weights[25] = {
   vec3 col = vec3(0.);
   float w = 0.;
   vec2 currCoors = texCoord * iResolution;
-  float hist = texture2D(ACC, texCoord).w;
-  hist = max(1.0 - hist / 22., 0.);
-  hist = 0.;
+  //float hist = texture2D(ACC, texCoord).w;
+  //float hist = max(1.0 - hist / 22., 0.);
+  float hist = 0.;
   float moment1 = 0.;
   float moment2 = 0.;
   float momentCount = 0.;
