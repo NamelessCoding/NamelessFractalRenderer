@@ -6,30 +6,14 @@ layout(binding = 4, Rgba16f) uniform image2D sun;
 // out vec4 outputColor;
 in vec2 texCoord;
 
-// uniform sampler2D texture0;
-
 uniform sampler2D sunprev;
-//uniform sampler3D worl;
 
-//uniform vec2 wh;
-//uniform float time;
 uniform vec3 ldir;
 uniform vec3 lpos;
-//uniform vec3 viewPos;
 
 uniform mat4 lightproj;
 uniform mat4 lightview;
 
-//uniform vec3 lpos2;
-
-//uniform mat4 lightproj2;
-//uniform mat4 lightview2;
-
-//uniform mat4 invview;
-//uniform mat4 invproj;
-
-//uniform mat4 invview2;
-//uniform mat4 invproj2;
 uniform float scale;
 
 #define BAYER_LIMIT 16
@@ -55,28 +39,6 @@ float random3d(vec3 p) {
                cos(p.x * 42. + p.y * 41.2 + p.z * 32.) * 10.);
 }
 
-/*
-float fbm(vec3 p, vec3 cam) {
-
-  vec4 a = vec4(0.);
-
-  a.x = texture(worl, p * 0.003).g;
-  a.y = texture(worl, p * 0.012 + vec3(2.)).b;
-  a.z = texture(worl, p * 0.018 + vec3(4.)).a;
-  a.w = texture(worl, p * 0.003 + vec3(4.)).x;
-
-  float b = clamp(2. * a.x + 1. * a.y + .5 * a.z, 0., 100.99);
-
-  b *= a.w;
-  b = max(b - 1., 0.);
-
-  float Srb = clamp(
-      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);
-
-  return clamp(((Srb)*b), 0., 1.);
-}
-*/
-
 vec2 boxIntersection(in vec3 ro, in vec3 rd, vec3 boxSize) {
   vec3 m = 1.0 / rd;
   vec3 n = m * ro;
@@ -101,67 +63,15 @@ vec2 sphereIntersection(in vec3 ro, in vec3 rd, float ra) {
   return vec2(-b - h, -b + h);
 }
 
-/*
-vec3 cloudsPos(vec3 p, vec3 d, inout float dist) {
-
-  vec2 tts =
-      boxIntersection(p - vec3(0., 0., 320.), d, vec3(100000., 100000., 1.));
-  vec3 pos = vec3(50000.);
-
-  if (tts.x > 0.) {
-    // p += d*tts.x;
-  }
-  p += d * 3.;
-  vec3 ccc = p;
-
-  float transmission = 1.0;
-  vec3 Ex = vec3(1.0);
-
-  vec3 cam = p;
-
-  // vec3 energyLoss = exp(-rayleighcoefficients*mm);
-
-  vec3 accum = vec3(0.);
-  float minus = 0.95;
-  float mult = 1.0;
-
-  bool firsth = false;
-
-  for (int i = 0; i < 15; i++) {
-    // accum += ph(length(cam), reyleighH)*length(div);
-    float density =
-        max(fbm(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.00014, 0.);
-    // density = smoothstep(0.,1.,density);
-    density = clamp(density, 0., 1.);
-    density = 1.0 - pow(1.0 - density, 4.);
-    if (density > 0.00001 && length(cam - ccc) > 3.) {
-      // if(!firsth){
-      firsth = true;
-      pos = cam;
-      break;
-      //}
-
-      // if(length(cam)>7500.){break;}
-    }
-    cam += d * (1. - 0.5 * random3d(cam));
-  }
-  dist = length(cam - ccc);
-  if (!firsth) {
-    cam = ccc + d * 400.;
-  }
-  return cam;
-}
-*/
-
 void main() {
   vec4 p22 = vec4((clamp(texCoord, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
 
-  //vec3 dirnear = (invproj2 * p22).xyz / (invproj2 * p22).w;
-  //dirnear = normalize(mat3(invview2) * dirnear);
+  // vec3 dirnear = (invproj2 * p22).xyz / (invproj2 * p22).w;
+  // dirnear = normalize(mat3(invview2) * dirnear);
 
   ivec2 iFragCoord = ivec2(texCoord * scale);
 
-  //int index = int(time) % BAYER_LIMIT;
+  // int index = int(time) % BAYER_LIMIT;
   int prevIndex = int(texture2D(sunprev, texCoord).w);
 
   int iCoord = (iFragCoord.x + BAYER_LIMIT_H * iFragCoord.y) % BAYER_LIMIT;
@@ -203,41 +113,6 @@ void main() {
   // vec3 cloudsPos(vec3 p, vec3 d, vec3 lig, inout float dist){
   float dist = 100.;
   float dist2 = 100.;
-  /* if (iCoord == bayerFilter[index] && renderSkyAndSun ){
-
-       vec3 nrmdir = -normalize(vec3(ldir.xyz));
-       n = nrmdir;
-       W = (abs(n.x)>0.99)?vec3(0.,1.,0.):vec3(1.,0.,0.);
-       N = n;
-       T = normalize(cross(N,W));
-       B = cross(T,N);
-
-
-       vec3 pp = vec3(lpos2 + vec3(B*uv.x + -T*uv.y)*200.).xzy;
-      // pp = lpos2.xzy;
-      // nrmdir = dirnear;
-       vec3 finPos = cloudsPos(pp, nrmdir.xzy, dist);
-
-       vec4 sspace = lightproj2 * lightview2 * vec4(finPos.xzy, 1.);
-
-       sspace.xyz /= sspace.w;
-       vec3 coords = sspace.xyz * 0.5f + 0.5f;
-
-       if(coords.x >= 0. && coords.x <= 1. && coords.y >= 0. && coords.y <= 1.){
-           finCoords = ivec2(coords.xy*scale);
-           dist2 = coords.z;
-       }
-      // dist2 = dist;
-   }else if (index > 0 || prevIndex >= 16){
-
-       //col += texelFetch(skyTex, ivec2(wh.xy*texCoord),0).rgb;
-       //pos += texture2D(sunprev, texCoord).rgb;
-      // pos += imageLoad(sun, ivec2(iFragCoord)).xyz;
-       dist2 = imageLoad(sun, ivec2(finCoords)).b;
-       //finCoords = iFragCoord;
-       prevIndex = 20;
-   }
-*/
 
   imageStore(sun, ivec2(finCoords),
              vec4(vec3(lengthSun, lengthSun, dist2), float(prevIndex + 1)));

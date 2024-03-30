@@ -7,17 +7,11 @@ in vec2 texCoord;
 
 uniform sampler2D skyprev;
 uniform sampler3D worl;
-//uniform sampler2D suns;//TODO: use or remove
+// uniform sampler2D suns;//TODO: use or remove
 
 uniform vec2 wh;
 uniform float time;
 uniform vec3 ldir;
-//uniform vec3 viewPos;
-
-//uniform vec3 lpos2;
-
-//uniform mat4 lightproj2;
-//uniform mat4 lightview2;
 
 float ph(float h, float H) { return exp(-(abs(h) / H)); }
 float PM(float cost, float g) {

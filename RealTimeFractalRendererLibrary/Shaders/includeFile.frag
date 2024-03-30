@@ -642,7 +642,7 @@ float mapPl(vec3 p) {
 
   // return deWATER(p/0.6)*0.6;
 }
-/*
+
 float map(vec3 p) {
   float ls = 0.;
   p = p.xzy;
@@ -683,7 +683,7 @@ float map(vec3 p) {
               rough = 1.;
 
               //hitPointSurfaceType = WOOD;
-          }
+          }*/
 
   // return sceneDist;
   ///////////////////////
@@ -727,7 +727,7 @@ float map(vec3 p) {
   return final;
 
   // return fractal_de46(p/5.)*5.;
-}*/
+}
 
 /*
 float map(vec3 p){
@@ -1623,7 +1623,7 @@ float de333(vec3 p) {
 
   return sceneDist;
 }
-
+/*
 float map(vec3 p) {
   // p = p.xzy;
   p.y += 45.;
@@ -1643,7 +1643,7 @@ float map(vec3 p) {
   }
   return a;
 }
-
+*/
 /*
 float map(vec3 p){
     p = p.xzy;

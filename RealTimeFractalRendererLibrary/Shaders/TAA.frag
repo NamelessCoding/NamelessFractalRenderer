@@ -16,21 +16,18 @@ uniform sampler2D normal;
 uniform sampler2D albedo;
 uniform sampler2D secondpos;
 
-//uniform sampler2D Acc;
+// uniform sampler2D Acc;
 uniform sampler2D den1;
 uniform sampler2D prevTAA;
 uniform sampler2D reflAlb;
 uniform sampler2D colorfog;
 
-//uniform sampler2D holdinfo;
 uniform sampler2D suntex;
 uniform sampler2D skyTex;
 uniform sampler2D watpos;
 uniform sampler2D watnorm;
 uniform sampler3D worl;
 
-//uniform mat4 view;
-//uniform mat4 projection;
 uniform mat4 invview;
 uniform mat4 invproj;
 uniform mat4 prevview;
@@ -39,9 +36,7 @@ uniform mat4 prevproj;
 uniform vec2 wh;
 uniform float time;
 uniform vec3 viewPos;
-//uniform vec3 lastViewPos;
 uniform vec3 ldir;
-//uniform vec3 lpos;
 uniform mat4 lightproj;
 uniform mat4 lightview;
 // NOT MY CODE///////////////

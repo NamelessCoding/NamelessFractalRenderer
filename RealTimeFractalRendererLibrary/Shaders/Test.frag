@@ -13,37 +13,27 @@ layout(location = 5) out vec4 colortexFogp;
 // out vec4 outputColor;
 in vec2 texCoord;
 
-/*
-_testShader.SetInt("position ", 1);
-            _testShader.SetInt("normal", 2);
-            _testShader.SetInt("albedo", 3);
-*/
 layout(binding = 2, Rgba16f) uniform image3D rcrad;
 
 uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
 uniform sampler2D holdinfo;
-//uniform sampler2D colorfog;
 uniform sampler2D skytex;
 uniform sampler2D suntex;
 uniform sampler2D watpos;
 uniform sampler2D watnorm;
 
-//uniform mat4 view;
-//uniform mat4 projection;
 uniform mat4 invview;
 uniform mat4 invproj;
 uniform vec2 wh;
 uniform float time;
-//uniform float time2;
 
 uniform vec3 viewPos;
 
 uniform vec3 ldir;
 uniform mat4 lightproj;
 uniform mat4 lightview;
-//uniform vec3 lpos;
 
 vec3 shadowS(vec3 pos) {
   vec4 sspace = lightproj * lightview * vec4(pos, 1.);

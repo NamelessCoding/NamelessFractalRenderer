@@ -7,62 +7,20 @@ layout(location = 3) out vec4 outradFog;
 
 in vec2 texCoord;
 
-/*
-_SpatialRestirShader.SetInt("color", 0);
-            _SpatialRestirShader.SetInt("position", 1);
-            _SpatialRestirShader.SetInt("normal", 2);
-            _SpatialRestirShader.SetInt("albedo", 3);
-            _SpatialRestirShader.SetInt("secondpos", 4);
-            _SpatialRestirShader.SetInt("temppos", 5);
-            _SpatialRestirShader.SetInt("prevW", 6);
-            _SpatialRestirShader.SetInt("prevL", 7);
-
-*/
-
-//uniform sampler2D color;
 uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
-//uniform sampler2D secondpos;
 uniform sampler2D temppos;
 uniform sampler2D prevW;
 uniform sampler2D prevL;
 uniform sampler2D tempW;
 uniform sampler2D tempL;
 uniform sampler2D prevN;
-//uniform sampler2D reflAlb;
-//uniform sampler2D prevPosition;
-//uniform sampler2D prevSecondPosition;
 
-// uniform sampler2D tempfog;
-// uniform sampler2D tempLofog;
-// uniform sampler2D temppos2;
-// uniform sampler2D wightfog;
-// uniform sampler2D Lofog;
-// uniform sampler2D fosecg;
-
-// fosecg
-/*
- _SpatialRestirShader.SetInt("tempfog", 14);
-            _SpatialRestirShader.SetInt("tempLofog", 15);
-            _SpatialRestirShader.SetInt("temppos", 16);
-            _SpatialRestirShader.SetInt("wightfog", 17);
-            _SpatialRestirShader.SetInt("Lofog", 18);
-
-*/
-
-//uniform mat4 view;
-//uniform mat4 projection;
-//uniform mat4 invview;
-//uniform mat4 invproj;
 uniform mat4 prevview;
 uniform mat4 prevproj;
 uniform vec2 wh;
 uniform float time;
-//uniform float time2;
-//uniform vec3 viewPos;
-//uniform vec3 lastViewPos;
-//uniform vec3 ldir;
 
 float lum(vec3 c) {
   return sqrt(0.299 * c.x * c.x + 0.587 * c.y * c.y + 0.114 * c.z * c.z);
@@ -75,7 +33,7 @@ void main() {
                 uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
            uint(1);
   r = uint(time);
-  //vec3 cameraOffset = viewPos - lastViewPos;
+  // vec3 cameraOffset = viewPos - lastViewPos;
   vec3 View = texture2D(position, texCoord).xyz;
   vec4 Projected = vec4(View.xyz, 1.); // + vec4(cameraOffset, 0.);
   Projected = prevview * Projected;
@@ -83,7 +41,7 @@ void main() {
   Projected /= Projected.w;
   vec2 ProjectedCoordinates = Projected.xy * 0.5 + 0.5;
 
-  //vec3 InitSampleLO = texture2D(color, texCoord).xyz;
+  // vec3 InitSampleLO = texture2D(color, texCoord).xyz;
   bool isthesky = false;
 
   bool outsc = false;
@@ -96,7 +54,7 @@ void main() {
   if (abs(currN.w - prevN.w) > 2.) {
     disc = true;
   }
-  //float isSpec = texture2D(reflAlb, texCoord).w;
+  // float isSpec = texture2D(reflAlb, texCoord).w;
 
   if (ProjectedCoordinates.x > 1. || ProjectedCoordinates.x < 0. ||
       ProjectedCoordinates.y > 1. || ProjectedCoordinates.y < 0. || disc) {
