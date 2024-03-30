@@ -698,10 +698,10 @@ float map(vec3 p) {
   // if(final == b2)l = 3.;
   // if(final == c1)c = vec3(0.9,0.1,0.1);
   // if(final == c2)c = vec3(0.1,0.9,0.1);
-  if (final == aa) {
-    rough = 1.0;
-    cccc = pal(escape * 2., vec3(0.8, 0.4, 0.4));
-  }
+  //   if (final == aa) {
+  //     rough = 1.0;
+  //     cccc = pal(escape * 2., vec3(0.8, 0.4, 0.4));
+  //   }
   if (final == aa3) {
     rough = 1.0;
     cccc = pal(escape333, vec3(0.4, 0.4, 0.8));

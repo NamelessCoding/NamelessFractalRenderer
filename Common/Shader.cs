@@ -7,11 +7,11 @@ using System.IO;
 namespace LearnOpenTK.Common
 {
     // A simple class meant to help create shaders.
-    public class Shader
+    public class Shader : IDisposable
     {
         public readonly int Handle;
         public string Name;
-        private readonly Dictionary<string, int> _uniformLocations;
+        private readonly Dictionary<string, int> _uniformLocations = [];
 
         // This is how you create a simple shader.
         // Shaders are written in GLSL, which is a language very similar to C in its semantics.
@@ -76,9 +76,6 @@ namespace LearnOpenTK.Common
 
             // First, we have to get the number of active uniforms in the shader.
             GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
-
-            // Next, allocate the dictionary to hold the locations.
-            _uniformLocations = new Dictionary<string, int>();
 
             // Loop over all the uniforms,
             for (var i = 0; i < numberOfUniforms; i++)
@@ -145,9 +142,6 @@ namespace LearnOpenTK.Common
             // First, we have to get the number of active uniforms in the shader.
             GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
 
-            // Next, allocate the dictionary to hold the locations.
-            _uniformLocations = new Dictionary<string, int>();
-
             // Loop over all the uniforms,
             for (var i = 0; i < numberOfUniforms; i++)
             {
@@ -204,21 +198,21 @@ namespace LearnOpenTK.Common
             return GL.GetAttribLocation(Handle, attribName);
         }
 
-        public void setMatrix4(Matrix4 matrix, string uniformName)
+        public void SetMatrix4(Matrix4 matrix, string uniformName)
         {
             GL.UniformMatrix4(GetUniformLocation(uniformName), false, ref matrix);
         }
 
-        public void setFloat(float num, string uniformName)
+        public void SetFloat(float num, string uniformName)
         {
             GL.Uniform1(GetUniformLocation(uniformName), num);
         }
-        public void setVector3(Vector3 vec, string uniformName)
+        public void SetVector3(Vector3 vec, string uniformName)
         {
             GL.Uniform3(GetUniformLocation(uniformName), vec.X, vec.Y, vec.Z);
         }
 
-        public void setVector2(Vector2 vec, string uniformName)
+        public void SetVector2(Vector2 vec, string uniformName)
         {
             GL.Uniform2(GetUniformLocation(uniformName), vec.X, vec.Y);
         }

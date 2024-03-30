@@ -2,7 +2,6 @@
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace RealTimeFractalRendererLibrary
@@ -13,19 +12,19 @@ namespace RealTimeFractalRendererLibrary
         int quadVAO;
         int quadEBO;
 
-        float[] quad =
-        {
+        readonly float[] quad =
+        [
             //Position          Texture coordinates
             1.0f,  1.0f, 0.0f, 1.0f, 1.0f, // top right
             1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom right
             -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom left
             -1.0f,  1.0f, 0.0f, 0.0f, 1.0f  // top left
-        };
+        ];
 
-        uint[] quadindices = {  // note that we start from 0!
+        readonly uint[] quadindices = [  // note that we start from 0!
             0, 1, 3,   // first triangle
             1, 2, 3    // second triangle
-        };
+        ];
 
         int colortex;
         int colortexHoldInfo;
@@ -45,19 +44,19 @@ namespace RealTimeFractalRendererLibrary
         int watnorm;
 
         int colorbuff2;
-        private Shader _initShader;
+        private Shader _initShader = default!;
         int colorfog;
         int colorfog2;
 
         int colorbuff;
-        Stopwatch stopWatch;
+        Stopwatch stopWatch = default!;
 
         float iFrame = 0.0f;
 
-        private Shader _testShader;
-        private Shader _finalShader;
+        private Shader _testShader = default!;
+        private Shader _finalShader = default!;
 
-        private Shader _TemporalRestirShader;
+        private Shader _TemporalRestirShader = default!;
         int temporalbuff;
         int temporalWeigths;
         int temporalOutgoingRadiance;
@@ -67,7 +66,7 @@ namespace RealTimeFractalRendererLibrary
         int temporalPosition;
         int temporalPositionFog;
 
-        private Shader _SpatialRestirShader;
+        private Shader _SpatialRestirShader = default!;
         int spatialbuff;
         int spatialWeigths;
         int spatialOutgoingRadiance;
@@ -75,10 +74,10 @@ namespace RealTimeFractalRendererLibrary
         int spatialWeigthsFog;
         int spatialOutgoingRadianceFog;
 
-        private Shader _swapShader;
+        private Shader _swapShader = default!;
         int swapbuff;
 
-        private Shader _swapShader2;
+        private Shader _swapShader2 = default!;
         int swapbuff2;
 
         int prevTemporalWeigths;
@@ -93,23 +92,23 @@ namespace RealTimeFractalRendererLibrary
         int prevAcc;
         int prevTAA;
 
-        private Shader _tempAccumShader;
+        private Shader _tempAccumShader = default!;
         int tempAccumbuff;
         int tempAccum;
 
-        private Shader _upscale;
+        private Shader _upscale = default!;
         int upscale;
         int upscale2;
 
         int upscaleBuff;
 
 
-        private Shader _TAAShader;
+        private Shader _TAAShader = default!;
         int TAAbuff;
         int TAA;
 
-        private Shader _denoiseShader;
-        private Shader _denoiseShader2;
+        private Shader _denoiseShader = default!;
+        //private Shader _denoiseShader2 = default!;
         int den1;
         int den2;
         int den1buff;
@@ -122,26 +121,26 @@ namespace RealTimeFractalRendererLibrary
         int rcrad;
         int rcfog;
 
-        private Shader _skyShader;
+        private Shader _skyShader = default!;
 
         int skybuff;
         int skytex;
 
-        private Shader _sunShader;
+        private Shader _sunShader = default!;
 
         int sunbuff;
         int suntex;
 
 
-        private Shader _RC;
+        private Shader _RC = default!;
 
         int worley;
 
-        private Shader _worl;
+        private Shader _worl = default!;
 
 
 
-        private Camera _camera;
+        private Camera _camera = default!;
         public Camera Camera => _camera;
 
         /// <summary>
@@ -149,21 +148,22 @@ namespace RealTimeFractalRendererLibrary
         /// </summary>
         public int TargetFramebuffer { get; set; } = 0;
 
-        private Vector3 prevCamPos = new Vector3(0.0f, 0.0f, 0.0f);
+        private Vector3 prevCamPos = new(0.0f, 0.0f, 0.0f);
 
-        public const bool EnableDebugging = true;
-        private bool isEverythingLower = true;
+        private const bool EnableDebugging = true;
+        private const bool isEverythingLower = true;
 
-        static float ScaleEverything = 1.5f;
-        static int shadowScale = 2048;
-        static float KeepScale = ScaleEverything;
+        private const float KeepScale = 1.5f; //the default scale
+        private static float ScaleEverything = KeepScale;
 
-        private Vector2 size = new Vector2(1920.0f / ScaleEverything, 1080.0f / ScaleEverything);
+        private const int shadowScale = 2048;
+
+        private Vector2 size = new(1920.0f / ScaleEverything, 1080.0f / ScaleEverything);
 
         private Matrix4 prevView;
         private Matrix4 prevProjection;
 
-        public Vector3 ldir = new Vector3(0.0f, 0.1f, -0.9f);
+        public Vector3 ldir = new(0.0f, 0.1f, -0.9f);
 
         public float bright = 1.0f;
         
@@ -201,6 +201,7 @@ namespace RealTimeFractalRendererLibrary
         private static readonly DebugProc _debugProcCallback = DebugCallback;
         private static GCHandle _debugProcCallbackHandle;
 
+        private bool isInitialized = false;
 
         float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
         void setupTex2D(int texture, bool scaleTexture = true, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
@@ -345,7 +346,7 @@ namespace RealTimeFractalRendererLibrary
                 TextureTarget.Texture2D, skytex, 0
                 );
 
-            DrawBuffersEnum[] attx = { DrawBuffersEnum.ColorAttachment0 };
+            DrawBuffersEnum[] attx = [DrawBuffersEnum.ColorAttachment0];
             GL.DrawBuffers(1, attx);
 
             //=======================================================
@@ -356,7 +357,7 @@ namespace RealTimeFractalRendererLibrary
                 TextureTarget.Texture2D, suntex, 0
                 );
 
-            DrawBuffersEnum[] attxs = { DrawBuffersEnum.ColorAttachment0 };
+            DrawBuffersEnum[] attxs = [DrawBuffersEnum.ColorAttachment0];
             GL.DrawBuffers(1, attxs);
             //====================================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
@@ -389,9 +390,9 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment6,
                 TextureTarget.Texture2D, watnorm, 0
                 );
-            DrawBuffersEnum[] att = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
+            DrawBuffersEnum[] att = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
                 DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4,
-             DrawBuffersEnum.ColorAttachment5, DrawBuffersEnum.ColorAttachment6};
+             DrawBuffersEnum.ColorAttachment5, DrawBuffersEnum.ColorAttachment6];
             GL.DrawBuffers(7, att);
 
 
@@ -421,9 +422,9 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment5,
                 TextureTarget.Texture2D, colortexFogPos, 0
                 );
-            DrawBuffersEnum[] atts = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
+            DrawBuffersEnum[] atts = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
                 DrawBuffersEnum.ColorAttachment2,  DrawBuffersEnum.ColorAttachment3
-            ,  DrawBuffersEnum.ColorAttachment4,  DrawBuffersEnum.ColorAttachment5};
+            ,  DrawBuffersEnum.ColorAttachment4,  DrawBuffersEnum.ColorAttachment5];
             GL.DrawBuffers(6, atts);
 
 
@@ -474,8 +475,8 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment5,
                 TextureTarget.Texture2D, temporalPositionFog, 0
                 );
-            DrawBuffersEnum[] att2 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2
-            , DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4, DrawBuffersEnum.ColorAttachment5};
+            DrawBuffersEnum[] att2 = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2
+            , DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4, DrawBuffersEnum.ColorAttachment5];
             GL.DrawBuffers(6, att2);
 
             //private Shader _swapShader;
@@ -513,7 +514,7 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment3,
                 TextureTarget.Texture2D, spatialOutgoingRadianceFog, 0
                 );
-            DrawBuffersEnum[] att4 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att4 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att4);
 
    
@@ -542,7 +543,7 @@ namespace RealTimeFractalRendererLibrary
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, colortexFogPrev, 0
                );
-            DrawBuffersEnum[] att10 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att10 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att10);
 
  
@@ -555,7 +556,7 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment0,
                 TextureTarget.Texture2D, upscale, 0
                 );
-            DrawBuffersEnum[] att11 = { DrawBuffersEnum.ColorAttachment0 };
+            DrawBuffersEnum[] att11 = [DrawBuffersEnum.ColorAttachment0];
             GL.DrawBuffers(1, att11);
 
             prevTemporalWeigths = GL.GenTexture();
@@ -610,7 +611,7 @@ namespace RealTimeFractalRendererLibrary
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, upscale2, 0
                );
-            DrawBuffersEnum[] att3 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att3 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att3);
 
 
@@ -638,8 +639,8 @@ namespace RealTimeFractalRendererLibrary
                 TextureTarget.Texture2D, prevSpatialOutgoingRadiance, 0
                 );
 
-            DrawBuffersEnum[] att3s = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2,
-                DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4};
+            DrawBuffersEnum[] att3s = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2,
+                DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4];
             GL.DrawBuffers(5, att3s);
 
 
@@ -681,7 +682,7 @@ namespace RealTimeFractalRendererLibrary
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, colortexSecondAlbedo, 0
                );
-            DrawBuffersEnum[] att8 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att8 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att8);
 
 
@@ -704,7 +705,7 @@ namespace RealTimeFractalRendererLibrary
                FramebufferAttachment.ColorAttachment3,
                TextureTarget.Texture2D, colortexSecondAlbedo, 0
                );
-            DrawBuffersEnum[] att9 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3 };
+            DrawBuffersEnum[] att9 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
             GL.DrawBuffers(4, att9);
 
 
@@ -729,7 +730,7 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment2,
                 TextureTarget.Texture2D, var1, 0
                 );
-            DrawBuffersEnum[] att5 = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2 };
+            DrawBuffersEnum[] att5 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2];
             GL.DrawBuffers(3, att5);
 
 
@@ -918,20 +919,23 @@ namespace RealTimeFractalRendererLibrary
             _worl.Use();
             GL.DispatchCompute(64, 64, 64);
 
-            //CursorState = CursorState.Grabbed;
-
             SetupTextureBindings();
 
+            //CursorState = CursorState.Grabbed;
+
+            isInitialized = true;
         }
 
 
         public void RenderFrame()
         {
+            if (!isInitialized) throw new InvalidOperationException("Unable to render frame before successful initialization.");
+
             //GL.Clear(ClearBufferMask.ColorBufferBit);
 
             ldir = Vector3.Normalize(ldir);
 
-            Vector3 lpos = new Vector3( _camera.Position.X + ldir.X * 270.0f, ldir.Y * 270.0f, _camera.Position.Z + ldir.Z * 270.0f );
+            Vector3 lpos = new( _camera.Position.X + ldir.X * 270.0f, ldir.Y * 270.0f, _camera.Position.Z + ldir.Z * 270.0f );
 
             Matrix4 lightview = Matrix4.LookAt(
                 lpos,
@@ -946,9 +950,9 @@ namespace RealTimeFractalRendererLibrary
             //    );
             Matrix4 lightproj = Matrix4.CreateOrthographic(200.0f, 200.0f, 0.0f, 127.5f);
 
-            Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
+            //Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
 
-             Vector3 lpos2 = new Vector3(_camera.Position.X + ldir.X * 360.0f, ldir.Y * 360.0f, _camera.Position.Z + ldir.Z * 360.0f);
+             Vector3 lpos2 = new(_camera.Position.X + ldir.X * 360.0f, ldir.Y * 360.0f, _camera.Position.Z + ldir.Z * 360.0f);
             //lpos2 = lpos;
             //Vector3 lpos2 = ldir * 8200.0f;
            // Vector3 lpos2 = new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z) + nm * 8200.0f;
@@ -973,11 +977,11 @@ namespace RealTimeFractalRendererLibrary
             GL.Disable(EnableCap.DepthTest);
             _initShader.Use();
             GL.BindVertexArray(quadVAO);
-            _initShader.setMatrix4(view.Inverted(), "invview");
-            _initShader.setMatrix4(projection.Inverted(), "invproj");
-            _initShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _initShader.setFloat(iFrame, "time");
-            _initShader.setVector3(_camera.Position, "viewPos");
+            _initShader.SetMatrix4(view.Inverted(), "invview");
+            _initShader.SetMatrix4(projection.Inverted(), "invproj");
+            _initShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _initShader.SetFloat(iFrame, "time");
+            _initShader.SetVector3(_camera.Position, "viewPos");
 
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
@@ -992,9 +996,9 @@ namespace RealTimeFractalRendererLibrary
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _skyShader.Use();
-            _skyShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _skyShader.setFloat(iFrame, "time");
-            _skyShader.setVector3(ldir, "ldir");
+            _skyShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _skyShader.SetFloat(iFrame, "time");
+            _skyShader.SetVector3(ldir, "ldir");
      
 
             GL.BindVertexArray(quadVAO);
@@ -1017,11 +1021,11 @@ namespace RealTimeFractalRendererLibrary
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _sunShader.Use();
-            _sunShader.setVector3(ldir, "ldir");
-            _sunShader.setVector3(lpos, "lpos");
-            _sunShader.setMatrix4(lightproj, "lightproj");
-            _sunShader.setMatrix4(lightview, "lightview");
-            _sunShader.setFloat((float)shadowScale, "scale");
+            _sunShader.SetVector3(ldir, "ldir");
+            _sunShader.SetVector3(lpos, "lpos");
+            _sunShader.SetMatrix4(lightproj, "lightproj");
+            _sunShader.SetMatrix4(lightview, "lightview");
+            _sunShader.SetFloat((float)shadowScale, "scale");
           
             GL.BindVertexArray(quadVAO);
 
@@ -1039,14 +1043,14 @@ namespace RealTimeFractalRendererLibrary
             _RC.Use();
             GL.BindVertexArray(quadVAO);
            
-            _RC.setFloat(iFrame, "time");
-            //_RC.setFloat(stopWatch.ElapsedMilliseconds, "time2");
-            _RC.setVector3(_camera.Position, "viewPos");
-            _RC.setVector3(prevCamPos, "lastViewPos");
-            _RC.setVector3(ldir, "ldir");
-            _RC.setMatrix4(lightproj, "lightproj");
-            _RC.setMatrix4(lightview, "lightview");
-            //_RC.setVector3(lpos, "lpos");
+            _RC.SetFloat(iFrame, "time");
+            //_RC.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
+            _RC.SetVector3(_camera.Position, "viewPos");
+            _RC.SetVector3(prevCamPos, "lastViewPos");
+            _RC.SetVector3(ldir, "ldir");
+            _RC.SetMatrix4(lightproj, "lightproj");
+            _RC.SetMatrix4(lightview, "lightview");
+            //_RC.SetVector3(lpos, "lpos");
 
             GL.DispatchCompute(45, 45, 45);
 
@@ -1064,16 +1068,16 @@ namespace RealTimeFractalRendererLibrary
             _testShader.Use();
             GL.BindVertexArray(quadVAO);
          
-            _testShader.setMatrix4(view.Inverted(), "invview");
-            _testShader.setMatrix4(projection.Inverted(), "invproj");
-            _testShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _testShader.setFloat(iFrame, "time");
-            //_testShader.setFloat(stopWatch.ElapsedMilliseconds, "time2");
-            _testShader.setVector3(_camera.Position, "viewPos");
-            _testShader.setVector3(ldir, "ldir");
-            _testShader.setMatrix4(lightproj, "lightproj");
-            _testShader.setMatrix4(lightview, "lightview");
-            //_testShader.setVector3(lpos, "lpos");
+            _testShader.SetMatrix4(view.Inverted(), "invview");
+            _testShader.SetMatrix4(projection.Inverted(), "invproj");
+            _testShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _testShader.SetFloat(iFrame, "time");
+            //_testShader.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
+            _testShader.SetVector3(_camera.Position, "viewPos");
+            _testShader.SetVector3(ldir, "ldir");
+            _testShader.SetMatrix4(lightproj, "lightproj");
+            _testShader.SetMatrix4(lightview, "lightview");
+            //_testShader.SetVector3(lpos, "lpos");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
@@ -1087,11 +1091,11 @@ namespace RealTimeFractalRendererLibrary
             _TemporalRestirShader.Use();
             GL.BindVertexArray(quadVAO);
       
-            _TemporalRestirShader.setMatrix4(prevView, "prevview");
-            _TemporalRestirShader.setMatrix4(prevProjection, "prevproj");
+            _TemporalRestirShader.SetMatrix4(prevView, "prevview");
+            _TemporalRestirShader.SetMatrix4(prevProjection, "prevproj");
 
-            _TemporalRestirShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _TemporalRestirShader.setFloat(iFrame, "time");
+            _TemporalRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _TemporalRestirShader.SetFloat(iFrame, "time");
           
             
             GL.ActiveTexture(TextureUnit.Texture8);//hack
@@ -1121,10 +1125,10 @@ namespace RealTimeFractalRendererLibrary
             _SpatialRestirShader.Use();
             GL.BindVertexArray(quadVAO);
         
-            _SpatialRestirShader.setMatrix4(prevView, "prevview");
-            _SpatialRestirShader.setMatrix4(prevProjection, "prevproj");
-            _SpatialRestirShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _SpatialRestirShader.setFloat(iFrame, "time");
+            _SpatialRestirShader.SetMatrix4(prevView, "prevview");
+            _SpatialRestirShader.SetMatrix4(prevProjection, "prevproj");
+            _SpatialRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _SpatialRestirShader.SetFloat(iFrame, "time");
            
 
             GL.ActiveTexture(TextureUnit.Texture8);//hack
@@ -1149,8 +1153,8 @@ namespace RealTimeFractalRendererLibrary
             _tempAccumShader.Use();
             GL.BindVertexArray(quadVAO);
       
-            _tempAccumShader.setMatrix4(prevView, "prevview");
-            _tempAccumShader.setMatrix4(prevProjection, "prevproj");
+            _tempAccumShader.SetMatrix4(prevView, "prevview");
+            _tempAccumShader.SetMatrix4(prevProjection, "prevproj");
          
 
             GL.ActiveTexture(TextureUnit.Texture0);//hack
@@ -1170,7 +1174,7 @@ namespace RealTimeFractalRendererLibrary
             _denoiseShader.Use();
             GL.BindVertexArray(quadVAO);
     
-            _denoiseShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _denoiseShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
 
 
             for (int i = 0; i < 7; i++)
@@ -1213,16 +1217,16 @@ namespace RealTimeFractalRendererLibrary
             GL.Disable(EnableCap.DepthTest);
             _TAAShader.Use();
             GL.BindVertexArray(quadVAO);
-            _TAAShader.setMatrix4(view.Inverted(), "invview");
-            _TAAShader.setMatrix4(projection.Inverted(), "invproj");
-            _TAAShader.setMatrix4(prevView, "prevview");
-            _TAAShader.setMatrix4(prevProjection, "prevproj");
-            _TAAShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _TAAShader.setFloat(iFrame, "time");
-            _TAAShader.setVector3(_camera.Position, "viewPos");
-            _TAAShader.setVector3(ldir, "ldir");
-            _TAAShader.setMatrix4(lightproj, "lightproj");
-            _TAAShader.setMatrix4(lightview, "lightview");
+            _TAAShader.SetMatrix4(view.Inverted(), "invview");
+            _TAAShader.SetMatrix4(projection.Inverted(), "invproj");
+            _TAAShader.SetMatrix4(prevView, "prevview");
+            _TAAShader.SetMatrix4(prevProjection, "prevproj");
+            _TAAShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _TAAShader.SetFloat(iFrame, "time");
+            _TAAShader.SetVector3(_camera.Position, "viewPos");
+            _TAAShader.SetVector3(ldir, "ldir");
+            _TAAShader.SetMatrix4(lightproj, "lightproj");
+            _TAAShader.SetMatrix4(lightview, "lightview");
 
             //TODO: hack, we ran out of texture units..
             GL.ActiveTexture(TextureUnit.Texture13);
@@ -1244,7 +1248,7 @@ namespace RealTimeFractalRendererLibrary
             _upscale.Use();
             GL.BindVertexArray(quadVAO);
          
-            _upscale.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _upscale.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
          
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             //GL.GenerateTextureMipmap(!isEverythingLower ? upscale2 : upscale); //TODO: review, this seems intended but causes a "ghost" sky effect
@@ -1260,17 +1264,17 @@ namespace RealTimeFractalRendererLibrary
             GL.BindVertexArray(quadVAO);
             //TODO: consider if we really need these uniforms in swapshaders
             // _testShader.SetMatrix4(model, "model");
-            //_swapShader.setMatrix4(view, "view");
-            //_swapShader.setMatrix4(projection, "projection");
-            //_swapShader.setMatrix4(view.Inverted(), "invview");
-            //_swapShader.setMatrix4(projection.Inverted(), "invproj");
-            //_swapShader.setMatrix4(prevView, "prevview");
-            //_swapShader.setMatrix4(prevProjection, "prevproj");
-            //_swapShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            //_swapShader.setFloat(iFrame, "time");
-            //_swapShader.setVector3(_camera.Position, "viewPos");
-            //_swapShader.setVector3(prevCamPos, "lastViewPos");
-            //_swapShader.setVector3(ldir, "ldir");
+            //_swapShader.SetMatrix4(view, "view");
+            //_swapShader.SetMatrix4(projection, "projection");
+            //_swapShader.SetMatrix4(view.Inverted(), "invview");
+            //_swapShader.SetMatrix4(projection.Inverted(), "invproj");
+            //_swapShader.SetMatrix4(prevView, "prevview");
+            //_swapShader.SetMatrix4(prevProjection, "prevproj");
+            //_swapShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            //_swapShader.SetFloat(iFrame, "time");
+            //_swapShader.SetVector3(_camera.Position, "viewPos");
+            //_swapShader.SetVector3(prevCamPos, "lastViewPos");
+            //_swapShader.SetVector3(ldir, "ldir");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(prevTAA);
@@ -1287,17 +1291,17 @@ namespace RealTimeFractalRendererLibrary
             GL.BindVertexArray(quadVAO);
             //TODO: consider if we really need these uniforms in swapshaders
             // _testShader.SetMatrix4(model, "model");
-            //_swapShader2.setMatrix4(view, "view");
-            //_swapShader2.setMatrix4(projection, "projection");
-            //_swapShader2.setMatrix4(view.Inverted(), "invview");
-            //_swapShader2.setMatrix4(projection.Inverted(), "invproj");
-            //_swapShader2.setMatrix4(prevView, "prevview");
-            //_swapShader2.setMatrix4(prevProjection, "prevproj");
-            //_swapShader2.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            //_swapShader2.setFloat(iFrame, "time");
-            //_swapShader2.setVector3(_camera.Position, "viewPos");
-            //_swapShader2.setVector3(prevCamPos, "lastViewPos");
-            //_swapShader2.setVector3(ldir, "ldir");
+            //_swapShader2.SetMatrix4(view, "view");
+            //_swapShader2.SetMatrix4(projection, "projection");
+            //_swapShader2.SetMatrix4(view.Inverted(), "invview");
+            //_swapShader2.SetMatrix4(projection.Inverted(), "invproj");
+            //_swapShader2.SetMatrix4(prevView, "prevview");
+            //_swapShader2.SetMatrix4(prevProjection, "prevproj");
+            //_swapShader2.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            //_swapShader2.SetFloat(iFrame, "time");
+            //_swapShader2.SetVector3(_camera.Position, "viewPos");
+            //_swapShader2.SetVector3(prevCamPos, "lastViewPos");
+            //_swapShader2.SetVector3(ldir, "ldir");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
@@ -1311,12 +1315,12 @@ namespace RealTimeFractalRendererLibrary
             _finalShader.Use();
             GL.BindVertexArray(quadVAO);
       
-            _finalShader.setMatrix4(projection, "projection");
+            _finalShader.SetMatrix4(projection, "projection");
     
-            _finalShader.setVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _finalShader.setFloat(iFrame, "time");
+            _finalShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _finalShader.SetFloat(iFrame, "time");
       
-            _finalShader.setFloat(bright, "brightness");
+            _finalShader.SetFloat(bright, "brightness");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 

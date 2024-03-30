@@ -18,12 +18,12 @@
 
         <opentk:GLWpfControl Grid.Column="0"
             x:Name="display" 
-            SizeChanged="display_SizeChanged"
-            Ready="display_Ready"
-            Render="display_OnRender"
-            MouseWheel="display_MouseWheel"
-            MouseMove="display_MouseMove"
-            MouseDown="display_MouseDown"
+            SizeChanged="Display_SizeChanged"
+            Ready="Display_Ready"
+            Render="Display_OnRender"
+            MouseWheel="Display_MouseWheel"
+            MouseMove="Display_MouseMove"
+            MouseDown="Display_MouseDown"
             Focusable="True"/>
 
         <StackPanel Grid.Column="1" Margin="8">
