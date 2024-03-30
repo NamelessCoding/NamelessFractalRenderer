@@ -1,10 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Collections.Generic;
-using OpenTK.Graphics.OpenGL4;
+﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using System.Xml.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace LearnOpenTK.Common
 {
@@ -206,27 +204,39 @@ namespace LearnOpenTK.Common
             return GL.GetAttribLocation(Handle, attribName);
         }
 
-        public void setMatrix4(Matrix4 matrix, string name)
+        public void setMatrix4(Matrix4 matrix, string uniformName)
         {
-            int location = GL.GetUniformLocation(Handle, name);
-            GL.UniformMatrix4(location, false, ref matrix);
+            GL.UniformMatrix4(GetUniformLocation(uniformName), false, ref matrix);
         }
 
-        public void setFloat(float num, string name)
+        public void setFloat(float num, string uniformName)
         {
-            int location = GL.GetUniformLocation(Handle, name);
-            GL.Uniform1(location, num);
+            GL.Uniform1(GetUniformLocation(uniformName), num);
         }
-        public void setVector3(Vector3 vec, string name)
+        public void setVector3(Vector3 vec, string uniformName)
         {
-            int location = GL.GetUniformLocation(Handle, name);
-            GL.Uniform3(location, vec.X, vec.Y, vec.Z);
+            GL.Uniform3(GetUniformLocation(uniformName), vec.X, vec.Y, vec.Z);
         }
 
-        public void setVector2(Vector2 vec, string name)
+        public void setVector2(Vector2 vec, string uniformName)
         {
-            int location = GL.GetUniformLocation(Handle, name);
-            GL.Uniform2(location, vec.X, vec.Y);
+            GL.Uniform2(GetUniformLocation(uniformName), vec.X, vec.Y);
+        }
+
+        public void SetInt(string uniformName, int value)
+        {
+            GL.Uniform1(GetUniformLocation(uniformName), value);
+        }
+
+        private int GetUniformLocation(string uniformName)
+        {
+            if (!_uniformLocations.TryGetValue(uniformName, out var location))
+                location = GL.GetUniformLocation(Handle, uniformName);
+
+            if (location == -1) //TODO: && EnableDebugging
+                throw new ArgumentException($"Uniform '{uniformName}' in shader '{Name}' is not defined or has been optimized out.");
+
+            return location;
         }
 
         private bool disposedValue = false;
@@ -251,13 +261,6 @@ namespace LearnOpenTK.Common
         {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        public void SetInt(string name, int value)
-        {
-            int location = GL.GetUniformLocation(Handle, name);
-
-            GL.Uniform1(location, value);
         }
     }
 }
