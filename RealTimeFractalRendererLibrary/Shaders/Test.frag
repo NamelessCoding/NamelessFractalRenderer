@@ -541,8 +541,8 @@ void main() {
     AO += dist;
   }
   // AO = max(1.-AO, 0.01);
-  AO = max(pow(AO * 3., 2.), 0.);
-  AO = clamp(AO, 0., 1.);
+  AO = max(pow(AO * 1.5, 2.), 0.);
+  AO = clamp(AO, 0.1, 1.);
   //+ texture2D(colorfog, texCoord).xyz
   // col = tonemap_uchimura2(col);
   // col = pow(col, vec3(1.6))*1.8;

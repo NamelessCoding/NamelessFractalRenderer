@@ -10,11 +10,14 @@ uniform sampler2D albedo;
 uniform sampler2D TAA;
 
 uniform sampler2D fogLO;
+uniform sampler2D watpos;
 
 uniform mat4 projection;
 
 uniform vec2 wh;
 uniform float time;
+
+uniform vec3 viewPos;
 
 uniform float brightness;
 
@@ -78,7 +81,7 @@ float getBlurSize(float depth, float focusPoint, float focusScale,
 }
 
 vec3 blur3(vec2 p, float centerDepth, float focalLength, vec2 iResolution,
-           inout uint r, bool mn) {
+           inout uint r, bool mn, vec4 waterInfo) {
   // vec2 iResolution = vec2(viewWidth, viewHeight);
 
   float TotalContribution = 0.;
@@ -87,6 +90,9 @@ vec3 blur3(vec2 p, float centerDepth, float focalLength, vec2 iResolution,
   float mm = iResolution.y / iResolution.x;
 
   float currentDepth = texture2D(normal, p / iResolution).w;
+  if (waterInfo.w > 0.5) {
+    currentDepth = length(waterInfo.xyz - viewPos);
+  }
   /// float cocSizeS =  clamp(CoC(mm, focalLength, currentDepth, centerDepth),
   /// 0.0001, 1. );
   // float newCOC(float As, float focalLength, float depth, float depthCenter){
@@ -124,7 +130,10 @@ vec3 blur3(vec2 p, float centerDepth, float focalLength, vec2 iResolution,
     vec2 sampCoords = (p + coords) / iResolution;
 
     float Depth = texture2D(normal, sampCoords).w;
-
+    vec4 wpo = texture2D(watpos, sampCoords);
+    if (wpo.w > 0.5) {
+      Depth = length(wpo.xyz - viewPos);
+    }
     vec2 uv2 = sampCoords;
     vec3 rad2 = vec3(0.);
     vec2 offset2 = (sampCoords * iResolution - iResolution.xy / 2.) * 1.;
@@ -620,7 +629,7 @@ void main() {
 
   f = percent;
 
-  // vec4 wp = texture2D(watpos, texCoord);
+  vec4 wp = texture2D(watpos, texCoord);
   float fov = 2. * atan(1. / projection[1][1]);
   // 2 * atan(1 / projMatrix[1][1])
   float fc = .1;
@@ -630,8 +639,15 @@ void main() {
     fc = 4.;
     mixen = true;
   }
-  vec3 color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen);
 
+  if (wp.w > 0.5) {
+    depthCenter = length(texture2D(watpos, vec2(0.5)).xyz - viewPos);
+  }
+
+  vec3 color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
+  if (brightness < 1.0) {
+    color2 = texture2D(fogLO, texCoord).xyz;
+  }
   // color2 = texture2D(fogLO, texCoord).xyz;
 
   // vec3 lodbloom(vec2 iResolution, float lod){
@@ -650,7 +666,7 @@ void main() {
   float exposure = clamp((0.5) * exp2(EV100), 0.00018, 1.);
   col = max(col, 0.);
   col /= exposure;
-  col *= brightness;
+  // col *= brightness;
 
   uint seedCam = uint(time);
   vec2 smallOffset =

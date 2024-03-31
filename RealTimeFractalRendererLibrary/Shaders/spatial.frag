@@ -40,6 +40,12 @@ void main() {
   Projected = prevproj * Projected;
   Projected /= Projected.w;
   vec2 ProjectedCoordinates = Projected.xy * 0.5 + 0.5;
+  uint seedCamPrev = uint(max(time, 0));
+  vec2 smallOffset2 =
+      ((vec2(rndf(seedCamPrev), rndf(seedCamPrev))) * 2. - 1.) / wh;
+  // smallOffset2 = vec2(0.);
+
+  ProjectedCoordinates -= smallOffset2 * 1.;
 
   // vec3 InitSampleLO = texture2D(color, texCoord).xyz;
   bool isthesky = false;

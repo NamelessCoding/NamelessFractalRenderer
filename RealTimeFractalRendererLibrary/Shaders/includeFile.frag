@@ -643,9 +643,115 @@ float mapPl(vec3 p) {
   // return deWATER(p/0.6)*0.6;
 }
 
+float sdPlane(vec3 p) { return p.y; }
+
+float sdSphere(vec3 p, float s) { return length(p) - s; }
+
+float sdBox2(vec3 p, vec3 b) {
+  vec3 d = abs(p) - b;
+  return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+const vec2 mp = vec2(-1., 1.);
+
+void mengerFold(inout vec3 z) {
+  z.xy += min(z.x - z.y, 0.0) * mp;
+  z.xz += min(z.x - z.z, 0.0) * mp;
+  z.yz += min(z.y - z.z, 0.0) * mp;
+}
+
+float iFracScale, iFracAng1, iFracAng2;
+vec3 iFracShift, iFracCol;
+
+vec4 fractalTEST(vec3 p) {
+  vec2 a1 = vec2(sin(iFracAng1), cos(iFracAng1));
+  vec2 a2 = vec2(sin(iFracAng2), cos(iFracAng2));
+  mat2 rmZ = mat2(a1.y, a1.x, -a1.x, a1.y);
+  mat2 rmX = mat2(a2.y, a2.x, -a2.x, a2.y);
+  float scale = 1.0;
+  vec3 orbit = vec3(0.);
+  for (int i = 0; i < 11; ++i) {
+    p.xyz = abs(p.xyz);
+    p.xy *= rmZ;
+    mengerFold(p);
+    p.yz *= rmX;
+    p *= iFracScale;
+    scale *= iFracScale;
+    p.xyz += iFracShift;
+    orbit = max(orbit, p.xyz * iFracCol);
+  }
+  return vec4(clamp(orbit, 0., 1.), sdBox2(p, vec3(6.0)) / scale);
+}
+
+struct Level {
+  float FracScale, FracAng1, FracAng2;
+  vec3 FracShift, FracCol;
+  vec4 MarblePos, FlagPos;
+  bool isPlanet;
+};
+
+const int levelnum = 6;
+const Level[] Levels = Level[](
+    // Jump the crater
+    Level(1.8, -0.12, 0.5, vec3(-2.12, -2.75, 0.49), vec3(0.42, 0.38, 0.19),
+          vec4(-2.95862, 2.68825, -1.11868, 0.035),
+          vec4(2.95227, 2.65057, 1.11848, 0.035), false),
+    // Too many trees
+    Level(1.9073f, -9.83f, -1.16f, vec3(-3.508, -3.593, 3.295),
+          vec3(-0.34, 0.12, -0.08), vec4(-3.40191, 4.14347, -3.48312, 0.04),
+          vec4(3.40191, 4.065, 3.48312, 0.04), false),
+    // Hole in one
+    Level(2.02f, -1.57f, 1.62f, vec3(-3.31f, 6.19f, 1.53f),
+          vec3(0.12f, -0.09f, -0.09f), vec4(3.18387f, 5.99466f, 0.0f, 0.009f),
+          vec4(0.0f, -6.25f, 0.0f, 0.009f), false),
+    // Around the world
+    Level(1.65f, 0.37f, 5.26f, vec3(-1.41f, -0.22f, -0.77f),
+          vec3(0.14f, -1.71f, 0.31f), vec4(0.0f, 2.29418f, 0.0f, 0.01f),
+          vec4(0.0f, -2.25f, 0.0f, 0.01f), true),
+    // Beware Of Bumps
+    Level(1.66f, 1.52f, 0.19f, vec3(-3.83f, -1.94f, -1.09f),
+          vec3(0.42f, 0.38f, 0.19f), vec4(0.68147f, 2.80038f, 2.52778f, 0.02f),
+          vec4(0.0f, 2.84448f, -2.71705f, 0.02f), false),
+    // Mountain Climbing
+    Level(1.58f, -1.45f, 3.95f, vec3(-1.55f, -0.13f, -2.52f),
+          vec3(-1.17f, -0.4f, -1.0f), vec4(0.0f, 3.36453f, 2.28284f, 0.02f),
+          vec4(0.0f, 3.68893f, -0.604513f, 0.02f), false),
+    // Mind the gap
+    Level(1.81, -4.84, -2.99, vec3(-2.905, 0.765, -4.165),
+          vec3(0.251, 0.337, 0.161), vec4(-4.63064f, 3.8365f, 0.0f, 0.022f),
+          vec4(4.63f, 3.61f, 0.0f, 0.022f), false),
+    // The Sponge
+    Level(1.88f, 1.52f, 4.91f, vec3(-4.54f, -1.26f, 0.1f),
+          vec3(-1.0f, 0.3f, -0.43f), vec4(-2.8896f, 3.76526f, 0.0f, 0.03f),
+          vec4(2.88924f, 3.73f, 0.0f, 0.03f), false),
+    // Build Up Speed
+    Level(2.08f, -4.79f, 3.16f, vec3(-7.43f, 5.96f, -6.23f),
+          vec3(0.16f, 0.38f, 0.15f), vec4(6.06325f, 6.32712f, 0.0f, 0.023f),
+          vec4(0.0f, 6.72f, 0.0f, 0.023f), false),
+    // Around The Citadel
+    Level(2.0773f, -9.66f, -1.34f, vec3(-1.238f, -1.533f, 1.085f),
+          vec3(0.42f, 0.38f, 0.19f), vec4(1.03543f, 1.06432f, 1.22698f, 0.01f),
+          vec4(-1.39536f, 0.641835f, 0.0f, 0.01f), false),
+    // Top Of The Citadel
+    Level(2.0773f, -9.66f, -1.34f, vec3(-1.238f, -1.533f, 1.085f),
+          vec3(0.42f, 0.38f, 0.19f), vec4(1.04172f, 1.41944f, 1.09742f, 0.005f),
+          vec4(-1.04172f, 1.414f, -1.09742f, 0.005f), false),
+    // Mega Citadel
+    Level(1.4731, 0.0f, 0.0f, vec3(-10.27, 3.28, -1.90), vec3(1.17, 0.07, 1.27),
+          vec4(-0.05, 14.69, 0.02, 0.009), vec4(-14.76, 0.01, -0.00, 0.009),
+          false));
+
+void LoadLevel(Level LVL) {
+  iFracScale = LVL.FracScale;
+  iFracAng1 = LVL.FracAng1 + 0.0 * sin(3.1);
+  iFracAng2 = LVL.FracAng2 + 0.0 * cos(3.1);
+  iFracShift = LVL.FracShift;
+  iFracCol = LVL.FracCol;
+}
+
 float map(vec3 p) {
   float ls = 0.;
-  p = p.xzy;
+  // p = p.xzy;
   isWat = 0.;
   float c = 32.1;
   vec3 l33 = vec3(3., 1., 3.);
@@ -653,7 +759,11 @@ float map(vec3 p) {
   // p = floor(p*5.)/5.;
   l = 0.;
   rough = 1.;
-  cccc = vec3(0.6);
+  cccc = vec3(0.99);
+  LoadLevel(Levels[1]);
+  vec4 newstuff = fractalTEST(p / 5.);
+  cccc = clamp(newstuff.xyz, 0., 0.99);
+  return newstuff.w * 5.;
 
   float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p.xzy) / 10.) * 10.;
   float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;

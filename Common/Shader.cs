@@ -227,8 +227,8 @@ namespace LearnOpenTK.Common
             if (!_uniformLocations.TryGetValue(uniformName, out var location))
                 location = GL.GetUniformLocation(Handle, uniformName);
 
-            if (location == -1) //TODO: && EnableDebugging
-                throw new ArgumentException($"Uniform '{uniformName}' in shader '{Name}' is not defined or has been optimized out.");
+            //if (location == -1) //TODO: && EnableDebugging
+              //  throw new ArgumentException($"Uniform '{uniformName}' in shader '{Name}' is not defined or has been optimized out.");
 
             return location;
         }

@@ -887,9 +887,10 @@ namespace RealTimeFractalRendererLibrary
    
             _finalShader.SetInt("TAA", 13); //TODO: review. "TAA" sampler is bound to "upscale" here.
             _finalShader.SetInt("fogLO", 17); //TAA
-          
+            _finalShader.SetInt("watpos", 19);
 
- 
+
+
 
 
             GL.BindVertexArray(quadVAO);
@@ -1155,7 +1156,8 @@ namespace RealTimeFractalRendererLibrary
       
             _tempAccumShader.SetMatrix4(prevView, "prevview");
             _tempAccumShader.SetMatrix4(prevProjection, "prevproj");
-         
+            _tempAccumShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _tempAccumShader.SetFloat(iFrame, "time");
 
             GL.ActiveTexture(TextureUnit.Texture0);//hack
             GL.BindTexture(TextureTarget.Texture2D, prevAcc);
@@ -1321,6 +1323,7 @@ namespace RealTimeFractalRendererLibrary
             _finalShader.SetFloat(iFrame, "time");
       
             _finalShader.SetFloat(bright, "brightness");
+            _finalShader.SetVector3(_camera.Position, "viewPos");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 

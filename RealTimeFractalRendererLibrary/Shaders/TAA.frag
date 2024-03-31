@@ -573,6 +573,8 @@ void main() {
 
   col *= vec3(texture2D(colorfog, TC).w);
 
+  // col = diff;
+
   vec3 watPOS = View;
   if (wp.w > 0.5) {
     // do water
