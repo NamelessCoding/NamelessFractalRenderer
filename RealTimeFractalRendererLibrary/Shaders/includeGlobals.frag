@@ -171,8 +171,8 @@ float t = 0.01;
         t += h;
 */
 bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
-           bool renderWat, inout bool hitswat, bool stopatwat = false,
-           float isk2 = 0.) {
+           bool renderWat, inout bool hitswat, inout float isk2,
+           bool stopatwat = false) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   bool hitWat = false;
@@ -182,7 +182,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   isk2 = 0.;
   float epsl = epsilon;
   vec3 keepWP = cam;
-  for (int i = 0; i < 220; i++) {
+  for (int i = 0; i < 290; i++) {
     // p = cam + d*t;
 
     float A = map(p);

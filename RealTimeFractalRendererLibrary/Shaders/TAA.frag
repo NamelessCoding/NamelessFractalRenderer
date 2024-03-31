@@ -594,7 +594,7 @@ void main() {
           clamp(spec * F22, 0., 1000.);
 
     if (wn.w > 0.5) {
-      col = vec3(0.);
+      col = clamp(spec * F22, 0., 1000.);
     }
   }
 

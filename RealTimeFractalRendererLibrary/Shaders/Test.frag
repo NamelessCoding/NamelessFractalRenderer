@@ -314,7 +314,8 @@ void main() {
   vec3 wpzz = vec3(0.);
   vec3 wnzz = vec3(0.);
   bool hitswat = false;
-  if (trace(p, dir, wpzz, wnzz, false, hitswat)) {
+  float ss = 0.;
+  if (trace(p, dir, wpzz, wnzz, false, hitswat, ss)) {
     // lengthOfReflection = length(holdp - p);
     normalLength = length(p - camera);
 
@@ -456,8 +457,8 @@ void main() {
     bool hitswat = false;
     // bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
     // renderWat, inout bool hitswat, bool stopatwat = false){
-
-    if (trace(p, dir, wps, wns, removeWater, hitswat, true)) {
+    float sss = 0.;
+    if (trace(p, dir, wps, wns, removeWater, hitswat, sss, true)) {
       cosT = max(dot(dir, n), 0.);
       reflectionLength = length(p - reflcam);
 
