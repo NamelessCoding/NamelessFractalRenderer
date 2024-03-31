@@ -3,9 +3,6 @@
 layout(location = 0) out vec4 weigths;
 layout(location = 1) out vec4 outrad;
 layout(location = 2) out vec4 outpos;
-layout(location = 3) out vec4 weigthsFog;
-layout(location = 4) out vec4 outradFog;
-layout(location = 5) out vec4 temporalPositionFog;
 
 // temporalPositionFog
 in vec2 texCoord;
@@ -22,8 +19,6 @@ uniform sampler2D prevN;
 
 //TODO: use or remove these:
 //uniform sampler2D reflAlb;
-//uniform sampler2D prevPosition;
-//uniform sampler2D prevSecondPosition;
 //uniform sampler2D tempFog;
 //uniform sampler2D LOFog;
 //uniform sampler2D fog;

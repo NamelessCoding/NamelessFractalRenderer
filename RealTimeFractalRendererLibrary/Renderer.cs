@@ -33,9 +33,7 @@ namespace RealTimeFractalRendererLibrary
         int colortexPosition;
         int colortexNormal;
         int colortexAlbedo;
-        int colortexFog;
         int colortexFogPos;
-        int colortexFogPrev;
 
         int colortexSecondPosition;
         int colortexSecondAlbedo;
@@ -60,19 +58,13 @@ namespace RealTimeFractalRendererLibrary
         int temporalbuff;
         int temporalWeigths;
         int temporalOutgoingRadiance;
-        int temporalWeigthsFog;
-        int temporalOutgoingRadianceFog;
 
         int temporalPosition;
-        int temporalPositionFog;
 
         private Shader _SpatialRestirShader = default!;
         int spatialbuff;
         int spatialWeigths;
         int spatialOutgoingRadiance;
-
-        int spatialWeigthsFog;
-        int spatialOutgoingRadianceFog;
 
         private Shader _swapShader = default!;
         int swapbuff;
@@ -86,8 +78,6 @@ namespace RealTimeFractalRendererLibrary
         int prevSpatialWeigths;
         int prevSpatialOutgoingRadiance;
         int prevNormalDepth;
-        int prevPosition;
-        int prevSecondPosition;
 
         int prevAcc;
         int prevTAA;
@@ -281,14 +271,11 @@ namespace RealTimeFractalRendererLibrary
             colortexReflection = GL.GenTexture();
             colortexSecondAlbedo = GL.GenTexture();
             colortexHoldInfo = GL.GenTexture();
-            colortexFog = GL.GenTexture();
             colortexFogPos = GL.GenTexture();
-            colortexFogPrev = GL.GenTexture();
             colorfog = GL.GenTexture();
             colorfog2 = GL.GenTexture();
             watpos = GL.GenTexture();
             watnorm = GL.GenTexture();
-            prevSecondPosition = GL.GenTexture();
             rcpos = GL.GenTexture();
             // rcpos = GL.GenTextures();
             rcnorm = GL.GenTexture();
@@ -313,7 +300,7 @@ namespace RealTimeFractalRendererLibrary
                 ScaleEverything = 1.0f;
             }
 
-           
+                 
             setupTex2D(colorfog2);          
             setupTex2D(colorfog);
             setupTex2D(watnorm);
@@ -328,9 +315,7 @@ namespace RealTimeFractalRendererLibrary
             setupTex3D(rcrad, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex2D(colortex, false);
             setupTex2D(colortexPosition, true, PixelInternalFormat.Rgba32f);
-            setupTex2D(colortexFog, false);
             setupTex2D(colortexFogPos, false);
-            setupTex2D(colortexFogPrev);
             setupTex2D(colortexHoldInfo);
             setupTex2D(colortexNormal, true, PixelInternalFormat.Rgba32f);
             setupTex2D(colortexAlbedo);
@@ -431,22 +416,13 @@ namespace RealTimeFractalRendererLibrary
             temporalWeigths = GL.GenTexture();
             temporalOutgoingRadiance = GL.GenTexture();
             temporalPosition = GL.GenTexture();
-            temporalPositionFog = GL.GenTexture();
-            temporalWeigthsFog = GL.GenTexture();
-            temporalOutgoingRadianceFog = GL.GenTexture();
             temporalbuff = GL.GenFramebuffer();
-            prevPosition = GL.GenTexture();
 
             
             setupTex2D(temporalWeigths, false);
-            setupTex2D(temporalWeigthsFog, false);
-            setupTex2D(temporalOutgoingRadianceFog, false);
 
-            setupTex2D(prevPosition, true, PixelInternalFormat.Rgba32f);
-            setupTex2D(prevSecondPosition, true, PixelInternalFormat.Rgba32f);
             setupTex2D(temporalOutgoingRadiance, false);
             setupTex2D(temporalPosition, false, PixelInternalFormat.Rgba32f);
-            setupTex2D(temporalPositionFog, false);
 
 
             //====================================================================
@@ -463,21 +439,8 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment2,
                 TextureTarget.Texture2D, temporalPosition, 0
                 );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment3,
-                TextureTarget.Texture2D, temporalWeigthsFog, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment4,
-                TextureTarget.Texture2D, temporalOutgoingRadianceFog, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment5,
-                TextureTarget.Texture2D, temporalPositionFog, 0
-                );
-            DrawBuffersEnum[] att2 = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2
-            , DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4, DrawBuffersEnum.ColorAttachment5];
-            GL.DrawBuffers(6, att2);
+            DrawBuffersEnum[] att2 = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2];
+            GL.DrawBuffers(3, att2);
 
             //private Shader _swapShader;
 
@@ -486,14 +449,10 @@ namespace RealTimeFractalRendererLibrary
             spatialWeigths = GL.GenTexture();
             spatialOutgoingRadiance = GL.GenTexture();
 
-            spatialWeigthsFog = GL.GenTexture();
-            spatialOutgoingRadianceFog = GL.GenTexture();
             spatialbuff = GL.GenFramebuffer();
 
             
             setupTex2D(spatialWeigths, false);
-            setupTex2D(spatialWeigthsFog, false);
-            setupTex2D(spatialOutgoingRadianceFog, false);
             setupTex2D(spatialOutgoingRadiance, false);
 
 
@@ -506,16 +465,8 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment1,
                 TextureTarget.Texture2D, spatialOutgoingRadiance, 0
                 );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment2,
-                TextureTarget.Texture2D, spatialWeigthsFog, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment3,
-                TextureTarget.Texture2D, spatialOutgoingRadianceFog, 0
-                );
-            DrawBuffersEnum[] att4 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
-            GL.DrawBuffers(4, att4);
+            DrawBuffersEnum[] att4 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1];
+            GL.DrawBuffers(2, att4);
 
    
             TAA = GL.GenTexture();
@@ -530,21 +481,8 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment0,
                 TextureTarget.Texture2D, TAA, 0
                 );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, prevPosition, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment2,
-               TextureTarget.Texture2D, prevSecondPosition, 0
-               );
-            //colortexFogPrev
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment3,
-               TextureTarget.Texture2D, colortexFogPrev, 0
-               );
-            DrawBuffersEnum[] att10 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
-            GL.DrawBuffers(4, att10);
+            DrawBuffersEnum[] att10 = [DrawBuffersEnum.ColorAttachment0];
+            GL.DrawBuffers(1, att10);
 
  
             setupTex2D(upscale, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
@@ -698,7 +636,7 @@ namespace RealTimeFractalRendererLibrary
                TextureTarget.Texture2D, var1, 0
                );
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-              FramebufferAttachment.ColorAttachment2,
+               FramebufferAttachment.ColorAttachment2,
               TextureTarget.Texture2D, colorfog, 0
               );
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -801,8 +739,6 @@ namespace RealTimeFractalRendererLibrary
             _TemporalRestirShader.SetInt("prevP", 10);//hack
             _TemporalRestirShader.SetInt("prevN", 22);
             //_TemporalRestirShader.SetInt("reflAlb", 25);
-            //_TemporalRestirShader.SetInt("prevPosition", );
-            //_TemporalRestirShader.SetInt("prevSecondPosition", );
 
             _SpatialRestirShader.Use();
             //_SpatialRestirShader.SetInt("color", 1);
@@ -1376,18 +1312,16 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture2D, upscale);
             GL.ActiveTexture(TextureUnit.Texture14);
             GL.BindTexture(TextureTarget.Texture2D, colorfog2);
-            //colortexFog
-            GL.ActiveTexture(TextureUnit.Texture15);
-            GL.BindTexture(TextureTarget.Texture2D, colortexFogPrev);
-            GL.ActiveTexture(TextureUnit.Texture16);
-            GL.BindTexture(TextureTarget.Texture2D, spatialWeigthsFog);
+            //GL.ActiveTexture(TextureUnit.Texture15);
+            //GL.BindTexture(TextureTarget.Texture2D, );
+            //GL.ActiveTexture(TextureUnit.Texture16);
+            //GL.BindTexture(TextureTarget.Texture2D, );
             GL.ActiveTexture(TextureUnit.Texture17);
             GL.BindTexture(TextureTarget.Texture2D, TAA);
             GL.ActiveTexture(TextureUnit.Texture18);
             GL.BindTexture(TextureTarget.Texture2D, suntex);
             GL.ActiveTexture(TextureUnit.Texture19);
             GL.BindTexture(TextureTarget.Texture2D, watpos);
-            //
             GL.ActiveTexture(TextureUnit.Texture20);
             GL.BindTexture(TextureTarget.Texture2D, temporalPosition);
             GL.ActiveTexture(TextureUnit.Texture21);
@@ -1406,10 +1340,10 @@ namespace RealTimeFractalRendererLibrary
             GL.BindTexture(TextureTarget.Texture2D, colorfog);
             GL.ActiveTexture(TextureUnit.Texture28);
             GL.BindTexture(TextureTarget.Texture2D, colortexReflection);
-            GL.ActiveTexture(TextureUnit.Texture29);
-            GL.BindTexture(TextureTarget.Texture2D, colortexFog);
-            GL.ActiveTexture(TextureUnit.Texture30);
-            GL.BindTexture(TextureTarget.Texture2D, spatialOutgoingRadianceFog);
+            //GL.ActiveTexture(TextureUnit.Texture29);
+            //GL.BindTexture(TextureTarget.Texture2D, );
+            //GL.ActiveTexture(TextureUnit.Texture30);
+            //GL.BindTexture(TextureTarget.Texture2D, );
             GL.ActiveTexture(TextureUnit.Texture31);
             GL.BindTexture(TextureTarget.Texture2D, skytex);
         }
