@@ -13,44 +13,16 @@ in vec2 texCoord;
 uniform sampler2D color;
 uniform sampler2D position;
 uniform sampler2D normal;
-//uniform sampler2D albedo;
 uniform sampler2D secondpos;
 uniform sampler2D prevW;
 uniform sampler2D prevL;
 uniform sampler2D prevP;
 uniform sampler2D prevN;
 
-//TODO: use or remove these:
-//uniform sampler2D reflAlb;
-//uniform sampler2D prevPosition;
-//uniform sampler2D prevSecondPosition;
-//uniform sampler2D tempFog;
-//uniform sampler2D LOFog;
-//uniform sampler2D fog;
-//uniform sampler2D fogsecpos;
-//uniform sampler2D tempfogpos;
-
-/*
-_TemporalRestirShader.SetInt("tempFog", 12);
-            _TemporalRestirShader.SetInt("LOFog", 13);
-*/
-/*
-_TemporalRestirShader.SetInt("prevW", 5);
-            _TemporalRestirShader.SetInt("prevL", 6);
-            _TemporalRestirShader.SetInt("prevP", 7);
-             */
-
-//uniform mat4 view;
-//uniform mat4 projection;
-//uniform mat4 invview;
-//uniform mat4 invproj;
 uniform mat4 prevview;
 uniform mat4 prevproj;
 uniform vec2 wh;
 uniform float time;
-//uniform vec3 viewPos;
-//uniform vec3 lastViewPos;
-//uniform vec3 ldir;
 
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
@@ -78,7 +50,7 @@ void main() {
   vec3 InitSampleLO = texture2D(color, texCoord).xyz;
   vec4 pst = texture2D(secondpos, texCoord).xyzw;
 
-  //vec3 cameraOffset = viewPos - lastViewPos;
+  // vec3 cameraOffset = viewPos - lastViewPos;
   vec3 View = texture2D(position, texCoord).xyz;
   vec4 Projected = vec4(View.xyz, 1.); // + vec4(cameraOffset, 0.);
   Projected = prevview * Projected;
@@ -99,14 +71,13 @@ void main() {
   if (abs(currN.w - prevN.w) > 2.) {
     disc = true;
   }
-  //float isSpec = texture2D(reflAlb, texCoord).w;
+  // float isSpec = texture2D(reflAlb, texCoord).w;
   if (ProjectedCoordinates.x > 1. || ProjectedCoordinates.x < 0. ||
       ProjectedCoordinates.y > 1. || ProjectedCoordinates.y < 0. || disc) {
     ProjectedCoordinates = texCoord;
     outsc = true;
   }
 
- 
   vec3 weigthR = texture2D(prevW, ProjectedCoordinates).xyz;
   float RM = weigthR.x;
   float Rw = weigthR.y;

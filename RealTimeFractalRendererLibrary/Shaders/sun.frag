@@ -87,7 +87,7 @@ void main() {
   // return normalize(x*T + y*B + z*N);
 
   vec2 uv = texCoord * 2. - 1.;
-  vec3 p = vec3(lpos + vec3(B * uv.x + -T * uv.y) * 100.);
+  vec3 p = vec3(lpos + vec3(B * uv.x + -T * uv.y) * 200.);
   vec3 cam = p;
 
   if (traceSun(p, dir, 380.)) {

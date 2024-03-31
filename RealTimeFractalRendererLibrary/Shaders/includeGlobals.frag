@@ -180,8 +180,9 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   watn = vec3(0.);
   hitswat = false;
   isk2 = 0.;
+  float epsl = epsilon;
   vec3 keepWP = cam;
-  for (int i = 0; i < 280; i++) {
+  for (int i = 0; i < 180; i++) {
     // p = cam + d*t;
 
     float A = map(p);
@@ -193,14 +194,14 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     }
     // float precis = 0.001 * t;
 
-    if (dist < epsilon && abs(dist - A) < 0.001 && !hitWat) {
+    if (dist < epsl && abs(dist - A) < epsl && !hitWat) {
       return true;
     }
 
-    if (dist < epsilon && !hitWat && renderWat) {
+    if (dist < epsl && !hitWat && renderWat) {
       watp = p;
       keepWP = watp;
-      watn = normWat(p - d * epsilon);
+      watn = normWat(p - d * epsl);
       hitswat = true;
       hitWat = true;
       // if(dot(d, watn) < -0.1){
@@ -210,11 +211,11 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
         return true;
       }
       //  continue;
-    } else if (dist < epsilon) {
+    } else if (dist < epsl) {
       return true;
     }
 
-    if (length(cam - p) > 260.) {
+    if (length(cam - p) > 1260.) {
       if (hitWat && renderWat) {
         isk2 = 1.;
         // p = keepWP;
@@ -224,6 +225,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     }
 
     // t += dist;
+    epsl += epsilon * 0.1;
     p += d * dist;
   }
 
@@ -297,13 +299,15 @@ bool traceSun(inout vec3 p, vec3 d, float maxDist) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   p += d * 30.;
-  for (int i = 0; i < 380; i++) {
+  float epsl = epsilon;
+
+  for (int i = 0; i < 180; i++) {
     // p = cam + d*t;
 
     float dist = map(p);
     // float precis = 0.001 * t;
 
-    if (dist < epsilon) {
+    if (dist < epsl) {
       return true;
     }
     if (length(cam - p) > maxDist) {
@@ -312,6 +316,7 @@ bool traceSun(inout vec3 p, vec3 d, float maxDist) {
 
     // t += dist;
     p += d * dist;
+    epsl += epsilon * 0.01;
   }
   return false;
 }

@@ -948,7 +948,7 @@ namespace RealTimeFractalRendererLibrary
             //Matrix4 lightproj = Matrix4.CreateOrthographicOffCenter(
             //    -60.0f, 60.0f, -60.0f, 60.0f, 1.0f, 100.0f
             //    );
-            Matrix4 lightproj = Matrix4.CreateOrthographic(200.0f, 200.0f, 0.0f, 127.5f);
+            Matrix4 lightproj = Matrix4.CreateOrthographic(400.0f, 400.0f, 0.0f, 127.5f);
 
             //Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
 
