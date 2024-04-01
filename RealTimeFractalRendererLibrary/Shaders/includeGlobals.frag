@@ -218,7 +218,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     if (length(cam - p) > 1260.) {
       if (hitWat && renderWat) {
         isk2 = 1.;
-        // p = keepWP;
+        p = keepWP;
         return true;
       }
       return false;
@@ -231,7 +231,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
 
   if (hitWat && renderWat) {
     isk2 = 1.;
-    // p = keepWP;
+    p = keepWP;
     return true;
   }
 

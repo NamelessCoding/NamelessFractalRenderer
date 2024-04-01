@@ -748,7 +748,39 @@ void LoadLevel(Level LVL) {
   iFracShift = LVL.FracShift;
   iFracCol = LVL.FracCol;
 }
-
+float dze(vec3 p) {
+  float i, g, e, R, S;
+  vec3 q = p;
+  R = 2.;
+  for (int j = 0; j++ < 9;)
+    p -= clamp(p, -1., 1.) * 2.,
+        S = 9. * clamp(.7 / min(dot(p, p), 3.), 0., 1.), p = p * S + q,
+        R = R * abs(S) + 1., p = p.yzx;
+  return length(p) / R;
+}
+float dxe(vec3 p) {
+  float S = 1.0f;
+  float time = 0.;
+  float R, e;
+  p.y += p.z;
+  p = vec3(log(R = length(p)) - time, asin(-p.z / R), atan(p.x, p.y) + time);
+  for (e = p.y - 1.5f; S < 6e2; S += S)
+    e += sqrt(abs(dot(sin(p.zxy * S), cos(p * S)))) / S;
+  return e * R * 0.1f;
+}
+float dfe(vec3 p0) {
+  vec4 p = vec4(p0, 3.);
+  escape = 0.;
+  p *= 2. / min(dot(p.xyz, p.xyz), 30.);
+  for (int i = 0; i < 14; i++) {
+    p.xyz = vec3(2., 4., 2.) - (abs(p.xyz) - vec3(2., 4., 2.));
+    p.xyz = mod(p.xyz - 4., 8.) - 4.;
+    p *= 9. / min(dot(p.xyz, p.xyz), 12.);
+    escape += exp(-0.2 * dot(p.xyz, p.xyz));
+  }
+  p.xyz -= clamp(p.xyz, -1.2, 1.2);
+  return length(p.xyz) / p.w;
+}
 float map(vec3 p) {
   float ls = 0.;
   // p = p.xzy;
@@ -758,14 +790,19 @@ float map(vec3 p) {
   //   p = p-c*clamp(round(p/c),-l33,l33);
   // p = floor(p*5.)/5.;
   l = 0.;
-  rough = 1.;
+  rough = 0.1;
   cccc = vec3(0.99);
-  LoadLevel(Levels[1]);
+  LoadLevel(Levels[7]);
   vec4 newstuff = fractalTEST(p / 5.);
   cccc = clamp(newstuff.xyz, 0., 0.99);
   return newstuff.w * 5.;
 
-  float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p.xzy) / 10.) * 10.;
+  float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p) / 10.) * 10.;
+
+  float bsss = dxe(p / 0.1) * 0.09;
+  return min(dze((vec3(0., -120., -120.) - p) / 65.) * 65. * 0.8,
+             min(bsss, min(aa3, dfe(p / 15.) * 15.)));
+
   float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
   float sphere = mb(p / 15.).x * 15.;
   // float sphere = length(p) - 3.5;

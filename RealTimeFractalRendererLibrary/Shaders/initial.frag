@@ -177,6 +177,13 @@ void main() {
 
       // albedos = sky(vec3(0.), dir.xzy, normalize(ldir).xzy)*1.*
       // max(dot(normalize(ldir).xzy, vec3(0.,0.,1.)),0.34);
+
+      p22 = vec4((clamp(texCoord, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
+      // p22.xy += smallOffset*1.;
+
+      dir = (invproj * p22).xyz / (invproj * p22).w;
+      dir = normalize(mat3(invview) * dir);
+
       vec3 rayDirection = dir.xzy;
       rayDirection = normalize(rayDirection);
       vec2 TX = vec2((atan(rayDirection.z, rayDirection.x) /

@@ -672,7 +672,7 @@ void main() {
   vec2 smallOffset =
       ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
 
-  if (texture2D(albedo, texCoord - smallOffset).w < 0.5) {
+  if (texture2D(albedo, texCoord).w < 0.5) {
     col = srgb_to_oklch(col);
     col.z *= 1.2;
     col.y *= 1.2;

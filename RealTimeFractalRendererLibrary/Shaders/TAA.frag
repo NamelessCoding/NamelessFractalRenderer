@@ -413,8 +413,7 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
     accum += stepCol * volAbs * .004 * dens * max(shadow, 0.5) * 1.5 *
              exp(-acci * 5.);
 
-    accum +=
-        stepCol * volAbs * .8 * max(shadow, 0.5) * dens * 1.5 * heigh * skyCol;
+    accum += stepCol * volAbs * .0005 * max(shadow, 0.5) * dens * 1.5 * heigh;
 
     // volAbs *= exp(-length(finPos - cam)*.025);
     volAbs *= exp(-max(dens, 0.05) * heigh * length(finPos - cam) * .01);
@@ -598,9 +597,8 @@ void main() {
     }
   }
 
-  if (texture2D(albedo, TC - smallOffset).w > 0.5 ||
-      texture2D(position, TC - smallOffset).w > 0.5) {
-    col = texture2D(albedo, TC - smallOffset).xyz;
+  if (texture2D(albedo, TC).w > 0.5 || texture2D(position, TC).w > 0.5) {
+    col = texture2D(albedo, TC).xyz;
   }
   ind = col;
 
@@ -666,8 +664,7 @@ void main() {
   blendFactor *= exp(-length(velocity) * 0.9) * 0.6 + 0.3;
 
   // if(texture2D(color, TC).w > 0.5){
-  if (texture2D(albedo, TC - smallOffset2).w < 0.5 &&
-      texture2D(position, TC - smallOffset2).w < 0.5) {
+  if (texture2D(albedo, TC).w < 0.5 && texture2D(position, TC).w < 0.5) {
     col = mix(col, prevCol, clamp(blendFactor, 0.0, 1.));
   }
   //}

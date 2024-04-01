@@ -632,6 +632,9 @@ void main() {
   } else if (index > 0 || prevIndex >= 16) {
 
     // col += texelFetch(skyTex, ivec2(wh.xy*texCoord),0).rgb;
+    uint seedCam = uint(time);
+    vec2 smallOffset = ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / wh;
+
     col += texture2D(skyprev, texCoord).rgb;
     prevIndex = 20;
   }
