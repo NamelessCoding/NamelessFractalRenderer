@@ -149,7 +149,9 @@ void main() {
 
     if (l > 0.01) {
       // if(i == 0){
-      isEM = 1.0;
+        if(!iswat || !removeWater){
+          isEM = 1.0;
+        }
       // }
       col += tt * l * cccc;
       // break;

@@ -182,7 +182,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   isk2 = 0.;
   float epsl = epsilon;
   vec3 keepWP = cam;
-  for (int i = 0; i < 290; i++) {
+  for (int i = 0; i < 190; i++) {
     // p = cam + d*t;
 
     float A = map(p);

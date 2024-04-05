@@ -284,7 +284,7 @@ float fbm(vec3 p, vec3 cam) {
   */
   // return max(a.x-.77,0.);
   // return a.x;
-  float b = clamp(2. * a.x + 1. * a.y + .5 * a.z + mr.x * 1., 0., 100.99);
+  float b = clamp(2. * a.x + 1. * a.y + .5 * a.z + mr.x * 1. + a.w*0.25, 0., 100.99);
   /// b b, 2.1);
   // b = a.w;
   // return max(b-0.95,0.);
@@ -293,12 +293,12 @@ float fbm(vec3 p, vec3 cam) {
   // b *= clamp(fbm2(p.xy*2.)-abs(cam.z-6500.)*0.00014, 0.001, 1.);
   // b-= a.w;
   // b = max(b-1.2-max(1.-a.w*a.x,0.), 0.);
-  b *= (a.w + mr.y) * 0.5;
+  b *= ( mr.y) * 0.9;
   b = max(b - 1.4, 0.);
   // float b = texture3D(worl, p*22.).x;
   // b += max(fbmcc(p*.05)-0.4,0.);
   float Srb = clamp(
-      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);
+      remap(clamp((cam.z - 200.) / 30., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);
   // a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
   // a -= clamp((p.z)*0.4,0., 1.);
   // a = max(a,0.);

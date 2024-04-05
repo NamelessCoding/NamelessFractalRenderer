@@ -577,7 +577,7 @@ void main() {
   vec3 watPOS = View;
   if (wp.w > 0.5) {
     // do water
-    vec3 F22 = clamp(fresnelSchlick(vec3(0.04), vec3(0.99),
+    vec3 F22 = clamp(fresnelSchlick(vec3(0.5), vec3(0.99),
                                     max(dot(normalize(wn.xyz), -wi), 0.)),
                      0., 1.);
     vec3 posWat = wp.xyz;
@@ -604,9 +604,9 @@ void main() {
 
   // vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r){
 
-  vec4 fogs = fog(watPOS, wi, TC, r);
-  col = col * fogs.w + pow(fogs.xyz * max(ldir.y * ldir.y, 0.5), vec3(1.));
-
+//  vec4 fogs = fog(watPOS, wi, TC, r);
+//  col = col * fogs.w + pow(fogs.xyz * max(ldir.y * ldir.y, 0.5), vec3(1.));
+  //col = mix(col, vec3(0.9, 0.5, 0.9) , clamp(texture2D(normal, TC).w*0.1,0.,1.));
   /// Keep for possible emissive volumetrics
   /*
   vec3 PP = texture2D(position, TC).xyz;
@@ -671,8 +671,8 @@ void main() {
 
   //}
 
-  TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.1 +
-                            texture2D(prevTAA, ProjectedCoordinates).w * 0.9,
+  TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.05 +
+                            texture2D(prevTAA, ProjectedCoordinates).w * 0.95,
                         0., 0.99));
 
   prevPosition = texture2D(position, TC);

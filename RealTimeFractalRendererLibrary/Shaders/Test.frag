@@ -321,7 +321,7 @@ void main() {
 
     vec3 kpn = vec3(0.);
     n = norm(p - dir * epsilon * 2.);
-    if (mapPl(p) < 0.) {
+    if (mapPl(p) < 0. && removeWater) {
       cccc *= vec3(0.2, 0.6, 0.9);
     }
 
@@ -463,7 +463,7 @@ void main() {
       reflectionLength = length(p - reflcam);
 
       n = norm(p - dir * epsilon * 2.);
-      if (mapPl(p) < 0.) {
+      if (mapPl(p) < 0. && removeWater) {
         cccc *= vec3(0.2, 0.6, 0.9);
       }
 

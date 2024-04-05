@@ -781,6 +781,81 @@ float dfe(vec3 p0) {
   p.xyz -= clamp(p.xyz, -1.2, 1.2);
   return length(p.xyz) / p.w;
 }
+
+
+float city_fractal(vec3 p){
+    float angle = 3.14159 / 4.0;
+    vec4 rM = 
+    vec4(cos(angle), sin(angle), 
+    -sin(angle), cos(angle));
+    float sd = p.y + 8.0;
+    float t = 100.0;
+    while (t > 0.1){
+    //for(int i = 0; i < 100; i++){
+        p.x = p.x * rM.x + p.z * rM.y;
+        p.z = p.x * rM.z + p.z * rM.w;
+        p.y += t * 0.8;
+        p = vec3(0.9, 0.6, 0.7) * t 
+        - abs(mod(p, vec3(t,t,t)*2.0) - vec3(t, t, t));
+        //vec3 a = (p)-.1;
+        float minDistance = min(p.x, min(p.y, p.z));
+        sd = max(sd, minDistance);
+        t /= 4.0;
+        
+    }
+    return sd;
+}
+
+mat2  M = mat2(6,8,-8,6)*.1;
+float i,t,s,j,T,S;
+vec3 orbitSSSS = vec3(0.);
+
+float D(vec3 p)
+{
+  orbitSSSS = vec3(0.);
+  escape = 0.;
+	for(i=1e2, t = p.y+8.; i > 1.; i/=4. ){
+		p.zx *= M,
+		p.y += i*.9,
+		p = i*.8 - abs( mod(p,i+i) - i ),
+		s = min(p.x,min(p.y,p.z)),
+        t < s ? t=s, j=i : j;
+    orbitSSSS = max(orbitSSSS, p.xzy * vec3(0.2, 0.9, 0.9));
+  // orbitSSSS = max(orbitSSSS, );
+
+    escape += exp(-0.2*dot(p,p));
+
+  }
+	return t;
+}
+
+
+float noise(vec3 uv){
+return fract(sin(uv.x*23. + uv.y*345.)*534432.*cos(uv.y*203. + uv.z*353.));
+}
+
+float noise2(vec3 uv){
+vec3 f = floor(uv);
+vec3 i = fract(uv);
+i = smoothstep(0.,1.,i);
+float a = noise(f);
+float b = noise(f+vec3(1.,0.,0.));
+float c = noise(f+vec3(0.,1.,0.));
+float d = noise(f+vec3(1.,1.,0.));
+float e = noise(f+vec3(0.,0.,1.));
+float f2 = noise(f+vec3(1.,0.,1.));
+float g = noise(f+vec3(0.,1.,1.));
+float h = noise(f+vec3(1.,1.,1.));
+
+float m1 =  mix(mix(a,b,i.x),mix(c,d,i.x),i.y);
+float m2 =  mix(mix(e,f2,i.x),mix(g,h,i.x),i.y);
+return mix(m1,m2,i.z);
+}
+
+float fbm(vec3 uv){
+return noise2(uv)*0.5+noise2(uv*2.0)*0.25+noise2(uv*4.)*0.125+noise2(uv*8.)*0.0625;
+}
+
 float map(vec3 p) {
   float ls = 0.;
   // p = p.xzy;
@@ -790,12 +865,37 @@ float map(vec3 p) {
   //   p = p-c*clamp(round(p/c),-l33,l33);
   // p = floor(p*5.)/5.;
   l = 0.;
-  rough = 0.1;
-  cccc = vec3(0.99);
-  LoadLevel(Levels[7]);
+  rough = 1.;
+  cccc = vec3(0.5);
+//p.y *= -1.;
+//p.y *= 0.5;
+/*p.y -= 55.;
+float city = D(p/0.5)*0.5;
+//cccc = clamp(orbitSSSS, 0., 1.);
+//l = max((1.-clamp((fbmss(p.xz*2. + p.y))*1.5, 0. ,1.))-0.7,0.);
+rough = (clamp(fbm(p*0.5)-0.34,0.0, 1.) > 0.0001)?1.:0.01;
+rough = 1.;
+cccc = mix(vec3(0.7), cccc, rough);
+//cccc = pal(escape, vec3(0.9, 0.6, 0.2));
+vec3 ssss = clamp(orbitSSSS, 0., 1.);
+if(ssss.x > 0.9 && ssss.y < 0.5){
+ // l = .1;
+}
+
+//return city;
+return max(city, box(p, vec3(80., 100., 80.)));
+*/
+
+  LoadLevel(Levels[6]);
   vec4 newstuff = fractalTEST(p / 5.);
   cccc = clamp(newstuff.xyz, 0., 0.99);
-  return newstuff.w * 5.;
+  float ab = dfe(p / 15.) * 15.;
+  float bb = newstuff.w * 5.;
+  float cc = min(ab, bb);
+  if (cc == ab) {
+    cccc = pal(escape, vec3(0.9, 0.6, 0.2));
+  }
+  return cc;
 
   float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p) / 10.) * 10.;
 

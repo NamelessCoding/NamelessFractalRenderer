@@ -91,7 +91,7 @@ vec3 blur3(vec2 p, float centerDepth, float focalLength, vec2 iResolution,
 
   float currentDepth = texture2D(normal, p / iResolution).w;
   if (waterInfo.w > 0.5) {
-    // currentDepth = length(waterInfo.xyz - viewPos);
+     currentDepth = length(waterInfo.xyz - viewPos);
   }
   /// float cocSizeS =  clamp(CoC(mm, focalLength, currentDepth, centerDepth),
   /// 0.0001, 1. );
@@ -132,7 +132,7 @@ vec3 blur3(vec2 p, float centerDepth, float focalLength, vec2 iResolution,
     float Depth = texture2D(normal, sampCoords).w;
     vec4 wpo = texture2D(watpos, sampCoords);
     if (wpo.w > 0.5) {
-      //  Depth = length(wpo.xyz - viewPos);
+        Depth = length(wpo.xyz - viewPos);
     }
     vec2 uv2 = sampCoords;
     vec3 rad2 = vec3(0.);
@@ -641,12 +641,14 @@ void main() {
   }
 
   if (wp.w > 0.5) {
-    // depthCenter = length(texture2D(watpos, vec2(0.5)).xyz - viewPos);
+   //  depthCenter = length(texture2D(watpos, vec2(0.5)).xyz - viewPos);
   }
 
-  vec3 color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
+  vec3 color2 = vec3(0.);
   if (brightness < 1.0) {
     color2 = texture2D(fogLO, texCoord).xyz;
+  } else {
+    color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
   }
   // color2 = texture2D(fogLO, texCoord).xyz;
 

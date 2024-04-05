@@ -153,7 +153,7 @@ namespace RealTimeFractalRendererLibrary
         private const bool EnableDebugging = true;
         private const bool isEverythingLower = true;
 
-        private const float KeepScale = 1.5f; //the default scale
+        private const float KeepScale = 1.0f; //the default scale
         private static float ScaleEverything = KeepScale;
 
         private const int shadowScale = 2048;

@@ -73,7 +73,7 @@ void main() {
 
   vec4 info = vec4(0.);
 
-  if ((l > 0.5)) {
+  if ((l > 0.01)) {
     // info = vec4(pow(imageLoad(cimage1, ivec3(prevPos)).xyz, vec3(2.2)), 20.);
     imageStore(rcfog, ivec3(prevPos), vec4(cccc * 2., 20.));
   } else if (bl2 < 0.01) {
@@ -144,7 +144,7 @@ void main() {
   if (trace(p, dir, wp, wn, false, hitswat, ssd)) {
 
     vec3 n = norm(p - dir * epsilon * 2.);
-    if (mapPl(p) < 0.) {
+    if (mapPl(p) < 0. && removeWater) {
       cccc *= vec3(0.2, 0.6, 0.9);
     }
     vec3 brdf = cccc;
