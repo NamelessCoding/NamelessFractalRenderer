@@ -309,13 +309,14 @@ void main() {
   vec3 wpzz = vec3(0.);
   vec3 wnzz = vec3(0.);
   bool hitswat = false;
-  if (trace(p, dir, wpzz, wnzz, false, hitswat)) {
+  float ss = 0.;
+  if (trace(p, dir, wpzz, wnzz, false, hitswat, ss)) {
     // lengthOfReflection = length(holdp - p);
     normalLength = length(p - camera);
 
     vec3 kpn = vec3(0.);
     n = norm(p - dir * epsilon * 2.);
-    if (mapPl(p) < 0.) {
+    if (mapPl(p) < 0. && removeWater) {
       cccc *= vec3(0.2, 0.6, 0.9);
     }
 
@@ -451,13 +452,13 @@ void main() {
     bool hitswat = false;
     // bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn, bool
     // renderWat, inout bool hitswat, bool stopatwat = false){
-
-    if (trace(p, dir, wps, wns, removeWater, hitswat, true)) {
+    float sss = 0.;
+    if (trace(p, dir, wps, wns, removeWater, hitswat, sss, true)) {
       cosT = max(dot(dir, n), 0.);
       reflectionLength = length(p - reflcam);
 
       n = norm(p - dir * epsilon * 2.);
-      if (mapPl(p) < 0.) {
+      if (mapPl(p) < 0. && removeWater) {
         cccc *= vec3(0.2, 0.6, 0.9);
       }
 
@@ -536,8 +537,8 @@ void main() {
     AO += dist;
   }
   // AO = max(1.-AO, 0.01);
-  AO = max(pow(AO * 3., 2.), 0.);
-  AO = clamp(AO, 0., 1.);
+  AO = max(pow(AO * 1.5, 2.), 0.);
+  AO = clamp(AO, 0.1, 1.);
   //+ texture2D(colorfog, texCoord).xyz
   // col = tonemap_uchimura2(col);
   // col = pow(col, vec3(1.6))*1.8;

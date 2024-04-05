@@ -17,7 +17,8 @@ uniform sampler2D prevvar;
 
 uniform mat4 prevview;
 uniform mat4 prevproj;
-
+uniform vec2 wh;
+uniform float time;
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
   seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
@@ -43,7 +44,7 @@ float lum(vec3 c) {
 }
 
 void main() {
-  // vec2 iResolution = wh;
+  vec2 iResolution = wh;
   if (texture2D(albedo, texCoord).w > 0.5) {
     return;
   }
@@ -55,6 +56,14 @@ void main() {
   Projected = prevproj * Projected;
   Projected /= Projected.w;
   vec2 ProjectedCoordinates = Projected.xy * 0.5 + 0.5;
+
+  uint seedCamPrev = uint(max(time, 0));
+  vec2 smallOffset2 =
+      ((vec2(rndf(seedCamPrev), rndf(seedCamPrev))) * 2. - 1.) / iResolution;
+  // smallOffset2 = vec2(0.);
+
+  ProjectedCoordinates -= smallOffset2 * 1.;
+
   float RW = texture2D(weightS, texCoord).z;
   vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
   // float roughness = texture2D(color, texCoord).w;

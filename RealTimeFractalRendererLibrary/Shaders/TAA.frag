@@ -411,8 +411,7 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
     accum += stepCol * volAbs * .004 * dens * max(shadow, 0.5) * 1.5 *
              exp(-acci * 5.);
 
-    accum +=
-        stepCol * volAbs * .8 * max(shadow, 0.5) * dens * 1.5 * heigh * skyCol;
+    accum += stepCol * volAbs * .0005 * max(shadow, 0.5) * dens * 1.5 * heigh;
 
     // volAbs *= exp(-length(finPos - cam)*.025);
     volAbs *= exp(-max(dens, 0.05) * heigh * length(finPos - cam) * .01);
@@ -571,10 +570,12 @@ void main() {
 
   col *= vec3(texture2D(colorfog, TC).w);
 
+  // col = diff;
+
   vec3 watPOS = View;
   if (wp.w > 0.5) {
     // do water
-    vec3 F22 = clamp(fresnelSchlick(vec3(0.04), vec3(0.99),
+    vec3 F22 = clamp(fresnelSchlick(vec3(0.5), vec3(0.99),
                                     max(dot(normalize(wn.xyz), -wi), 0.)),
                      0., 1.);
     vec3 posWat = wp.xyz;
@@ -590,21 +591,20 @@ void main() {
           clamp(spec * F22, 0., 1000.);
 
     if (wn.w > 0.5) {
-      col = vec3(0.);
+      col = clamp(spec * F22, 0., 1000.);
     }
   }
 
-  if (texture2D(albedo, TC - smallOffset).w > 0.5 ||
-      texture2D(position, TC - smallOffset).w > 0.5) {
-    col = texture2D(albedo, TC - smallOffset).xyz;
+  if (texture2D(albedo, TC).w > 0.5 || texture2D(position, TC).w > 0.5) {
+    col = texture2D(albedo, TC).xyz;
   }
   ind = col;
 
   // vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r){
 
-  vec4 fogs = fog(watPOS, wi, TC, r);
-  col = col * fogs.w + pow(fogs.xyz * max(ldir.y * ldir.y, 0.5), vec3(1.));
-
+//  vec4 fogs = fog(watPOS, wi, TC, r);
+//  col = col * fogs.w + pow(fogs.xyz * max(ldir.y * ldir.y, 0.5), vec3(1.));
+  //col = mix(col, vec3(0.9, 0.5, 0.9) , clamp(texture2D(normal, TC).w*0.1,0.,1.));
   /// Keep for possible emissive volumetrics
   /*
   vec3 PP = texture2D(position, TC).xyz;
@@ -662,16 +662,15 @@ void main() {
   blendFactor *= exp(-length(velocity) * 0.9) * 0.6 + 0.3;
 
   // if(texture2D(color, TC).w > 0.5){
-  if (texture2D(albedo, TC - smallOffset2).w < 0.5 &&
-      texture2D(position, TC - smallOffset2).w < 0.5) {
+  if (texture2D(albedo, TC).w < 0.5 && texture2D(position, TC).w < 0.5) {
     col = mix(col, prevCol, clamp(blendFactor, 0.0, 1.));
   }
   //}
 
   //}
 
-  TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.1 +
-                            texture2D(prevTAA, ProjectedCoordinates).w * 0.9,
+  TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.05 +
+                            texture2D(prevTAA, ProjectedCoordinates).w * 0.95,
                         0., 0.99));
 
   prevPosition = texture2D(position, TC);

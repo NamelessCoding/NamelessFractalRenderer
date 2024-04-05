@@ -143,7 +143,7 @@ namespace RealTimeFractalRendererLibrary
         private const bool EnableDebugging = true;
         private const bool isEverythingLower = true;
 
-        private const float KeepScale = 1.5f; //the default scale
+        private const float KeepScale = 1.0f; //the default scale
         private static float ScaleEverything = KeepScale;
 
         private const int shadowScale = 2048;
@@ -823,9 +823,10 @@ namespace RealTimeFractalRendererLibrary
    
             _finalShader.SetInt("TAA", 13); //TODO: review. "TAA" sampler is bound to "upscale" here.
             _finalShader.SetInt("fogLO", 17); //TAA
-          
+            _finalShader.SetInt("watpos", 19);
 
- 
+
+
 
 
             GL.BindVertexArray(quadVAO);
@@ -884,7 +885,7 @@ namespace RealTimeFractalRendererLibrary
             //Matrix4 lightproj = Matrix4.CreateOrthographicOffCenter(
             //    -60.0f, 60.0f, -60.0f, 60.0f, 1.0f, 100.0f
             //    );
-            Matrix4 lightproj = Matrix4.CreateOrthographic(200.0f, 200.0f, 0.0f, 127.5f);
+            Matrix4 lightproj = Matrix4.CreateOrthographic(400.0f, 400.0f, 0.0f, 127.5f);
 
             //Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
 
@@ -1091,7 +1092,8 @@ namespace RealTimeFractalRendererLibrary
       
             _tempAccumShader.SetMatrix4(prevView, "prevview");
             _tempAccumShader.SetMatrix4(prevProjection, "prevproj");
-         
+            _tempAccumShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _tempAccumShader.SetFloat(iFrame, "time");
 
             GL.ActiveTexture(TextureUnit.Texture0);//hack
             GL.BindTexture(TextureTarget.Texture2D, prevAcc);
@@ -1257,6 +1259,7 @@ namespace RealTimeFractalRendererLibrary
             _finalShader.SetFloat(iFrame, "time");
       
             _finalShader.SetFloat(bright, "brightness");
+            _finalShader.SetVector3(_camera.Position, "viewPos");
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 

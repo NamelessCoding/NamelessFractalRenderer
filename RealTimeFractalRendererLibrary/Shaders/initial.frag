@@ -119,7 +119,7 @@ void main() {
   vec3 watN = vec3(0.);
   float iskwater = 0.;
 
-  if (trace(pos, dir, watP, watN, removeWater, iswat, false, iskwater)) {
+  if (trace(pos, dir, watP, watN, removeWater, iswat, iskwater, false)) {
 
     vec3 n = norm(pos - dir * epsilon * 2.);
 
@@ -149,7 +149,9 @@ void main() {
 
     if (l > 0.01) {
       // if(i == 0){
-      isEM = 1.0;
+        if(!iswat || !removeWater){
+          isEM = 1.0;
+        }
       // }
       col += tt * l * cccc;
       // break;
@@ -177,6 +179,13 @@ void main() {
 
       // albedos = sky(vec3(0.), dir.xzy, normalize(ldir).xzy)*1.*
       // max(dot(normalize(ldir).xzy, vec3(0.,0.,1.)),0.34);
+
+      p22 = vec4((clamp(texCoord, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
+      // p22.xy += smallOffset*1.;
+
+      dir = (invproj * p22).xyz / (invproj * p22).w;
+      dir = normalize(mat3(invview) * dir);
+
       vec3 rayDirection = dir.xzy;
       rayDirection = normalize(rayDirection);
       vec2 TX = vec2((atan(rayDirection.z, rayDirection.x) /

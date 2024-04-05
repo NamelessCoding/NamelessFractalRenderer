@@ -6,8 +6,8 @@ bool useRadCache = true;
 // vec3 sunColor = mix(vec3(0.9, 0.8, 0.5), vec3(0.9,0.85, 0.8),
 // max(ldir.y,0.))*pow(max(dot(normalize(ldir), vec3(0., 1., 0.)),0.),3.);
 vec3 sunColor = vec3(0.9, 0.8, 0.5);
-float sunStrength = 12.;
-float skyStrength = 20.;
+float sunStrength = 6.;
+float skyStrength = 6.;
 
 float epsilon = 0.01;
 
@@ -171,8 +171,8 @@ float t = 0.01;
         t += h;
 */
 bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
-           bool renderWat, inout bool hitswat, bool stopatwat = false,
-           float isk2 = 0.) {
+           bool renderWat, inout bool hitswat, inout float isk2,
+           bool stopatwat = false) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   bool hitWat = false;
@@ -180,8 +180,9 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   watn = vec3(0.);
   hitswat = false;
   isk2 = 0.;
+  float epsl = epsilon;
   vec3 keepWP = cam;
-  for (int i = 0; i < 280; i++) {
+  for (int i = 0; i < 190; i++) {
     // p = cam + d*t;
 
     float A = map(p);
@@ -193,14 +194,14 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     }
     // float precis = 0.001 * t;
 
-    if (dist < epsilon && abs(dist - A) < 0.001 && !hitWat) {
+    if (dist < epsl && abs(dist - A) < epsl && !hitWat) {
       return true;
     }
 
-    if (dist < epsilon && !hitWat && renderWat) {
+    if (dist < epsl && !hitWat && renderWat) {
       watp = p;
       keepWP = watp;
-      watn = normWat(p - d * epsilon);
+      watn = normWat(p - d * epsl);
       hitswat = true;
       hitWat = true;
       // if(dot(d, watn) < -0.1){
@@ -210,26 +211,27 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
         return true;
       }
       //  continue;
-    } else if (dist < epsilon) {
+    } else if (dist < epsl) {
       return true;
     }
 
-    if (length(cam - p) > 260.) {
+    if (length(cam - p) > 1260.) {
       if (hitWat && renderWat) {
         isk2 = 1.;
-        // p = keepWP;
+        p = keepWP;
         return true;
       }
       return false;
     }
 
     // t += dist;
+    epsl += epsilon * 0.1;
     p += d * dist;
   }
 
   if (hitWat && renderWat) {
     isk2 = 1.;
-    // p = keepWP;
+    p = keepWP;
     return true;
   }
 
@@ -237,7 +239,9 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
 }
 
 // https://www.shadertoy.com/view/llKfD1
-bool tracefast(inout vec3 ro, vec3 rd) {
+bool trace222(inout vec3 ro, vec3 rd, inout vec3 watp, inout vec3 watn,
+              bool renderWat, inout bool hitswat, bool stopatwat = false,
+              float isk2 = 0.) {
 
   float w = 1.2;
   float dw = 1.8;
@@ -248,11 +252,34 @@ bool tracefast(inout vec3 ro, vec3 rd) {
   vec3 p = ro;
 
   float t = map(p);
+
+  if (renderWat) {
+    float B = mapPl(p);
+
+    t = min(t, B);
+  }
+
   float dt = 0.0;
   float stepCtr = 0.0;
-  for (int i = 0; i < 132; i++) {
+
+  vec3 cam = p;
+  // p += d*epsilon*2.;
+  bool hitWat = false;
+  watp = cam;
+  watn = vec3(0.);
+  hitswat = false;
+  isk2 = 0.;
+
+  for (int i = 0; i < 182; i++) {
     p = ro + rd * t;
-    float f = map(p);
+    float A = map(p);
+    float f = A;
+    if (!hitWat && renderWat) {
+      float B = mapPl(p);
+
+      f = min(f, B);
+    }
+
     dt = f * w;
     if (prevF + f < prevDt &&
         relaxed) // Reset to fallback position on excessive relaxation
@@ -260,16 +287,96 @@ bool tracefast(inout vec3 ro, vec3 rd) {
       relaxed = false;
       t += prevDt * (1.0 - w);
       p = ro + rd * t;
-      f = map(p);
+      float As = map(p);
+      f = As;
+      if (!hitWat && renderWat) {
+        float B = mapPl(p);
+
+        f = min(f, B);
+      }
       dt = f * w;
     }
-    if (t > 380.) {
+
+    if (t > 980.) {
       ro = p;
+      if (hitWat && renderWat) {
+        isk2 = 1.;
+        // p = keepWP;
+        return true;
+      }
       return false;
     }
-    if (t < eps2) {
+
+    if (f < eps2 && abs(f - A) < eps2 && !hitWat) {
       ro = p;
       return true;
+    }
+
+    if (f < eps2 && !hitWat && renderWat) {
+      ro = p;
+      watp = p;
+      // keepWP = watp;
+      watn = normWat(p - rd * eps2);
+      hitswat = true;
+      hitWat = true;
+      // if(dot(d, watn) < -0.1){
+      //    d = normalize(refract(d, normalize(watn), 0.1));
+      //}
+      if (stopatwat) {
+        return true;
+      }
+    } else if (f < eps2) {
+      ro = p;
+      return true;
+    } else {
+      t += dt;
+      prevF = f;
+      prevDt = dt;
+      if (relaxed) {
+        w = mod(fract(w) * dw, 1.0) + 1.0;
+      } // Escalate step scaling after each relaxation
+      else {
+        w = 1.2;
+      }              // Otherwise re-set [w]
+      eps2 *= 1.025; // Potential for further research here...
+    }
+    stepCtr += 1.0;
+  }
+  ro = p;
+  return false;
+}
+
+bool traceSun2(inout vec3 ro, vec3 rd, float mxd) {
+
+  float w = 1.2;
+  float dw = 1.8;
+  float prevF = 0.0;
+  float prevDt = 0.0;
+  bool relaxed = true;
+  float eps2 = epsilon;
+  vec3 p = ro;
+
+  float t = map(p);
+
+  float dt = 0.0;
+  float stepCtr = 0.0;
+
+  for (int i = 0; i < 182; i++) {
+    p = ro + rd * t;
+    float A = map(p);
+    float f = A;
+
+    dt = f * w;
+    if (prevF + f < prevDt &&
+        relaxed) // Reset to fallback position on excessive relaxation
+    {
+      relaxed = false;
+      t += prevDt * (1.0 - w);
+      p = ro + rd * t;
+      float As = map(p);
+      f = As;
+
+      dt = f * w;
     }
 
     if (f < eps2) {
@@ -285,7 +392,7 @@ bool tracefast(inout vec3 ro, vec3 rd) {
       else {
         w = 1.2;
       }              // Otherwise re-set [w]
-      eps2 *= 1.125; // Potential for further research here...
+      eps2 *= 1.025; // Potential for further research here...
     }
     stepCtr += 1.0;
   }
@@ -297,13 +404,15 @@ bool traceSun(inout vec3 p, vec3 d, float maxDist) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   p += d * 30.;
-  for (int i = 0; i < 380; i++) {
+  float epsl = epsilon;
+
+  for (int i = 0; i < 180; i++) {
     // p = cam + d*t;
 
     float dist = map(p);
     // float precis = 0.001 * t;
 
-    if (dist < epsilon) {
+    if (dist < epsl) {
       return true;
     }
     if (length(cam - p) > maxDist) {
@@ -312,6 +421,7 @@ bool traceSun(inout vec3 p, vec3 d, float maxDist) {
 
     // t += dist;
     p += d * dist;
+    epsl += epsilon * 0.01;
   }
   return false;
 }
