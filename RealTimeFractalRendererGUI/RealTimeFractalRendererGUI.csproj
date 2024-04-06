@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\RealTimeFractalRendererLibrary\RealTimeFractalRendererLibrary.csproj" />
   </ItemGroup>
 

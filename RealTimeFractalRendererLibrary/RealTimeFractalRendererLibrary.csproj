@@ -136,8 +136,4 @@
     <PackageReference Include="OpenTK.GLWpfControl" Version="4.2.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Common\Common.csproj" />
-  </ItemGroup>
-
 </Project>
