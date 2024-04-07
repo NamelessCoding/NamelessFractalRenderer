@@ -5,12 +5,7 @@ layout(location = 1) out vec4 secondp;
 layout(location = 2) out vec4 reflection2;
 layout(location = 3) out vec4 reflectionAlb;
 layout(location = 4) out vec4 colortexFog;
-layout(location = 5) out vec4 colortexFogp;
 
-// colortexFogp
-// colortexFog
-
-// out vec4 outputColor;
 in vec2 texCoord;
 
 layout(binding = 2, Rgba16f) uniform image3D rcrad;

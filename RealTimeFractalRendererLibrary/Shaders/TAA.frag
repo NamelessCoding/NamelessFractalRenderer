@@ -1,12 +1,10 @@
 ﻿#version 420
-// colortexFogPrev
 
 layout(binding = 0, Rgba16f) uniform image3D rcpos;
 
 layout(location = 0) out vec4 TAA;
 layout(location = 1) out vec4 prevPosition;
 layout(location = 2) out vec4 prevSecondPosition;
-layout(location = 3) out vec4 colortexFogPrev;
 
 // prevSecondPosition
 in vec2 texCoord;
