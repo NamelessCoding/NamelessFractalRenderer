@@ -27,6 +27,12 @@
             Focusable="True"/>
 
         <StackPanel Grid.Column="1" Margin="8">
+            <Grid>
+                <Label>Framerate</Label>
+                <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Run Text="{Binding FrameCounter, Mode=OneWay}"/> FPS
+                </TextBlock>
+            </Grid>
             <Label>Brightness</Label>
             <uitk:SingleUpDown Value="{Binding Brightness}" FormatString="N3"
                                Minimum="0" Maximum="100" Increment="0.1" />

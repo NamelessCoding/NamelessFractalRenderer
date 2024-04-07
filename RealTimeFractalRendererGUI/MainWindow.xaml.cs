@@ -4,9 +4,11 @@ using OpenTK.Wpf;
 using RealTimeFractalRendererLibrary;
 using System;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Timers;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Window = System.Windows.Window;
 
 namespace RealTimeFractalRendererGUI
@@ -25,6 +27,7 @@ namespace RealTimeFractalRendererGUI
         private readonly Timer renderTimer = new(TimeSpan.FromSeconds(1.0/60.0));
         private bool isRendering = false;
         public event PropertyChangedEventHandler? PropertyChanged;
+        private readonly DispatcherTimer _framerateUpdateTimer;
 
         private float realYaw = 0.0f;
         //private float smoothedYaw = 0.0f;
@@ -32,7 +35,10 @@ namespace RealTimeFractalRendererGUI
         private float realPitch = 0.0f;
         //private float smoothedPitch = 0.0f;
 
-
+        /// <summary>
+        /// Used to measure framerate in FPS.
+        /// </summary>
+        public int FrameCounter { get; set; } = 0;
         public float Brightness { get; set; } = 1.0f;
         public float Contrast { get; set; } = 1.0f;
 
@@ -61,14 +67,23 @@ namespace RealTimeFractalRendererGUI
                 RenderContinuously = false,//avoid relying on WPF's CompositionTarget.Rendering
             });
 
+            //invoke frame render periodically according to the target framerate
             renderTimer.Elapsed += (s, e) => { 
                 if (!isRendering) 
                 { 
                     isRendering = true;
-                    Dispatcher.Invoke(display.InvalidateVisual, 
-                        System.Windows.Threading.DispatcherPriority.Render);
-                } 
+                    Dispatcher.Invoke(display.InvalidateVisual, DispatcherPriority.Render);
+                    FrameCounter++;
+                }
             };
+
+            //show and reset the frame counter periodically every second
+            _framerateUpdateTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Normal, (s, e) =>
+            {
+                OnPropertyChanged(nameof(FrameCounter));
+                FrameCounter = 0;
+            }, Dispatcher.CurrentDispatcher);
+            _framerateUpdateTimer.Start();
 
         }
 
@@ -199,6 +214,11 @@ namespace RealTimeFractalRendererGUI
         {
             Keyboard.ClearFocus();
             Keyboard.Focus(display);
+        }
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
