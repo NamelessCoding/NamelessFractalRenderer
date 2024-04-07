@@ -119,7 +119,7 @@ void main() {
   vec3 watN = vec3(0.);
   float iskwater = 0.;
 
-  if (trace(pos, dir, watP, watN, removeWater, iswat, iskwater, false)) {
+  if (trace(pos, dir, watP, watN, removeWater, iswat, iskwater, false) ) {
 
     vec3 n = norm(pos - dir * epsilon * 2.);
 

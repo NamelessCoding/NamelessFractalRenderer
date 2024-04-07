@@ -36,6 +36,7 @@ namespace RealTimeFractalRendererGUI
         public float Brightness { get; set; } = 1.0f;
         public float Contrast { get; set; } = 1.0f;
 
+        public float CloudCoverage { get; set; } = 0.1f;
 
         public float XL { get; set; } = 0.0f;
         public float YL { get; set; } = 0.1f;
@@ -146,6 +147,7 @@ namespace RealTimeFractalRendererGUI
 
             //update uniforms
             renderer.SetBrightness(Brightness);
+            renderer.SetCloudCoverage(CloudCoverage);
            // renderer.SetContrast(Contrast);
             renderer.SetLdir(XL, YL, ZL);
             //TODO: add uniforms to update from gui

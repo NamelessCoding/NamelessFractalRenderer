@@ -12,6 +12,8 @@ uniform sampler3D worl;
 uniform vec2 wh;
 uniform float time;
 uniform vec3 ldir;
+uniform vec3 viewPos;
+uniform float cloudCoverage;
 
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
@@ -222,35 +224,62 @@ float worley3d(vec3 p) {
   return ll;
 }
 
-float hash(vec3 p3) {
-  p3 = fract(p3 * .1031);
-  p3 += dot(p3, p3.zyx + 31.32);
-  return fract((p3.x + p3.y) * p3.z);
+float hash(vec3 p3)
+{
+    p3  = fract(p3 * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
 }
-float noise222(in vec3 x) {
-  vec3 i = floor(x);
-  vec3 f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
+float noise222( in vec3 x )
+{
+    vec3 i = floor(x);
+    vec3 f = fract(x);
+    f = f*f*(3.0-2.0*f);
 
-  return mix(
-      mix(mix(hash(i + vec3(0, 0, 0)), hash(i + vec3(1, 0, 0)), f.x),
-          mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
-      mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
-          mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y),
-      f.z);
+    return mix(mix(mix( hash(i+vec3(0,0,0)), 
+                        hash(i+vec3(1,0,0)),f.x),
+                   mix( hash(i+vec3(0,1,0)), 
+                        hash(i+vec3(1,1,0)),f.x),f.y),
+               mix(mix( hash(i+vec3(0,0,1)), 
+                        hash(i+vec3(1,0,1)),f.x),
+                   mix( hash(i+vec3(0,1,1)), 
+                        hash(i+vec3(1,1,1)),f.x),f.y),f.z);
 }
 
-float fbmss(vec3 p) {
-  float scale = 0.1;
-  float threshold = 0.3;
-  float sum = 0.;
-  p += vec3(5., 0., 0.);
-  for (int i = 1; i <= 8; i++) {
-    sum +=
-        texture3D(worl, (p)*scale * pow(2., float(i))).w / pow(1.7, float(i));
-  }
-  return max(sum - threshold, 0.);
+float fbmss(vec3 p)
+{
+    float scale = 0.1;
+    float threshold = 0.3;
+    float sum = 0.;
+        p += vec3(5., 0., 0.);
+        for(int i = 1; i <= 8; i++)
+        {
+            sum += noise222((p+0.5) * scale * pow(2., float(i))) / pow(1.7, float(i));
+        }
+        return max(sum - threshold, 0.);
 }
+float fbmz(vec3 p, vec3 cam){
+//p.yz = rot(p.yz, iTime*0.3);
+//float a = texture(iChannel0, p).x*0.5 +texture(iChannel0, p*2.).y*0.25+
+//texture(iChannel0, p*4.).z*0.125+texture(iChannel0, p*8.).x*0.0625;
+//float a = texture(iChannel0, p).x*0.9;
+
+float b = fbmss(p*0.1);
+
+  float Srb = clamp(
+      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+//a -= clamp((p.z)*0.4,0., 1.);
+//a = max(a,0.);
+//vec3 pos = vec3(0.,0.,6500.)-p;
+//pos.xz = rot(pos.xz, iTime*200.);
+//float cap = box(pos, vec3(100.,500.,100.));
+//cap = capsule(pos, vec3(0.,-2000., 6500.), vec3(0.,2000.,6500.), 100.);
+//cap = abs(cap)+0.01;
+//float density = exp(-cap*0.00002);
+return clamp((Srb)*b,0.,1.);
+}
+
+
 
 float fbm(vec3 p, vec3 cam) {
   // p.yz = rot(p.yz, iTime*0.3);
@@ -259,6 +288,7 @@ float fbm(vec3 p, vec3 cam) {
   // float a = texture(iChannel0, p).x*0.9;
 
   // float b = fbmss(p*122.);
+  p*= 0.7;
   vec4 a = vec4(0.);
 
   a.x = texture3D(worl, p * 0.0011).g;
@@ -298,7 +328,7 @@ float fbm(vec3 p, vec3 cam) {
   // float b = texture3D(worl, p*22.).x;
   // b += max(fbmcc(p*.05)-0.4,0.);
   float Srb = clamp(
-      remap(clamp((cam.z - 200.) / 30., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);
+      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);
   // a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
   // a -= clamp((p.z)*0.4,0., 1.);
   // a = max(a,0.);
@@ -409,13 +439,24 @@ vec3 shadowS(vec3 pos) {
 }
 */
 
+
+
+
 vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 waves = vec3(0.00000519673, 0.0000121427, 0.0000296453);
   vec3 befo = p;
   vec2 tts =
-      boxIntersection(p - vec3(0., 0., 200.), d, vec3(100000., 100000., 0.1));
-  if (tts.x > 0.) {
-    p += d * tts.y;
+      boxIntersection(p - vec3(0., 0., 215.), d, vec3(100000., 100000., 0.1));
+  if (tts.x > 0. && p.z < 220. ) {
+    p += d * tts.x;
+  }/*else if(tts.x > 0. && p.z > 230.){
+      tts =
+      boxIntersection(p - vec3(0., 0., 220.), d, vec3(100000., 100000., 10.1));
+    p += d * tts.x;
+  }
+*/
+  if(length(befo-p) > 400.){
+    return vec4(0.,0.,0., 1.);
   }
 
   // vec3 drn = (p - befo)/20.;
@@ -455,9 +496,8 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 Ip = vec3(0.);
   vec3 accum = vec3(0.);
   float accum11 = 0.;
-  float minus = 0.95;
   float mult = 1.0;
-
+  float minus = max(1.0-cloudCoverage,0.);
   float zz = max(dot(vec3(0., 0., 1.), lig), 0.);
   /////////////
   // vec3 br = boreyleighconstant(wavelengths.zyx*0.0005);
@@ -473,10 +513,11 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   float keepdensity = 0.;
   bool firsth = false;
   vec3 firstHit = p;
-  for (int i = 0; i < 30; i++) {
+  float stepsize = 3.;
+  for (int i = 0; i < 200; i++) {
     // accum += ph(length(cam), reyleighH)*length(div);
     float density =
-        max(fbm(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.00014, 0.);
+        max(fbm(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.01, 0.);
     // density = smoothstep(0.,1.,density);
     density = clamp(density, 0., 1.);
     density = 1.0 - pow(1.0 - density, 4.);
@@ -486,6 +527,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
         dist = length(cam - ccc);
         firsth = true;
         firstHit = cam;
+        stepsize = 1.;
       }
       accum += density * 20.6;
       // accum11 += ph(length(cam)-6500., MieH)*length(div);
@@ -497,13 +539,13 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
 
       for (int k = 0; k < 10; k++) {
         float density2 = max(
-            fbm(cam2 * mult, cam2) - minus - abs(cam2.z - 220.) * 0.00014, 0.);
+            fbm(cam2 * mult, cam2) - minus - abs(cam2.z - 220.) * 0.01, 0.);
         // density2 = smoothstep(0.,1.,density2);
         density2 = clamp(density2, 0., 1.);
         density2 = 1.0 - pow(1.0 - density2, 4.);
 
         // accum2 += ph(cam2.z, 1300.)*30.;
-        accum2 += density2 * 40.1;
+        accum2 += density2 * 50.1;
         // accum3 += ph(length(cam2)-6500., MieH)*length(div2);
         cam2 += lig * (1. - 0.2 * random3d(cam2));
       }
@@ -548,6 +590,12 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
     //    octave += 1.0;
 
     cam += d * (1. - 0.5 * random3d(cam));
+    if(cam.z < 200. || cam.z > 260.){
+      break;
+    }
+    if(transmission < 0.5){
+      break;
+    }
     // if(length(cam)>7500.){break;}
   }
   // accumulateLight *= sky2;
@@ -601,16 +649,16 @@ void main() {
 
     // sky2 *= max(dot(ldir, vec3(0.,1.,0.)),0.34);
     vec3 final = sky2 * 1.;
-
+    //final = vec3(0.1);
     float dist = 0.;
     vec3 posit = vec3(0.);
     vec3 sunshafts = vec3(0.);
     vec4 mmm = vec4(0.);
     vec3 sunsh = vec3(0.);
-    mmm = clouds2(vec3(0., 0., 180.), d, normalize(vec3(lig.xy, abs(lig.z))),
+    mmm = clouds2(vec3(viewPos.x, -viewPos.z, 180. + viewPos.y), d, normalize(vec3(lig.xy, abs(lig.z))),
                   dist, sunsh);
     mmm.rgb *= max(dot(ldir2, vec3(0., 1., 0.)), 0.1);
-    mmm.rgb = pow(mmm.rgb, vec3(1.24));
+   //mmm.rgb = pow(mmm.rgb, vec3(1.24));
     // }else{
     //   mmm = clouds2(vec3(0.,0.,5200.),d,vec3(lig.),dist,0.01);
     //   mmm.rgb *= 0.01;
@@ -620,8 +668,8 @@ void main() {
     vec3 skys = final;
     final = final * mmm.w + pow(mmm.xyz, vec3(1.));
 
-    float f = exp(-dist * .028);
-    final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
+    float f = exp(-dist * .0028);
+    //final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
     // sn = fog();
     // final += sunshafts;
     float mmmms = max(pow(dot(ldir2, vec3(0., 1., 0.)) * 0.5 + 0.5, 4.), 0.01);

@@ -164,13 +164,19 @@ namespace RealTimeFractalRendererLibrary
         private Matrix4 prevProjection;
 
         public Vector3 ldir = new(0.0f, 0.1f, -0.9f);
-
+        public float cloudCoverage = 1.0f;
         public float bright = 1.0f;
         
         public void SetBrightness(float value)
         {
             //TODO: demo, use actual uniforms
             bright = value;
+        }
+
+        public void SetCloudCoverage(float value)
+        {
+            //TODO: demo, use actual uniforms
+            cloudCoverage = value;
         }
 
 
@@ -238,7 +244,7 @@ namespace RealTimeFractalRendererLibrary
 
         void setupTex3D(int texture, int sizeX, int sizeY, int sizeZ, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
             TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
-            TextureWrapMode wrapMode = TextureWrapMode.Repeat) {
+            TextureWrapMode wrapMode = TextureWrapMode.Repeat, TextureWrapMode wrapModeZ = TextureWrapMode.Repeat) {
             GL.BindTexture(TextureTarget.Texture3D, texture);
             // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
@@ -247,8 +253,8 @@ namespace RealTimeFractalRendererLibrary
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)magFilter);
 
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)wrapMode);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapMode);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapModeZ);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)wrapModeZ);
 
             GL.TexImage3D(TextureTarget.Texture3D, 0,
                 format,
@@ -321,7 +327,7 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(skytex, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
             setupTex2D(suntex, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder,
                 true, shadowScale, shadowScale);
-            setupTex3D(worley, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            setupTex3D(worley, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcpos, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcfog, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcnorm, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
@@ -1000,7 +1006,8 @@ namespace RealTimeFractalRendererLibrary
             _skyShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
             _skyShader.SetFloat(iFrame, "time");
             _skyShader.SetVector3(ldir, "ldir");
-     
+            _skyShader.SetVector3(_camera.Position, "viewPos");
+            _skyShader.SetFloat(cloudCoverage, "cloudCoverage");
 
             GL.BindVertexArray(quadVAO);
 

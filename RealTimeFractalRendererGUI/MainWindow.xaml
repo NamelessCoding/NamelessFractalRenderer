@@ -38,6 +38,10 @@
             <Slider Height="22" Width="116" RenderTransformOrigin="0.864,0.507" Value="{Binding YL}" Minimum="0.01" Maximum="1"/>
             <Slider Height="22" Width="116" RenderTransformOrigin="0.864,0.507" Value="{Binding ZL}" Minimum="-1" Maximum="1"/>
             <Label Content="X,Y,Z" Height="28" Width="153"/>
+
+            <Label>Cloud Coverage</Label>
+            <uitk:SingleUpDown Value="{Binding CloudCoverage}" FormatString="N3"
+                   Minimum="0" Maximum="1.0" Increment="0.01" />
             <!--TODO: Add more gui elements below to control scene uniforms-->
         </StackPanel>
 

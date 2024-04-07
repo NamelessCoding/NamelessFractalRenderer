@@ -885,15 +885,16 @@ if(ssss.x > 0.9 && ssss.y < 0.5){
 //return city;
 return max(city, box(p, vec3(80., 100., 80.)));
 */
-
-  LoadLevel(Levels[6]);
+  rough = 0.1;
+  LoadLevel(Levels[7]);
   vec4 newstuff = fractalTEST(p / 5.);
   cccc = clamp(newstuff.xyz, 0., 0.99);
   float ab = dfe(p / 15.) * 15.;
   float bb = newstuff.w * 5.;
-  float cc = min(ab, bb);
+  float cc = min(bb, bb);
   if (cc == ab) {
     cccc = pal(escape, vec3(0.9, 0.6, 0.2));
+    rough = 1.;
   }
   return cc;
 
