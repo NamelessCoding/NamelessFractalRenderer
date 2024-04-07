@@ -155,13 +155,8 @@ namespace RealTimeFractalRendererLibrary
 
         public Vector3 ldir = new(0.0f, 0.1f, -0.9f);
 
-        public float bright = 1.0f;
-        
-        public void SetBrightness(float value)
-        {
-            //TODO: demo, use actual uniforms
-            bright = value;
-        }
+        public float Brightness { get; set; } = 1.0f;
+        public bool EnableBlur { get; set; } = false;
 
 
         public void SetLdir(float X, float Y, float Z) {
@@ -1109,12 +1104,11 @@ namespace RealTimeFractalRendererLibrary
             GL.BindVertexArray(quadVAO);
       
             _finalShader.SetMatrix4(projection, "projection");
-    
-            _finalShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _finalShader.SetFloat(iFrame, "time");
-      
-            _finalShader.SetFloat(bright, "brightness");
             _finalShader.SetVector3(_camera.Position, "viewPos");
+            _finalShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _finalShader.SetFloat(iFrame, "time");      
+            _finalShader.SetFloat(Brightness, "brightness");
+            _finalShader.SetInt("enableBlur", EnableBlur ? 1 : 0);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 

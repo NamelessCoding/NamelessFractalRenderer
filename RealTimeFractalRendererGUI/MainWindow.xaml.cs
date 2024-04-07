@@ -15,6 +15,7 @@ namespace RealTimeFractalRendererGUI
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        public Renderer Renderer => renderer;
         private Renderer renderer = default!;
         private bool isRendererInitialized = false;
         private bool resolutionChanged = true;
@@ -39,8 +40,6 @@ namespace RealTimeFractalRendererGUI
         /// Used to measure framerate in FPS.
         /// </summary>
         public int FrameCounter { get; set; } = 0;
-        public float Brightness { get; set; } = 1.0f;
-        public float Contrast { get; set; } = 1.0f;
 
 
         public float XL { get; set; } = 0.0f;
@@ -94,6 +93,7 @@ namespace RealTimeFractalRendererGUI
             renderer.Load(new Vector2i(display.FrameBufferWidth, display.FrameBufferHeight));
             isRendererInitialized = true;
             renderTimer.Start();
+            OnPropertyChanged(nameof(Renderer));//tell the gui that the Renderer related properties are ready
         }
 
         private void Display_OnRender(TimeSpan delta)
@@ -160,8 +160,6 @@ namespace RealTimeFractalRendererGUI
             }
 
             //update uniforms
-            renderer.SetBrightness(Brightness);
-           // renderer.SetContrast(Contrast);
             renderer.SetLdir(XL, YL, ZL);
             //TODO: add uniforms to update from gui
 
