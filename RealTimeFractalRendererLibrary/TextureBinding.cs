@@ -13,7 +13,8 @@ namespace RealTimeFractalRendererLibrary
     /// </summary>
     public class TextureBinding
     {
-        private static int unitCounter = 0;
+        //Start counting from 1, because unit 0 is reserved for setup operations.
+        private static int unitCounter = 1;
 
         public int Handle { get; private set; }
 

@@ -197,6 +197,7 @@ namespace RealTimeFractalRendererLibrary
         void setupTex2D(int texture, bool scaleTexture = true, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
             TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
             TextureWrapMode wrapMode = TextureWrapMode.MirroredRepeat, bool customSize = false, int sizeX = 0, int sizeY = 0) {
+            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, texture);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
@@ -229,10 +230,9 @@ namespace RealTimeFractalRendererLibrary
         void setupTex3D(int texture, int sizeX, int sizeY, int sizeZ, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
             TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
             TextureWrapMode wrapMode = TextureWrapMode.Repeat) {
+            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture3D, texture);
-            // GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
-            // GL.BindImageTexture(0, rcpos, 0, );
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)magFilter);
 
@@ -244,9 +244,6 @@ namespace RealTimeFractalRendererLibrary
                 format,
                 sizeX, sizeY, sizeZ, 0, PixelFormat.Rgba,
                 PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindImageTexture(0, texture, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-
         }
 
         public void Load(Vector2i resolution)
