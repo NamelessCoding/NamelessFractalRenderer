@@ -1,7 +1,9 @@
 ﻿using LearnOpenTK.Common;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using System;
 using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 
 namespace RealTimeFractalRendererLibrary
@@ -25,6 +27,8 @@ namespace RealTimeFractalRendererLibrary
             0, 1, 3,   // first triangle
             1, 2, 3    // second triangle
         ];
+
+        private int debugFBO;
 
         private readonly TextureBinding colortex = new();
         private readonly TextureBinding colortexHoldInfo = new();
@@ -157,6 +161,11 @@ namespace RealTimeFractalRendererLibrary
 
         public float Brightness { get; set; } = 1.0f;
         public bool EnableBlur { get; set; } = false;
+        /// <summary>
+        /// The Texture that is currently displayed for debugging.
+        /// When null, the final image is not overridden.
+        /// </summary>
+        public TextureBinding? DebugTexture { get; set; } = null;
 
 
         public void SetLdir(float X, float Y, float Z) {
@@ -256,6 +265,7 @@ namespace RealTimeFractalRendererLibrary
            // GL.Enable(EnableCap.Texture3DExt);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
+            debugFBO = GL.GenFramebuffer();
             upscaleBuff = GL.GenFramebuffer();
             colorbuff = GL.GenFramebuffer();
             colorbuff2 = GL.GenFramebuffer();
@@ -290,6 +300,7 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(colortexSecondAlbedo.Handle, false);
 
             //====================================
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, debugFBO);
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, skybuff);
 
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -1087,7 +1098,7 @@ namespace RealTimeFractalRendererLibrary
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff2);
 
-            GL.Viewport(0, 0, (int)(size.X), (int)(size.Y ));
+            GL.Viewport(0, 0, (int)(size.X), (int)(size.Y));
             GL.Disable(EnableCap.DepthTest);
             _swapShader2.Use();
             GL.BindVertexArray(quadVAO);
@@ -1102,15 +1113,30 @@ namespace RealTimeFractalRendererLibrary
             GL.Disable(EnableCap.DepthTest);
             _finalShader.Use();
             GL.BindVertexArray(quadVAO);
-      
+
             _finalShader.SetMatrix4(projection, "projection");
             _finalShader.SetVector3(_camera.Position, "viewPos");
             _finalShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _finalShader.SetFloat(iFrame, "time");      
+            _finalShader.SetFloat(iFrame, "time");
             _finalShader.SetFloat(Brightness, "brightness");
             _finalShader.SetInt("enableBlur", EnableBlur ? 1 : 0);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+
+            DebugTexture = skytex;//
+            if (DebugTexture is not null)
+            {
+                //GL.BindFramebuffer(FramebufferTarget.Framebuffer, debugFBO);
+                //GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
+                //               FramebufferAttachment.ColorAttachment0,//must use attachment 0 to blit
+                //                TextureTarget.Texture2D, DebugTexture.Handle, 0);
+                //GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
+
+                GL.NamedFramebufferTexture(debugFBO, FramebufferAttachment.ColorAttachment0, DebugTexture.Handle, 0);
+
+                GL.BlitNamedFramebuffer(debugFBO, drawFramebuffer: TargetFramebuffer, 0, 0, 700, 700, 100, 100, 700, 700, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
+            }
+
 
             prevView = view;
             prevProjection = projection;

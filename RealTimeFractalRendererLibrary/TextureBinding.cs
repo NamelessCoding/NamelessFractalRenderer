@@ -18,6 +18,8 @@ namespace RealTimeFractalRendererLibrary
 
         public int Handle { get; private set; }
 
+        public string Name { get; private set; } = "cica";
+
         /// <summary>
         /// The TextureUnit that this Texture is bound to.
         /// </summary>
