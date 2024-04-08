@@ -3,7 +3,6 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 
 namespace RealTimeFractalRendererLibrary
@@ -165,7 +164,7 @@ namespace RealTimeFractalRendererLibrary
         /// The Texture that is currently displayed for debugging.
         /// When null, the final image is not overridden.
         /// </summary>
-        public TextureBinding? DebugTexture { get; set; } = null;
+        public TextureBinding? DebuggedTexture { get; set; } = null;
 
 
         public void SetLdir(float X, float Y, float Z) {
@@ -1120,23 +1119,10 @@ namespace RealTimeFractalRendererLibrary
             _finalShader.SetFloat(iFrame, "time");
             _finalShader.SetFloat(Brightness, "brightness");
             _finalShader.SetInt("enableBlur", EnableBlur ? 1 : 0);
+            _finalShader.SetInt("enableTextureDebugging", DebuggedTexture is not null ? 1 : 0);
+            _finalShader.SetInt("debuggedTexture", DebuggedTexture?.Unit ?? 0);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            DebugTexture = skytex;//
-            if (DebugTexture is not null)
-            {
-                //GL.BindFramebuffer(FramebufferTarget.Framebuffer, debugFBO);
-                //GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                //               FramebufferAttachment.ColorAttachment0,//must use attachment 0 to blit
-                //                TextureTarget.Texture2D, DebugTexture.Handle, 0);
-                //GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
-
-                GL.NamedFramebufferTexture(debugFBO, FramebufferAttachment.ColorAttachment0, DebugTexture.Handle, 0);
-
-                GL.BlitNamedFramebuffer(debugFBO, drawFramebuffer: TargetFramebuffer, 0, 0, 700, 700, 100, 100, 700, 700, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
-            }
-
 
             prevView = view;
             prevProjection = projection;

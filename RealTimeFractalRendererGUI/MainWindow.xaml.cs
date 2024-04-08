@@ -3,7 +3,10 @@ using OpenTK.Windowing.Common;
 using OpenTK.Wpf;
 using RealTimeFractalRendererLibrary;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Timers;
 using System.Windows;
@@ -52,6 +55,8 @@ namespace RealTimeFractalRendererGUI
             set => renderer.Camera.Yaw = value;
         }
 
+        public List<TextureBinding> Textures { get; set; } = [];
+
         public MainWindow()
         {
             InitializeComponent();
@@ -92,8 +97,17 @@ namespace RealTimeFractalRendererGUI
             renderer = new Renderer();
             renderer.Load(new Vector2i(display.FrameBufferWidth, display.FrameBufferHeight));
             isRendererInitialized = true;
+
+            //query all texture fields from renderer using reflection
+            Textures = typeof(Renderer).GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(field => field.FieldType == typeof(TextureBinding))
+                .Select(field => (TextureBinding)field.GetValue(renderer)!) //assume all fields are non-null
+                .ToList();
+
+            //tell the gui that these displayed property values have been updated
+            OnPropertyChanged(nameof(Textures));
+            OnPropertyChanged(nameof(Renderer));
             renderTimer.Start();
-            OnPropertyChanged(nameof(Renderer));//tell the gui that the Renderer related properties are ready
         }
 
         private void Display_OnRender(TimeSpan delta)
@@ -217,6 +231,11 @@ namespace RealTimeFractalRendererGUI
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void ClearDebugTexButton_Click(object sender, RoutedEventArgs e)
+        {
+            Renderer.DebuggedTexture = null;
         }
     }
 }

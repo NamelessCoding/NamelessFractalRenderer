@@ -26,35 +26,50 @@
             MouseDown="Display_MouseDown"
             Focusable="True"/>
 
-        <StackPanel Grid.Column="1" Margin="8">
-            <Grid>
-                <Label>Framerate</Label>
-                <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">
+        <Grid Grid.Column="1" Margin="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0">
+                <Grid>
+                    <Label>Framerate</Label>
+                    <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Run Text="{Binding FrameCounter, Mode=OneWay}"/> FPS
-                </TextBlock>
-            </Grid>
-            <Label>Brightness</Label>
-            <uitk:SingleUpDown Value="{Binding Renderer.Brightness}" FormatString="N3"
+                    </TextBlock>
+                </Grid>
+                <Label>Brightness</Label>
+                <uitk:SingleUpDown Value="{Binding Renderer.Brightness}" FormatString="N3"
                                Minimum="0" Maximum="100" Increment="0.1" />
-            <Label>Camera Yaw</Label>
-            <uitk:SingleUpDown Value="{Binding CameraYaw}" FormatString="N3"
+                <Label>Camera Yaw</Label>
+                <uitk:SingleUpDown Value="{Binding CameraYaw}" FormatString="N3"
                                Increment="1"/>
-            <Label Content="Sun Direction"/>
-            <StackPanel Orientation="Horizontal">
-                <Label>X</Label>
-                <Slider Height="22" Width="116" Value="{Binding XL}" Minimum="-1" Maximum="1" />
+                <Label Content="Sun Direction"/>
+                <StackPanel Orientation="Horizontal">
+                    <Label>X</Label>
+                    <Slider Height="22" Width="116" Value="{Binding XL}" Minimum="-1" Maximum="1" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label>Y</Label>
+                    <Slider Height="22" Width="116" Value="{Binding YL}" Minimum="0.01" Maximum="1"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label>Z</Label>
+                    <Slider Height="22" Width="116" Value="{Binding ZL}" Minimum="-1" Maximum="1"/>
+                </StackPanel>
+                <CheckBox IsChecked="{Binding Renderer.EnableBlur}">Enable blur</CheckBox>
             </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <Label>Y</Label>
-                <Slider Height="22" Width="116" Value="{Binding YL}" Minimum="0.01" Maximum="1"/>
+            <StackPanel Grid.Row="1">
+                <Separator/>
+                <Grid>
+                    <Label>Debug Texture</Label>
+                    <Button Click="ClearDebugTexButton_Click" HorizontalAlignment="Right">Clear</Button>
+                </Grid>
+                <ComboBox ItemsSource="{Binding Textures}"
+                      SelectedValue="{Binding Renderer.DebuggedTexture, Mode=TwoWay}" 
+                      DisplayMemberPath="Name" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <Label>Z</Label>
-                <Slider Height="22" Width="116" Value="{Binding ZL}" Minimum="-1" Maximum="1"/>
-            </StackPanel>
-            <CheckBox IsChecked="{Binding Renderer.EnableBlur}">Enable blur</CheckBox>
-            <!--TODO: Add more gui elements below to control scene uniforms-->
-        </StackPanel>
+        </Grid>
 
     </Grid>
 </Window>
