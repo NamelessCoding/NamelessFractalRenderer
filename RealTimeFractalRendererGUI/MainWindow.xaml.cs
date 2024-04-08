@@ -236,6 +236,7 @@ namespace RealTimeFractalRendererGUI
         private void ClearDebugTexButton_Click(object sender, RoutedEventArgs e)
         {
             Renderer.DebuggedTexture = null;
+            OnPropertyChanged(nameof(Renderer));
         }
     }
 }

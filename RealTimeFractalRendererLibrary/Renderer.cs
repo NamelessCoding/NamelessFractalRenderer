@@ -29,25 +29,25 @@ namespace RealTimeFractalRendererLibrary
 
         private int debugFBO;
 
-        private readonly TextureBinding colortex = new();
-        private readonly TextureBinding colortexHoldInfo = new();
+        private readonly TextureBinding colortex = new(nameof(colortex));
+        private readonly TextureBinding colortexHoldInfo = new(nameof(colortexHoldInfo));
 
-        private readonly TextureBinding colortexReflection = new();
-        private readonly TextureBinding colortexPosition = new();
-        private readonly TextureBinding colortexNormal = new();
-        private readonly TextureBinding colortexAlbedo = new();
-        private readonly TextureBinding colortexFogPos = new();
+        private readonly TextureBinding colortexReflection = new(nameof(colortexReflection));
+        private readonly TextureBinding colortexPosition = new(nameof(colortexPosition));
+        private readonly TextureBinding colortexNormal = new(nameof(colortexNormal));
+        private readonly TextureBinding colortexAlbedo = new(nameof(colortexAlbedo));
+        private readonly TextureBinding colortexFogPos = new(nameof(colortexFogPos));
 
-        private readonly TextureBinding colortexSecondPosition = new();
-        private readonly TextureBinding colortexSecondAlbedo = new();
+        private readonly TextureBinding colortexSecondPosition = new(nameof(colortexSecondPosition));
+        private readonly TextureBinding colortexSecondAlbedo = new(nameof(colortexSecondAlbedo));
 
-        private readonly TextureBinding watpos = new();
-        private readonly TextureBinding watnorm = new();
+        private readonly TextureBinding watpos = new(nameof(watpos));
+        private readonly TextureBinding watnorm = new(nameof(watnorm));
 
         int colorbuff2;
         private Shader _initShader = default!;
-        private readonly TextureBinding colorfog = new();
-        private readonly TextureBinding colorfog2 = new();
+        private readonly TextureBinding colorfog = new(nameof(colorfog));
+        private readonly TextureBinding colorfog2 = new(nameof(colorfog2));
 
         int colorbuff;
         Stopwatch stopWatch = default!;
@@ -59,15 +59,15 @@ namespace RealTimeFractalRendererLibrary
 
         private Shader _TemporalRestirShader = default!;
         int temporalbuff;
-        private readonly TextureBinding temporalWeigths = new();
-        private readonly TextureBinding temporalOutgoingRadiance = new();
+        private readonly TextureBinding temporalWeigths = new(nameof(temporalWeigths));
+        private readonly TextureBinding temporalOutgoingRadiance = new(nameof(temporalOutgoingRadiance));
 
-        private readonly TextureBinding temporalPosition = new();
+        private readonly TextureBinding temporalPosition = new(nameof(temporalPosition));
 
         private Shader _SpatialRestirShader = default!;
         int spatialbuff;
-        private readonly TextureBinding spatialWeigths = new();
-        private readonly TextureBinding spatialOutgoingRadiance = new();
+        private readonly TextureBinding spatialWeigths = new(nameof(spatialWeigths));
+        private readonly TextureBinding spatialOutgoingRadiance = new(nameof(spatialOutgoingRadiance));
 
         private Shader _swapShader = default!;
         int swapbuff;
@@ -75,39 +75,39 @@ namespace RealTimeFractalRendererLibrary
         private Shader _swapShader2 = default!;
         int swapbuff2;
 
-        private readonly TextureBinding prevTemporalWeigths = new();
-        private readonly TextureBinding prevTemporalOutgoingRadiance = new();
-        private readonly TextureBinding prevTemporalPosition = new();
-        private readonly TextureBinding prevSpatialWeigths = new();
-        private readonly TextureBinding prevSpatialOutgoingRadiance = new();
-        private readonly TextureBinding prevNormalDepth = new();
+        private readonly TextureBinding prevTemporalWeigths = new(nameof(prevTemporalWeigths));
+        private readonly TextureBinding prevTemporalOutgoingRadiance = new(nameof(prevTemporalOutgoingRadiance));
+        private readonly TextureBinding prevTemporalPosition = new(nameof(prevTemporalPosition));
+        private readonly TextureBinding prevSpatialWeigths = new(nameof(prevSpatialWeigths));
+        private readonly TextureBinding prevSpatialOutgoingRadiance = new(nameof(prevSpatialOutgoingRadiance));
+        private readonly TextureBinding prevNormalDepth = new(nameof(prevNormalDepth));
 
-        private readonly TextureBinding prevAcc = new();
-        private readonly TextureBinding prevTAA = new();
+        private readonly TextureBinding prevAcc = new(nameof(prevAcc));
+        private readonly TextureBinding prevTAA = new(nameof(prevTAA));
 
         private Shader _tempAccumShader = default!;
         int tempAccumbuff;
-        private readonly TextureBinding tempAccum = new();
+        private readonly TextureBinding tempAccum = new(nameof(tempAccum));
 
         private Shader _upscale = default!;
-        private readonly TextureBinding upscale = new();
-        private readonly TextureBinding upscale2 = new();
+        private readonly TextureBinding upscale = new(nameof(upscale));
+        private readonly TextureBinding upscale2 = new(nameof(upscale2));
 
         int upscaleBuff;
 
 
         private Shader _TAAShader = default!;
         int TAAbuff;
-        private readonly TextureBinding TAA = new();
+        private readonly TextureBinding TAA = new(nameof(TAA));
 
         private Shader _denoiseShader = default!;
         //private Shader _denoiseShader2 = default!;
-        private readonly TextureBinding den1 = new();
-        private readonly TextureBinding den2 = new();
+        private readonly TextureBinding den1 = new(nameof(den1));
+        private readonly TextureBinding den2 = new(nameof(den2));
         int den1buff;
         int den2buff;
-        private readonly TextureBinding var1 = new();
-        private readonly TextureBinding var2 = new();
+        private readonly TextureBinding var1 = new(nameof(var1));
+        private readonly TextureBinding var2 = new(nameof(var2));
 
         int rcpos;
         int rcnorm;
@@ -117,21 +117,19 @@ namespace RealTimeFractalRendererLibrary
         private Shader _skyShader = default!;
 
         int skybuff;
-        private readonly TextureBinding skytex = new();
+        private readonly TextureBinding skytex = new(nameof(skytex));
 
         private Shader _sunShader = default!;
 
         int sunbuff;
-        private readonly TextureBinding suntex = new();
+        private readonly TextureBinding suntex = new(nameof(suntex));
 
 
         private Shader _RC = default!;
 
-        private readonly TextureBinding worley = new(TextureTarget.Texture3D);
+        private readonly TextureBinding worley = new(nameof(worley), TextureTarget.Texture3D);
 
         private Shader _worl = default!;
-
-
 
         private Camera _camera = default!;
         public Camera Camera => _camera;

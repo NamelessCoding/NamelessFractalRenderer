@@ -600,7 +600,7 @@ vec3 lodbloom(vec2 iResolution, float lod) {
 void main() {
     if(enableTextureDebugging != 0)
     {
-        outputColor = brightness*256.0*texture2D(debuggedTexture, texCoord*wh.x/wh.y);
+        outputColor = brightness*texture2D(debuggedTexture, texCoord*wh.x/wh.y);
         return;
     }
 
