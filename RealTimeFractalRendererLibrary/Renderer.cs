@@ -27,8 +27,6 @@ namespace RealTimeFractalRendererLibrary
             1, 2, 3    // second triangle
         ];
 
-        private int debugFBO;
-
         private readonly TextureBinding colortex = new(nameof(colortex));
         private readonly TextureBinding colortexHoldInfo = new(nameof(colortexHoldInfo));
 
@@ -262,7 +260,6 @@ namespace RealTimeFractalRendererLibrary
            // GL.Enable(EnableCap.Texture3DExt);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-            debugFBO = GL.GenFramebuffer();
             upscaleBuff = GL.GenFramebuffer();
             colorbuff = GL.GenFramebuffer();
             colorbuff2 = GL.GenFramebuffer();
@@ -297,7 +294,6 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(colortexSecondAlbedo.Handle, false);
 
             //====================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, debugFBO);
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, skybuff);
 
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
