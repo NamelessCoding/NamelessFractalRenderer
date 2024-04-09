@@ -106,15 +106,17 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding var1 = new();
         private readonly TextureBinding var2 = new();
 
-        int rcpos;
-        int rcnorm;
-        int rcrad;
-        int rcfog;
+        private readonly TextureBinding rcpos = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcnorm = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcrad = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcfog = new(TextureTarget.Texture3D);
 
         private Shader _skyShader = default!;
 
         int skybuff;
         private readonly TextureBinding skytex = new();
+        private readonly TextureBinding skytexClouds = new();
+        private readonly TextureBinding skytexCloudsNormal = new();
 
         private Shader _sunShader = default!;
 
@@ -154,7 +156,11 @@ namespace RealTimeFractalRendererLibrary
         private Matrix4 prevProjection;
 
         public Vector3 ldir = new(0.0f, 0.1f, -0.9f);
+        public Vector3 ldirPrev = new(0.0f, 0.1f, -0.9f);
+
         public float cloudCoverage = 1.0f;
+        public float cloudCoveragePrev = 1.0f;
+
         public float bright = 1.0f;
         
         public void SetBrightness(float value)
@@ -284,13 +290,18 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(watnorm.Handle);
             setupTex2D(watpos.Handle);
             setupTex2D(skytex.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            setupTex2D(skytexClouds.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            setupTex2D(skytexCloudsNormal.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+
+            //skytexCloudsNormal
+            //skytexClouds
             setupTex2D(suntex.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder,
                 true, shadowScale, shadowScale);
             setupTex3D(worley.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcpos, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcfog, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcnorm, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcrad, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcpos.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcfog.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcnorm.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcrad.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex2D(colortex.Handle, false);
             setupTex2D(colortexPosition.Handle, true, PixelInternalFormat.Rgba32f);
             setupTex2D(colortexFogPos.Handle, false);
@@ -308,9 +319,17 @@ namespace RealTimeFractalRendererLibrary
                 FramebufferAttachment.ColorAttachment0,
                 TextureTarget.Texture2D, skytex.Handle, 0
                 );
-
-            DrawBuffersEnum[] attx = [DrawBuffersEnum.ColorAttachment0];
-            GL.DrawBuffers(1, attx);
+            //skytexClouds skytexCloudsNormal
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
+                FramebufferAttachment.ColorAttachment1,
+                TextureTarget.Texture2D, skytexClouds.Handle, 0
+                );
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
+                FramebufferAttachment.ColorAttachment2,
+                TextureTarget.Texture2D, skytexCloudsNormal.Handle, 0
+                );
+            DrawBuffersEnum[] attx = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2];
+            GL.DrawBuffers(3, attx);
 
             //=======================================================
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, sunbuff);
@@ -662,6 +681,10 @@ namespace RealTimeFractalRendererLibrary
 
             _skyShader.Use();
             _skyShader.SetInt("skyprev", skytex.Unit);
+            _skyShader.SetInt("skyprevClouds", skytexClouds.Unit);
+            _skyShader.SetInt("skyprevCloudsNormal", skytexCloudsNormal.Unit);
+            //skytexCloudsNormal
+
             _skyShader.SetInt("worl", worley.Unit);
             //_skyShader.SetInt("suns", suntex.Unit);
 
@@ -672,6 +695,8 @@ namespace RealTimeFractalRendererLibrary
             _RC.Use();
             _RC.SetInt("skytex", skytex.Unit);
             _RC.SetInt("suntex", suntex.Unit);
+            _RC.SetInt("skyCloudsNormal", skytexCloudsNormal.Unit);
+
 
             _testShader.Use();
             _testShader.SetInt("position", colortexPosition.Unit);
@@ -683,6 +708,8 @@ namespace RealTimeFractalRendererLibrary
             _testShader.SetInt("suntex", suntex.Unit);
             _testShader.SetInt("watpos", watpos.Unit);
             _testShader.SetInt("watnorm", watnorm.Unit);
+            _testShader.SetInt("skyCloudsNormal", skytexCloudsNormal.Unit);
+
 
             _TemporalRestirShader.Use();
             _TemporalRestirShader.SetInt("color", colortex.Unit);
@@ -750,6 +777,8 @@ namespace RealTimeFractalRendererLibrary
             _TAAShader.SetInt("watpos", watpos.Unit);
             _TAAShader.SetInt("watnorm", watnorm.Unit);
             _TAAShader.SetInt("worl", worley.Unit);
+            _TAAShader.SetInt("skyClouds", skytexClouds.Unit);
+
 
             _upscale.Use();
             _upscale.SetInt("TAA", TAA.Unit);
@@ -771,15 +800,14 @@ namespace RealTimeFractalRendererLibrary
         
 
             _finalShader.Use();
-            //_finalShader.SetInt("color", colortex.Unit);
+            _finalShader.SetInt("position", colortexPosition.Unit);
             _finalShader.SetInt("normal", colortexNormal.Unit);
             _finalShader.SetInt("albedo", colortexAlbedo.Unit);
    
             _finalShader.SetInt("TAA", upscale.Unit); //TODO: review. "TAA" sampler is bound to "upscale" here.
             _finalShader.SetInt("fogLO", TAA.Unit); //TODO: review. "fogLO" sampler is bound to "TAA" here.
             _finalShader.SetInt("watpos", watpos.Unit);
-
-
+            _finalShader.SetInt("skyClouds", skytexClouds.Unit);
 
 
 
@@ -811,10 +839,10 @@ namespace RealTimeFractalRendererLibrary
             GL.DispatchCompute(64, 64, 64);
 
             //setup image unit bindings
-            GL.BindImageTexture(0, rcpos, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            GL.BindImageTexture(1, rcnorm, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            GL.BindImageTexture(2, rcrad, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            GL.BindImageTexture(3, rcfog, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(0, rcpos.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(1, rcnorm.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(2, rcrad.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(3, rcfog.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
             GL.BindImageTexture(4, suntex.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
             //CursorState = CursorState.Grabbed;
@@ -897,11 +925,16 @@ namespace RealTimeFractalRendererLibrary
             _skyShader.SetVector3(ldir, "ldir");
             _skyShader.SetVector3(_camera.Position, "viewPos");
             _skyShader.SetFloat(cloudCoverage, "cloudCoverage");
-
+            _skyShader.SetFloat(cloudCoveragePrev, "cloudCoveragePrev");
+            //cloudCoveragePrev
+            _skyShader.SetVector3(ldirPrev, "ldirPrev");
+            _skyShader.SetMatrix4(view.Inverted(), "invview");
+            _skyShader.SetMatrix4(projection.Inverted(), "invproj");
             GL.BindVertexArray(quadVAO);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(skytex.Handle);
+            //GL.GenerateTextureMipmap(skytexClouds.Handle);
 
             //=================================================
 
@@ -1130,7 +1163,8 @@ namespace RealTimeFractalRendererLibrary
             prevProjection = projection;
             prevCamPos = _camera.Position;
             iFrame += 1.0f;
-
+            ldirPrev = ldir;
+            cloudCoveragePrev = cloudCoverage;
             //SwapBuffers(); //buffer swapping is handled by gui
         }
 

@@ -2,8 +2,9 @@
 out vec4 outputColor;
 in vec2 texCoord;
 
-layout(binding = 0, Rgba16f) uniform image3D rcpos;
+layout(binding = 2, Rgba16f) uniform image3D rcrad;
 
+uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
 
@@ -11,6 +12,8 @@ uniform sampler2D TAA;
 
 uniform sampler2D fogLO;
 uniform sampler2D watpos;
+
+uniform sampler2D skyClouds;
 
 uniform mat4 projection;
 
@@ -651,11 +654,21 @@ void main() {
     color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
   }
   // color2 = texture2D(fogLO, texCoord).xyz;
+  vec4 mmm = texture2D(skyClouds, texCoord);  
+    color2 = color2*mmm.w + mmm.xyz;
+
 
   // vec3 lodbloom(vec2 iResolution, float lod){
   vec3 blm = lodbloom(wh, 2.);
   // color2 = mix(color2, pow(blm, vec3(1.2))*2., 0.2);
   color2 += clamp(pow(blm, vec3(1.5)) * 0.6, 0., 10.);
+
+
+ // vec3 pos = texture2D(position, texCoord).xyz;
+ // ivec3 newP = ivec3((pos + 90. - floor(viewPos)));
+ // color2 = imageLoad(rcrad, newP).xyz ;
+        
+  //color2 = texture2D(skyClouds, texCoord).xyz;      
 
   vec3 col = color2;
 

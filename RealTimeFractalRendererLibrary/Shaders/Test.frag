@@ -18,6 +18,7 @@ uniform sampler2D skytex;
 uniform sampler2D suntex;
 uniform sampler2D watpos;
 uniform sampler2D watnorm;
+uniform sampler2D skyCloudsNormal;
 
 uniform mat4 invview;
 uniform mat4 invproj;
@@ -384,7 +385,12 @@ void main() {
                       6.283185307179586476925286766559) +
                          0.5,
                      acos(rayDirection.y) / 3.1415926535897932384626433832795);
-      col += tt * texture2D(skytex, TX).rgb *
+                     
+                     vec4 cldnorm = texture2D(skyCloudsNormal, TX);
+                     vec3 skyn = texture2D(skytex, TX).rgb;
+                     skyn = skyn * cldnorm.w + cldnorm.xyz;
+                     //skyCloudsNormal
+      col += tt * skyn  *
              max(dot(normalize(ldir).xzy, vec3(0., 0., 1.)), 0.34) *
              skyStrength;
     }
@@ -474,8 +480,7 @@ void main() {
       float rough2 = rough;
       float l2 = l;
       vec3 cccc2 = cccc;
-      if (renderSkyAndSun && dot(normalize(ldir), n) > 0. &&
-          length(p - cmmm) > 1.) {
+      if (renderSkyAndSun && dot(normalize(ldir), n) > 0.) {
 
         // if(!trace(newpZ, normalize(ldir))){
         //   if(l2 < 0.01 ){
@@ -519,7 +524,10 @@ void main() {
                   6.283185307179586476925286766559) +
                      0.5,
                  acos(rayDirection.y) / 3.1415926535897932384626433832795);
-        forgum += tt * texture2D(skytex, TX).rgb *
+                 vec4 cldnorm = texture2D(skyCloudsNormal, TX);
+                     vec3 skyn = texture2D(skytex, TX).rgb;
+                     skyn = skyn * cldnorm.w + cldnorm.xyz;
+        forgum += tt * skyn *
                   max(dot(normalize(ldir).xzy, vec3(0., 0., 1.)), 0.34) *
                   skyStrength;
       }

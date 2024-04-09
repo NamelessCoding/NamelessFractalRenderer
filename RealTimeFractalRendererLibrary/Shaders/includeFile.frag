@@ -869,7 +869,7 @@ float map(vec3 p) {
   cccc = vec3(0.5);
 //p.y *= -1.;
 //p.y *= 0.5;
-/*p.y -= 55.;
+p.y -= 55.;
 float city = D(p/0.5)*0.5;
 //cccc = clamp(orbitSSSS, 0., 1.);
 //l = max((1.-clamp((fbmss(p.xz*2. + p.y))*1.5, 0. ,1.))-0.7,0.);
@@ -884,7 +884,7 @@ if(ssss.x > 0.9 && ssss.y < 0.5){
 
 //return city;
 return max(city, box(p, vec3(80., 100., 80.)));
-*/
+
   rough = 0.1;
   LoadLevel(Levels[7]);
   vec4 newstuff = fractalTEST(p / 5.);

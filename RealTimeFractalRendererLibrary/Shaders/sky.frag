@@ -2,11 +2,17 @@
 #extension GL_ARB_shading_language_packing : enable
 
 layout(location = 0) out vec4 skyfin;
+layout(location = 1) out vec4 skyfinClouds;
+layout(location = 2) out vec4 skyfinCloudsNormal;
+
+
 
 in vec2 texCoord;
 
 uniform sampler2D skyprev;
 uniform sampler3D worl;
+uniform sampler2D skyprevClouds;
+uniform sampler2D skyprevCloudsNormal;
 // uniform sampler2D suns;//TODO: use or remove
 
 uniform vec2 wh;
@@ -14,7 +20,10 @@ uniform float time;
 uniform vec3 ldir;
 uniform vec3 viewPos;
 uniform float cloudCoverage;
-
+uniform float cloudCoveragePrev;
+uniform vec3 ldirPrev;
+uniform mat4 invview;
+uniform mat4 invproj;
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
   seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
@@ -258,7 +267,7 @@ float fbmss(vec3 p)
         }
         return max(sum - threshold, 0.);
 }
-float fbmz(vec3 p, vec3 cam){
+float fbm(vec3 p, vec3 cam){
 //p.yz = rot(p.yz, iTime*0.3);
 //float a = texture(iChannel0, p).x*0.5 +texture(iChannel0, p*2.).y*0.25+
 //texture(iChannel0, p*4.).z*0.125+texture(iChannel0, p*8.).x*0.0625;
@@ -267,7 +276,7 @@ float fbmz(vec3 p, vec3 cam){
 float b = fbmss(p*0.1);
 
   float Srb = clamp(
-      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
 //a -= clamp((p.z)*0.4,0., 1.);
 //a = max(a,0.);
 //vec3 pos = vec3(0.,0.,6500.)-p;
@@ -281,7 +290,7 @@ return clamp((Srb)*b,0.,1.);
 
 
 
-float fbm(vec3 p, vec3 cam) {
+float fbmz(vec3 p, vec3 cam) {
   // p.yz = rot(p.yz, iTime*0.3);
   // float a = texture(iChannel0, p).x*0.5 +texture(iChannel0, p*2.).y*0.25+
   // texture(iChannel0, p*4.).z*0.125+texture(iChannel0, p*8.).x*0.0625;
@@ -442,7 +451,7 @@ vec3 shadowS(vec3 pos) {
 
 
 
-vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
+vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf, bool dots = true) {
   vec3 waves = vec3(0.00000519673, 0.0000121427, 0.0000296453);
   vec3 befo = p;
   vec2 tts =
@@ -514,7 +523,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   bool firsth = false;
   vec3 firstHit = p;
   float stepsize = 3.;
-  for (int i = 0; i < 200; i++) {
+  for (int i = 0; i < 170; i++) {
     // accum += ph(length(cam), reyleighH)*length(div);
     float density =
         max(fbm(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.01, 0.);
@@ -537,7 +546,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
       // energy = energy*(1.0-rayleighcoefficients);
       vec3 cam2 = cam;
 
-      for (int k = 0; k < 10; k++) {
+      for (int k = 0; k < 13; k++) {
         float density2 = max(
             fbm(cam2 * mult, cam2) - minus - abs(cam2.z - 220.) * 0.01, 0.);
         // density2 = smoothstep(0.,1.,density2);
@@ -590,10 +599,14 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
     //    octave += 1.0;
 
     cam += d * (1. - 0.5 * random3d(cam));
-    if(cam.z < 200. || cam.z > 260.){
+    if(cam.z < 200. || cam.z > 280.){
       break;
     }
     if(transmission < 0.5){
+      if(dots){
+        transmission = 0.2;
+      }
+      
       break;
     }
     // if(length(cam)>7500.){break;}
@@ -637,7 +650,14 @@ void main() {
 
   int iCoord = (iFragCoord.x + BAYER_LIMIT_H * iFragCoord.y) % BAYER_LIMIT;
   vec3 col = vec3(0.);
-  if (iCoord == bayerFilter[index]) {
+  bool diffSunPos = (length(ldirPrev - ldir) > 0.00001 || abs(cloudCoveragePrev - cloudCoverage) > 0.00001);
+
+  if(diffSunPos){
+    prevIndex = 0;
+  }
+  vec4 outputClouds = vec4(0.,0.,0.,1.);
+  vec4 outputCloudsNormal = vec4(0., 0., 0., 1.);
+  if (((iCoord == bayerFilter[index] || diffSunPos) &&  prevIndex < 16) ) {
     vec3 d = rayDirection;
     vec3 lig = ldir2.xzy;
     vec3 sky2 =
@@ -655,10 +675,10 @@ void main() {
     vec3 sunshafts = vec3(0.);
     vec4 mmm = vec4(0.);
     vec3 sunsh = vec3(0.);
-    mmm = clouds2(vec3(viewPos.x, -viewPos.z, 180. + viewPos.y), d, normalize(vec3(lig.xy, abs(lig.z))),
+    mmm = clouds2(vec3(0., 0., 180. ), d, normalize(vec3(lig.xy, abs(lig.z))),
                   dist, sunsh);
     mmm.rgb *= max(dot(ldir2, vec3(0., 1., 0.)), 0.1);
-   //mmm.rgb = pow(mmm.rgb, vec3(1.24));
+   mmm.rgb = pow(mmm.rgb, vec3(1.24));
     // }else{
     //   mmm = clouds2(vec3(0.,0.,5200.),d,vec3(lig.),dist,0.01);
     //   mmm.rgb *= 0.01;
@@ -666,25 +686,58 @@ void main() {
 
     // distanceToClouds = dist;
     vec3 skys = final;
-    final = final * mmm.w + pow(mmm.xyz, vec3(1.));
+    //final = final * mmm.w + pow(mmm.xyz, vec3(1.));
 
-    float f = exp(-dist * .0028);
-    //final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
+    float f = exp(-dist * .028);
+   // mmm.xyz = mmm.xyz * f + skys.xyz * (1.0 - f);
     // sn = fog();
     // final += sunshafts;
+    outputCloudsNormal = mmm;
     float mmmms = max(pow(dot(ldir2, vec3(0., 1., 0.)) * 0.5 + 0.5, 4.), 0.01);
     col = final * mmmms;
 
     // col += vec3(sunsh/70.)*0.2;
 
-  } else if (index > 0 || prevIndex >= 16) {
+  }else if (index > 0 || prevIndex >= 16) {
 
     // col += texelFetch(skyTex, ivec2(wh.xy*texCoord),0).rgb;
     uint seedCam = uint(time);
     vec2 smallOffset = ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / wh;
-
     col += texture2D(skyprev, texCoord).rgb;
+    outputCloudsNormal = texture2D(skyprevCloudsNormal, texCoord);
+   // prevIndex = 20;
+  }
+  
+  if(iCoord == bayerFilter[index]){
+     vec4 p22 =
+      vec4((clamp(texCoord, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
+  // p22.xy += smallOffset*1.;
+
+    vec3 d = (invproj * p22).xyz / (invproj * p22).w;
+    d = normalize(mat3(invview) * d);
+    d.z *= -1.;
+    d = d.xzy;
+    vec3 lig = ldir2.xzy;
+
+    float dist = 0.;
+    vec3 posit = vec3(0.);
+    vec3 sunshafts = vec3(0.);
+    vec4 mmm = vec4(0.);
+    vec3 sunsh = vec3(0.);
+    mmm = clouds2(vec3(viewPos.x, -viewPos.z, 190. + viewPos.y ), d, normalize(vec3(lig.xy, abs(lig.z))),
+                  dist, sunsh, false);
+                  mmm.rgb *= max(dot(ldir2, vec3(0., 1., 0.)), 0.1);
+   mmm.rgb = pow(mmm.rgb, vec3(1.24));
+    outputClouds = mmm;
+
+  } else if (index > 0 || prevIndex >= 16) { 
+    outputClouds = texture2D(skyprevClouds, texCoord);
     prevIndex = 20;
   }
+
+
+
+  skyfinClouds = outputClouds;
+  skyfinCloudsNormal = outputCloudsNormal;
   skyfin = vec4(col, float(prevIndex + 1));
 }

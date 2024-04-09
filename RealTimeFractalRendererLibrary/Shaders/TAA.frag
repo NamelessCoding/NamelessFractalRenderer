@@ -25,6 +25,7 @@ uniform sampler2D skyTex;
 uniform sampler2D watpos;
 uniform sampler2D watnorm;
 uniform sampler3D worl;
+uniform sampler2D skyClouds;
 
 uniform mat4 invview;
 uniform mat4 invproj;
@@ -575,7 +576,7 @@ void main() {
   vec3 watPOS = View;
   if (wp.w > 0.5) {
     // do water
-    vec3 F22 = clamp(fresnelSchlick(vec3(0.5), vec3(0.99),
+    vec3 F22 = clamp(fresnelSchlick(vec3(0.05), vec3(0.99),
                                     max(dot(normalize(wn.xyz), -wi), 0.)),
                      0., 1.);
     vec3 posWat = wp.xyz;
@@ -598,6 +599,9 @@ void main() {
   if (texture2D(albedo, TC).w > 0.5 || texture2D(position, TC).w > 0.5) {
     col = texture2D(albedo, TC).xyz;
   }
+  //vec4 mmm = texture(skyClouds, TC);
+  //col = col*mmm.w + mmm.xyz;
+
   ind = col;
 
   // vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r){

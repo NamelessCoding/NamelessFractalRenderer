@@ -188,7 +188,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     float A = map(p);
     float dist = A;
     if (!hitWat && renderWat) {
-      float B = mapPl(p);
+      float B = mapPl(p)-0.01;
 
       dist = min(dist, B);
     }
