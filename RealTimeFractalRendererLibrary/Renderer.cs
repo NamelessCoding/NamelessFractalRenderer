@@ -106,10 +106,12 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding var1 = new();
         private readonly TextureBinding var2 = new();
 
-        int rcpos;
-        int rcnorm;
-        int rcrad;
-        int rcfog;
+        private readonly TextureBinding rcpos = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcnorm = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcrad = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcfog = new(TextureTarget.Texture3D);
+
+      
 
         private Shader _skyShader = default!;
 

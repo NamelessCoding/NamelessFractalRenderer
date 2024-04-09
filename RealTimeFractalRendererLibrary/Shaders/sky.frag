@@ -447,7 +447,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 befo = p;
   vec2 tts =
       boxIntersection(p - vec3(0., 0., 215.), d, vec3(100000., 100000., 0.1));
-  if (tts.x > 0. && p.z < 220. ) {
+  if (tts.x > 0.  ) {
     p += d * tts.x;
   }/*else if(tts.x > 0. && p.z > 230.){
       tts =
@@ -514,7 +514,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   bool firsth = false;
   vec3 firstHit = p;
   float stepsize = 3.;
-  for (int i = 0; i < 200; i++) {
+  for (int i = 0; i < 40; i++) {
     // accum += ph(length(cam), reyleighH)*length(div);
     float density =
         max(fbm(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.01, 0.);
@@ -655,7 +655,7 @@ void main() {
     vec3 sunshafts = vec3(0.);
     vec4 mmm = vec4(0.);
     vec3 sunsh = vec3(0.);
-    mmm = clouds2(vec3(viewPos.x, -viewPos.z, 180. + viewPos.y), d, normalize(vec3(lig.xy, abs(lig.z))),
+    mmm = clouds2(vec3(0., 0., 180. ), d, normalize(vec3(lig.xy, abs(lig.z))),
                   dist, sunsh);
     mmm.rgb *= max(dot(ldir2, vec3(0., 1., 0.)), 0.1);
    //mmm.rgb = pow(mmm.rgb, vec3(1.24));
