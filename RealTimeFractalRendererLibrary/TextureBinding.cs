@@ -16,17 +16,19 @@ namespace RealTimeFractalRendererLibrary
         //Start counting from 1, because unit 0 is reserved for setup operations.
         private static int unitCounter = 1;
 
-        public int Handle { get; private set; }
+        public int Handle { get; private init; }
+        public string Name { get; private init; }
 
         /// <summary>
         /// The TextureUnit that this Texture is bound to.
         /// </summary>
         public int Unit { get; private set; }
 
-        public TextureBinding(TextureTarget target = TextureTarget.Texture2D)
+        public TextureBinding(string name, TextureTarget target = TextureTarget.Texture2D)
         {
             Handle = GL.GenTexture();
             Unit = unitCounter;
+            Name = name;
             //remark: not using the glenum here because it only goes up to 32 units, even though a _minimum_ of 80 is supported according to 4.5 spec.
             GL.ActiveTexture(TextureUnit.Texture0 + Unit);
             GL.BindTexture(target, Handle);
