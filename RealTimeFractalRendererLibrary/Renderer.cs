@@ -267,9 +267,11 @@ namespace RealTimeFractalRendererLibrary
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, fboHandle);
             for (int i = 0; i < colorAttachments.Length; i++)
                 GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0 + i, colorAttachments[i].Target, colorAttachments[i].Handle, 0);
-            
             GL.DrawBuffers(colorAttachments.Length, drawBuffers);
-            //TODO: check fbo completeness
+
+            var status = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            if (status is not FramebufferErrorCode.FramebufferComplete)
+                throw new Exception($"Incomplete Framebuffer status: {status}");
             return fboHandle;
         }
 
