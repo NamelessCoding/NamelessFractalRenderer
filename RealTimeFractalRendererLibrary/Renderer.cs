@@ -505,7 +505,7 @@ namespace RealTimeFractalRendererLibrary
 
 
 
-
+            //We use the same fullscreen quad VAO during the whole frame
             GL.BindVertexArray(quadVAO);
             //Seclect the VertexBufferObject
             GL.BindBuffer(BufferTarget.ArrayBuffer, quadVBO);
@@ -595,7 +595,6 @@ namespace RealTimeFractalRendererLibrary
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _initShader.Use();
-            GL.BindVertexArray(quadVAO);
             _initShader.SetMatrix4(view.Inverted(), "invview");
             _initShader.SetMatrix4(projection.Inverted(), "invproj");
             _initShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
@@ -619,9 +618,6 @@ namespace RealTimeFractalRendererLibrary
             _skyShader.SetFloat(iFrame, "time");
             _skyShader.SetVector3(ldir, "ldir");
      
-
-            GL.BindVertexArray(quadVAO);
-
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(skytex.Handle);
 
@@ -640,14 +636,11 @@ namespace RealTimeFractalRendererLibrary
             _sunShader.SetMatrix4(lightview, "lightview");
             _sunShader.SetFloat((float)shadowScale, "scale");
           
-            GL.BindVertexArray(quadVAO);
-
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
             //===================================================
 
             _RC.Use();
-            GL.BindVertexArray(quadVAO);
            
             _RC.SetFloat(iFrame, "time");
             //_RC.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
@@ -672,7 +665,6 @@ namespace RealTimeFractalRendererLibrary
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _testShader.Use();
-            GL.BindVertexArray(quadVAO);
          
             _testShader.SetMatrix4(view.Inverted(), "invview");
             _testShader.SetMatrix4(projection.Inverted(), "invproj");
@@ -695,7 +687,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)size.X, (int)size.Y);
             GL.Disable(EnableCap.DepthTest);
             _TemporalRestirShader.Use();
-            GL.BindVertexArray(quadVAO);
       
             _TemporalRestirShader.SetMatrix4(prevView, "prevview");
             _TemporalRestirShader.SetMatrix4(prevProjection, "prevproj");
@@ -712,7 +703,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)size.X, (int)size.Y);
             GL.Disable(EnableCap.DepthTest);
             _SpatialRestirShader.Use();
-            GL.BindVertexArray(quadVAO);
         
             _SpatialRestirShader.SetMatrix4(prevView, "prevview");
             _SpatialRestirShader.SetMatrix4(prevProjection, "prevproj");
@@ -728,7 +718,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
             _tempAccumShader.Use();
-            GL.BindVertexArray(quadVAO);
       
             _tempAccumShader.SetMatrix4(prevView, "prevview");
             _tempAccumShader.SetMatrix4(prevProjection, "prevproj");
@@ -743,7 +732,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
             _denoiseShader.Use();
-            GL.BindVertexArray(quadVAO);
     
             _denoiseShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
 
@@ -776,7 +764,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
             _TAAShader.Use();
-            GL.BindVertexArray(quadVAO);
             _TAAShader.SetMatrix4(view.Inverted(), "invview");
             _TAAShader.SetMatrix4(projection.Inverted(), "invproj");
             _TAAShader.SetMatrix4(prevView, "prevview");
@@ -798,7 +785,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
             GL.Disable(EnableCap.DepthTest);
             _upscale.Use();
-            GL.BindVertexArray(quadVAO);
          
             _upscale.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
          
@@ -812,7 +798,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
             _swapShader.Use();
-            GL.BindVertexArray(quadVAO);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(prevTAA.Handle);
@@ -825,7 +810,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X), (int)(size.Y));
             GL.Disable(EnableCap.DepthTest);
             _swapShader2.Use();
-            GL.BindVertexArray(quadVAO);
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
@@ -836,7 +820,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
             GL.Disable(EnableCap.DepthTest);
             _finalShader.Use();
-            GL.BindVertexArray(quadVAO);
 
             _finalShader.SetMatrix4(projection, "projection");
             _finalShader.SetVector3(_camera.Position, "viewPos");
