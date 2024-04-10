@@ -245,6 +245,34 @@ namespace RealTimeFractalRendererLibrary
                 PixelType.UnsignedByte, IntPtr.Zero);
         }
 
+        /// <summary>
+        /// Used to match sampler indices to color attachment indices.
+        /// </summary>
+        private static readonly DrawBuffersEnum[] drawBuffers = [
+            DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3,
+            DrawBuffersEnum.ColorAttachment4, DrawBuffersEnum.ColorAttachment5, DrawBuffersEnum.ColorAttachment6, DrawBuffersEnum.ColorAttachment7];
+
+        /// <summary>
+        /// Helper method that creates a new framebuffer object,
+        /// sets up the specified textures as color attachments in increasing order and validates completeness.
+        /// </summary>
+        /// <param name="colorAttachments"></param>
+        /// <returns>The handle of the created framebuffer object.</returns>
+        private static int CreateFramebufferObject(params TextureBinding[] colorAttachments)
+        {
+            if (colorAttachments.Length > 8)
+                throw new ArgumentException($"A maximum of 8 textures can be added as color attachment. Provided: {colorAttachments.Length}");
+
+            var fboHandle = GL.GenFramebuffer();
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, fboHandle);
+            for (int i = 0; i < colorAttachments.Length; i++)
+                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0 + i, colorAttachments[i].Target, colorAttachments[i].Handle, 0);
+            
+            GL.DrawBuffers(colorAttachments.Length, drawBuffers);
+            //TODO: check fbo completeness
+            return fboHandle;
+        }
+
         public void Load(Vector2i resolution)
         {
             // glEnable(GL_TEXTURE_3D);
@@ -259,12 +287,6 @@ namespace RealTimeFractalRendererLibrary
 
            // GL.Enable(EnableCap.Texture3DExt);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-            upscaleBuff = GL.GenFramebuffer();
-            colorbuff = GL.GenFramebuffer();
-            colorbuff2 = GL.GenFramebuffer();
-            skybuff = GL.GenFramebuffer();
-            sunbuff = GL.GenFramebuffer();
 
             if (isEverythingLower) {
                 ScaleEverything = 1.0f;
@@ -293,356 +315,63 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(colortexReflection.Handle, false);
             setupTex2D(colortexSecondAlbedo.Handle, false);
 
-            //====================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, skybuff);
+            skybuff = CreateFramebufferObject(skytex);
+            sunbuff = CreateFramebufferObject(suntex);
+            colorbuff2 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
+            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, colortexFogPos);
 
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, skytex.Handle, 0
-                );
-
-            DrawBuffersEnum[] attx = [DrawBuffersEnum.ColorAttachment0];
-            GL.DrawBuffers(1, attx);
-
-            //=======================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, sunbuff);
-
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, suntex.Handle, 0
-                );
-
-            DrawBuffersEnum[] attxs = [DrawBuffersEnum.ColorAttachment0];
-            GL.DrawBuffers(1, attxs);
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
-
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, colortexPosition.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, colortexNormal.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment2,
-                TextureTarget.Texture2D, colortexAlbedo.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment3,
-                TextureTarget.Texture2D, colortexHoldInfo.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment4,
-                TextureTarget.Texture2D, colorfog.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment5,
-                TextureTarget.Texture2D, watpos.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment6,
-                TextureTarget.Texture2D, watnorm.Handle, 0
-                );
-            DrawBuffersEnum[] att = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
-                DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4,
-             DrawBuffersEnum.ColorAttachment5, DrawBuffersEnum.ColorAttachment6];
-            GL.DrawBuffers(7, att);
-
-
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, colortex.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, colortexSecondPosition.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment2,
-                TextureTarget.Texture2D, colortexReflection.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment3,
-                TextureTarget.Texture2D, colortexSecondAlbedo.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment4,
-                TextureTarget.Texture2D, colorfog.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment5,
-                TextureTarget.Texture2D, colortexFogPos.Handle, 0
-                );
-            DrawBuffersEnum[] atts = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1,
-                DrawBuffersEnum.ColorAttachment2,  DrawBuffersEnum.ColorAttachment3
-            ,  DrawBuffersEnum.ColorAttachment4,  DrawBuffersEnum.ColorAttachment5];
-            GL.DrawBuffers(6, atts);
-
-
-            temporalbuff = GL.GenFramebuffer();
-
-            
             setupTex2D(temporalWeigths.Handle, false);
-
             setupTex2D(temporalOutgoingRadiance.Handle, false);
             setupTex2D(temporalPosition.Handle, false, PixelInternalFormat.Rgba32f);
-
-
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, temporalbuff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, temporalWeigths.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, temporalOutgoingRadiance.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment2,
-                TextureTarget.Texture2D, temporalPosition.Handle, 0
-                );
-            DrawBuffersEnum[] att2 = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2];
-            GL.DrawBuffers(3, att2);
-
-            spatialbuff = GL.GenFramebuffer();
-
-            
+            temporalbuff = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition);
+           
             setupTex2D(spatialWeigths.Handle, false);
             setupTex2D(spatialOutgoingRadiance.Handle, false);
+            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance);
 
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialbuff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, spatialWeigths.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, spatialOutgoingRadiance.Handle, 0
-                );
-            DrawBuffersEnum[] att4 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1];
-            GL.DrawBuffers(2, att4);
-
-            TAAbuff = GL.GenFramebuffer();
-
-            
             setupTex2D(TAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            TAAbuff = CreateFramebufferObject(TAA);
 
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, TAAbuff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, TAA.Handle, 0
-                );
-            DrawBuffersEnum[] att10 = [DrawBuffersEnum.ColorAttachment0];
-            GL.DrawBuffers(1, att10);
-
- 
             setupTex2D(upscale.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
             setupTex2D(upscale2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
+            upscaleBuff = CreateFramebufferObject(upscale);
 
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleBuff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, upscale.Handle, 0
-                );
-            DrawBuffersEnum[] att11 = [DrawBuffersEnum.ColorAttachment0];
-            GL.DrawBuffers(1, att11);
-
-            swapbuff = GL.GenFramebuffer();
-            swapbuff2 = GL.GenFramebuffer();
-           
-            setupTex2D(prevTemporalWeigths.Handle, false);
-            
-            setupTex2D(prevTemporalOutgoingRadiance.Handle, false);
-
-           
+            setupTex2D(prevTemporalWeigths.Handle, false);            
+            setupTex2D(prevTemporalOutgoingRadiance.Handle, false);           
             setupTex2D(prevTemporalPosition.Handle, false);
-
-
-            setupTex2D(prevSpatialWeigths.Handle, false);
-
-    
+            setupTex2D(prevSpatialWeigths.Handle, false);    
             setupTex2D(prevSpatialOutgoingRadiance.Handle, false);
-
-            setupTex2D(prevNormalDepth.Handle, true, PixelInternalFormat.Rgba32f);
-
-
-           
+            setupTex2D(prevNormalDepth.Handle, true, PixelInternalFormat.Rgba32f);           
             setupTex2D(prevAcc.Handle, true);
-
-
             setupTex2D(prevTAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-
-  
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff);
-
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, prevNormalDepth.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment1,
-               TextureTarget.Texture2D, prevAcc.Handle, 0
-               );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment2,
-               TextureTarget.Texture2D, prevTAA.Handle, 0
-               );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment3,
-               TextureTarget.Texture2D, upscale2.Handle, 0
-               );
-            DrawBuffersEnum[] att3 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
-            GL.DrawBuffers(4, att3);
-
-
-
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff2);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, prevTemporalWeigths.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, prevTemporalOutgoingRadiance.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment2,
-                TextureTarget.Texture2D, prevTemporalPosition.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment3,
-                TextureTarget.Texture2D, prevSpatialWeigths.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment4,
-                TextureTarget.Texture2D, prevSpatialOutgoingRadiance.Handle, 0
-                );
-
-            DrawBuffersEnum[] att3s = [ DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2,
-                DrawBuffersEnum.ColorAttachment3, DrawBuffersEnum.ColorAttachment4];
-            GL.DrawBuffers(5, att3s);
-
-
-            //private Shader _tempAccumShader;
-            //int tempAccumbuff;
-            //int tempAccum;
-
-            //===============================================================
-
-            den1buff = GL.GenFramebuffer();
-            den2buff = GL.GenFramebuffer();
+            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA, upscale2);
+            swapbuff2 = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
        
             setupTex2D(den1.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             setupTex2D(den2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-
             setupTex2D(var1.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-
             setupTex2D(var2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-
-
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, den1buff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, den2.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, var2.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment2,
-               TextureTarget.Texture2D, colorfog2.Handle, 0
-               );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment3,
-               TextureTarget.Texture2D, colortexSecondAlbedo.Handle, 0
-               );
-            DrawBuffersEnum[] att8 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
-            GL.DrawBuffers(4, att8);
-
-
-
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, den2buff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, den1.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment1,
-               TextureTarget.Texture2D, var1.Handle, 0
-               );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment2,
-              TextureTarget.Texture2D, colorfog.Handle, 0
-              );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-               FramebufferAttachment.ColorAttachment3,
-               TextureTarget.Texture2D, colortexSecondAlbedo.Handle, 0
-               );
-            DrawBuffersEnum[] att9 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2, DrawBuffersEnum.ColorAttachment3];
-            GL.DrawBuffers(4, att9);
-
-
-
-            //==========================================================-=
-
-            tempAccumbuff = GL.GenFramebuffer();
-         
+            den1buff = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo);
+            den2buff = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo);
+                     
             setupTex2D(tempAccum.Handle);
-
-            //====================================================================
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, tempAccumbuff);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0,
-                TextureTarget.Texture2D, tempAccum.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment1,
-                TextureTarget.Texture2D, den1.Handle, 0
-                );
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment2,
-                TextureTarget.Texture2D, var1.Handle, 0
-                );
-            DrawBuffersEnum[] att5 = [DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1, DrawBuffersEnum.ColorAttachment2];
-            GL.DrawBuffers(3, att5);
-
-
+            tempAccumbuff = CreateFramebufferObject(tempAccum, den1, var1);
 
             _skyShader = new Shader("Shaders/sky.vert", "Shaders/sky.frag");
             _sunShader = new Shader("Shaders/sun.vert", "Shaders/sun.frag", true);
-
             _testShader = new Shader("Shaders/Test.vert", "Shaders/Test.frag", true);
-            //_initShader
             _initShader = new Shader("Shaders/initial.vert", "Shaders/initial.frag", true);
             _finalShader = new Shader("Shaders/final.vert", "Shaders/final.frag", true);
             _TemporalRestirShader = new Shader("Shaders/temporal.vert", "Shaders/temporal.frag");
             _swapShader = new Shader("Shaders/swap.vert", "Shaders/swap.frag");
             _swapShader2 = new Shader("Shaders/swap2.vert", "Shaders/swap2.frag");
-
             _SpatialRestirShader = new Shader("Shaders/spatial.vert", "Shaders/spatial.frag", true);
             _tempAccumShader = new Shader("Shaders/tempAccum.vert", "Shaders/tempAccum.frag");
             _denoiseShader = new Shader("Shaders/denoise1.vert", "Shaders/denoise1.frag");
             _TAAShader = new Shader("Shaders/TAA.vert", "Shaders/TAA.frag");
             _RC = new Shader("Shaders/RadianceCaching.comp", true);
-
-            _worl = new Shader("Shaders/worley.comp", false);
-
-
             _upscale = new Shader("Shaders/upscale.vert", "Shaders/upscale.frag");
-
-            //TODO: Some of these uniforms are commented out in the shaders. Decide what to do with them (delete or start feature branches).
+            _worl = new Shader("Shaders/worley.comp", false);
 
             //tempAccum
             quadVBO = GL.GenBuffer();
