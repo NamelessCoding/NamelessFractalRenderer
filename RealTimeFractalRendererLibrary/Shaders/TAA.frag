@@ -575,14 +575,19 @@ void main() {
   vec3 watPOS = View;
   if (wp.w > 0.5) {
     // do water
-    vec3 F22 = clamp(fresnelSchlick(vec3(0.5), vec3(0.99),
-                                    max(dot(normalize(wn.xyz), -wi), 0.)),
-                     0., 1.);
-    vec3 posWat = wp.xyz;
+     vec3 posWat = wp.xyz;
     watPOS = posWat;
     vec3 posNorm = texture2D(position, TC).xyz;
 
     float DP = length(posWat - posNorm);
+    float reflAm = 0.5;
+    if(DP < 15.){
+      reflAm = 0.05;
+    }
+    vec3 F22 = clamp(fresnelSchlick(vec3(reflAm), vec3(0.99),
+                                    max(dot(normalize(wn.xyz), -wi), 0.)),
+                     0., 1.);
+   
     vec3 watCol =
         mix(vec3(0.05, 0.1, 0.2), vec3(0.2, 0.6, 0.9), exp(-DP * 0.5));
     col = (diff * (Albedo / 3.14159) * 2. +

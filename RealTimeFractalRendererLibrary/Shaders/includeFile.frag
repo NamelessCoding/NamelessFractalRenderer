@@ -752,10 +752,13 @@ float dze(vec3 p) {
   float i, g, e, R, S;
   vec3 q = p;
   R = 2.;
-  for (int j = 0; j++ < 9;)
+  escape = 0.;
+  for (int j = 0; j++ < 9;){
     p -= clamp(p, -1., 1.) * 2.,
         S = 9. * clamp(.7 / min(dot(p, p), 3.), 0., 1.), p = p * S + q,
         R = R * abs(S) + 1., p = p.yzx;
+        escape += exp(-0.2*dot(p,p));
+  }
   return length(p) / R;
 }
 float dxe(vec3 p) {
@@ -885,6 +888,7 @@ if(ssss.x > 0.9 && ssss.y < 0.5){
 //return city;
 return max(city, box(p, vec3(80., 100., 80.)));
 */
+
   rough = 0.1;
   LoadLevel(Levels[7]);
   vec4 newstuff = fractalTEST(p / 5.);
@@ -901,9 +905,19 @@ return max(city, box(p, vec3(80., 100., 80.)));
   float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p) / 10.) * 10.;
 
   float bsss = dxe(p / 0.1) * 0.09;
-  return min(dze((vec3(0., -120., -120.) - p) / 65.) * 65. * 0.8,
-             min(bsss, min(aa3, dfe(p / 15.) * 15.)));
+  float bsss2 = dze((vec3(0., -120., -120.) - p) / 65.) * 65. * 0.8;
+  float fins = min(bsss2,
+             min(bsss, aa3));
+  if(fins == aa3){
+        cccc = pal(escape333, vec3(0.4, 0.4, 0.8));
+  }
 
+  if(fins == bsss2){
+        cccc = pal(escape, vec3(0.4, 0.4, 0.8));
+
+  }
+
+  return fins;
   float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
   float sphere = mb(p / 15.).x * 15.;
   // float sphere = length(p) - 3.5;

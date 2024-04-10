@@ -324,7 +324,7 @@ float fbm(vec3 p, vec3 cam) {
   // b-= a.w;
   // b = max(b-1.2-max(1.-a.w*a.x,0.), 0.);
   b *= ( mr.y) * 0.9;
-  b = max(b - 1.4, 0.);
+  b = max(b - 1.7, 0.);
   // float b = texture3D(worl, p*22.).x;
   // b += max(fbmcc(p*.05)-0.4,0.);
   float Srb = clamp(
