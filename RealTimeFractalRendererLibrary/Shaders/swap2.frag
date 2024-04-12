@@ -1,10 +1,10 @@
 ﻿#version 330
 
-layout(location = 0) out vec4 tempwe;
-layout(location = 1) out vec4 templ;
-layout(location = 2) out vec4 temppos;
-layout(location = 3) out vec4 spatw;
-layout(location = 4) out vec4 spatl;
+layout(location = 3) out vec4 tempwe;
+layout(location = 4) out vec4 templ;
+layout(location = 5) out vec4 temppos;
+layout(location = 6) out vec4 spatw;
+layout(location = 7) out vec4 spatl;
 
 in vec2 texCoord;
 

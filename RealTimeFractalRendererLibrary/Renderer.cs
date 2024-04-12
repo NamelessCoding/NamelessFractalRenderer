@@ -27,6 +27,13 @@ namespace RealTimeFractalRendererLibrary
             1, 2, 3    // second triangle
         ];
 
+        private int fbo1;
+        private int fbo2;
+        private int fbo3;
+        private int fbo4a;
+        private int fbo4b;
+        private int fbo5;
+
         private readonly TextureBinding colortex = new(nameof(colortex));
         private readonly TextureBinding colortexHoldInfo = new(nameof(colortexHoldInfo));
 
@@ -42,12 +49,10 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding watpos = new(nameof(watpos));
         private readonly TextureBinding watnorm = new(nameof(watnorm));
 
-        int colorbuff2;
         private Shader _initShader = default!;
         private readonly TextureBinding colorfog = new(nameof(colorfog));
         private readonly TextureBinding colorfog2 = new(nameof(colorfog2));
 
-        int colorbuff;
         Stopwatch stopWatch = default!;
 
         float iFrame = 0.0f;
@@ -56,22 +61,18 @@ namespace RealTimeFractalRendererLibrary
         private Shader _finalShader = default!;
 
         private Shader _TemporalRestirShader = default!;
-        int temporalbuff;
         private readonly TextureBinding temporalWeigths = new(nameof(temporalWeigths));
         private readonly TextureBinding temporalOutgoingRadiance = new(nameof(temporalOutgoingRadiance));
 
         private readonly TextureBinding temporalPosition = new(nameof(temporalPosition));
 
         private Shader _SpatialRestirShader = default!;
-        int spatialbuff;
         private readonly TextureBinding spatialWeigths = new(nameof(spatialWeigths));
         private readonly TextureBinding spatialOutgoingRadiance = new(nameof(spatialOutgoingRadiance));
 
         private Shader _swapShader = default!;
-        int swapbuff;
 
         private Shader _swapShader2 = default!;
-        int swapbuff2;
 
         private readonly TextureBinding prevTemporalWeigths = new(nameof(prevTemporalWeigths));
         private readonly TextureBinding prevTemporalOutgoingRadiance = new(nameof(prevTemporalOutgoingRadiance));
@@ -84,26 +85,19 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding prevTAA = new(nameof(prevTAA));
 
         private Shader _tempAccumShader = default!;
-        int tempAccumbuff;
         private readonly TextureBinding tempAccum = new(nameof(tempAccum));
 
         private Shader _upscale = default!;
         private readonly TextureBinding upscale = new(nameof(upscale));
-        private readonly TextureBinding upscale2 = new(nameof(upscale2));
-
-        int upscaleBuff;
-
+        //private readonly TextureBinding upscale2 = new(nameof(upscale2));
 
         private Shader _TAAShader = default!;
-        int TAAbuff;
         private readonly TextureBinding TAA = new(nameof(TAA));
 
         private Shader _denoiseShader = default!;
         //private Shader _denoiseShader2 = default!;
         private readonly TextureBinding den1 = new(nameof(den1));
         private readonly TextureBinding den2 = new(nameof(den2));
-        int den1buff;
-        int den2buff;
         private readonly TextureBinding var1 = new(nameof(var1));
         private readonly TextureBinding var2 = new(nameof(var2));
 
@@ -114,12 +108,10 @@ namespace RealTimeFractalRendererLibrary
 
         private Shader _skyShader = default!;
 
-        int skybuff;
         private readonly TextureBinding skytex = new(nameof(skytex));
 
         private Shader _sunShader = default!;
 
-        int sunbuff;
         private readonly TextureBinding suntex = new(nameof(suntex));
 
 
@@ -323,7 +315,6 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(spatialOutgoingRadiance.Handle, false);
             setupTex2D(TAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
             setupTex2D(upscale.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
-            setupTex2D(upscale2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
             setupTex2D(prevTemporalWeigths.Handle, false);
             setupTex2D(prevTemporalOutgoingRadiance.Handle, false);
             setupTex2D(prevTemporalPosition.Handle, false);
@@ -339,19 +330,12 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(tempAccum.Handle);
 
             //Setup Framebuffer Objects
-            skybuff = CreateFramebufferObject(skytex);
-            sunbuff = CreateFramebufferObject(suntex);
-            colorbuff2 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
-            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, colortexFogPos);
-            temporalbuff = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition);
-            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance);
-            TAAbuff = CreateFramebufferObject(TAA);
-            upscaleBuff = CreateFramebufferObject(upscale);
-            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA, upscale2);
-            swapbuff2 = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
-            den1buff = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo);
-            den2buff = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo);
-            tempAccumbuff = CreateFramebufferObject(tempAccum, den1, var1);
+            fbo1 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
+            fbo2 = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, skytex);
+            fbo3 = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition, spatialWeigths, spatialOutgoingRadiance, tempAccum, den1, var1);
+            fbo4a = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo, TAA, upscale);
+            fbo4b = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo, TAA, upscale);
+            fbo5 = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA, prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
 
             //Compile shader programs
             _skyShader = new Shader("Shaders/sky.vert", "Shaders/sky.frag");
@@ -455,7 +439,6 @@ namespace RealTimeFractalRendererLibrary
             _TAAShader.SetInt("position", colortexPosition.Unit);
             _TAAShader.SetInt("normal", colortexNormal.Unit);
             _TAAShader.SetInt("albedo", colortexAlbedo.Unit);
-            _TAAShader.SetInt("secondpos", colortexSecondPosition.Unit);
             //_TAAShader.SetInt("Acc", tempAccum.Unit);
             _TAAShader.SetInt("den1", den2.Unit);//den2 bound here
             _TAAShader.SetInt("prevTAA", prevTAA.Unit);
@@ -472,12 +455,10 @@ namespace RealTimeFractalRendererLibrary
             _upscale.SetInt("TAA", TAA.Unit);
            
 
-            _swapShader.Use();
-          
+            _swapShader.Use();          
             _swapShader.SetInt("normal", colortexNormal.Unit);
             _swapShader.SetInt("Acc", tempAccum.Unit);
             _swapShader.SetInt("TAA", TAA.Unit);
-            _swapShader.SetInt("up", upscale.Unit);
 
             _swapShader2.Use();
             _swapShader2.SetInt("tempWeights", temporalWeigths.Unit);
@@ -580,7 +561,7 @@ namespace RealTimeFractalRendererLibrary
 
             //Matrix4 lightproj2 = Matrix4.CreatePerspectiveFieldOfView(3.14159f / 1.2f, 1.0f, 0.01f, 120.0f);
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo1);
 
             Matrix4 view = _camera.GetViewMatrix();
             Matrix4 projection = _camera.GetProjectionMatrix();
@@ -600,10 +581,8 @@ namespace RealTimeFractalRendererLibrary
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
 
             //==============================================
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo2);
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, skybuff);
-
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
@@ -617,9 +596,8 @@ namespace RealTimeFractalRendererLibrary
 
             //=================================================
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, sunbuff);
+            GL.Viewport(0, 0, (int)shadowScale, (int)shadowScale);//Useless call? sunshader has no out
 
-            GL.Viewport(0, 0, (int)shadowScale, (int)shadowScale);
             //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
@@ -651,9 +629,6 @@ namespace RealTimeFractalRendererLibrary
 
             //===================================
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff);
-
-
             GL.Viewport(0, 0, (int)size.X, (int)size.Y);
             //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             //GL.Clear(ClearBufferMask.ColorBufferBit);
@@ -673,10 +648,9 @@ namespace RealTimeFractalRendererLibrary
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
-
             ///==========================================================
             
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, temporalbuff);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo3);
 
             GL.Viewport(0, 0, (int)size.X, (int)size.Y);
             GL.Disable(EnableCap.DepthTest);
@@ -692,8 +666,6 @@ namespace RealTimeFractalRendererLibrary
 
             ///==========================================================
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialbuff);
-
             GL.Viewport(0, 0, (int)size.X, (int)size.Y);
             GL.Disable(EnableCap.DepthTest);
             _SpatialRestirShader.Use();
@@ -706,8 +678,6 @@ namespace RealTimeFractalRendererLibrary
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
             ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, tempAccumbuff);
 
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
@@ -733,14 +703,14 @@ namespace RealTimeFractalRendererLibrary
             {
                 if (i % 2 == 0)
                 {
-                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, den1buff);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo4a);
                     _denoiseShader.SetInt("den1", den1.Unit);
                     _denoiseShader.SetInt("var1", var1.Unit);
                     _denoiseShader.SetInt("colorfog", colorfog.Unit);
                 }
                 else
                 {
-                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, den2buff);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo4b);
                     _denoiseShader.SetInt("den1", den2.Unit);
                     _denoiseShader.SetInt("var1", var2.Unit);
                     _denoiseShader.SetInt("colorfog", colorfog2.Unit);
@@ -752,8 +722,6 @@ namespace RealTimeFractalRendererLibrary
             }
 
             ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, TAAbuff);
 
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
@@ -774,8 +742,6 @@ namespace RealTimeFractalRendererLibrary
                         
             ///========
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleBuff);
-
             GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
             GL.Disable(EnableCap.DepthTest);
             _upscale.Use();
@@ -783,11 +749,10 @@ namespace RealTimeFractalRendererLibrary
             _upscale.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
          
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-            //GL.GenerateTextureMipmap(!isEverythingLower ? upscale2 : upscale); //TODO: review, this seems intended but causes a "ghost" sky effect
 
             ///=========================================================
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo5);
 
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             GL.Disable(EnableCap.DepthTest);
@@ -795,11 +760,8 @@ namespace RealTimeFractalRendererLibrary
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(prevTAA.Handle);
-            GL.GenerateTextureMipmap(upscale2.Handle);
 
             ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff2);
 
             GL.Viewport(0, 0, (int)(size.X), (int)(size.Y));
             GL.Disable(EnableCap.DepthTest);

@@ -1,7 +1,7 @@
 ﻿#version 450 compatibility
 // colortexFogPrev
 
-layout(location = 0) out vec4 upp;
+layout(location = 5) out vec4 upp;
 
 // prevSecondPosition
 in vec2 texCoord;

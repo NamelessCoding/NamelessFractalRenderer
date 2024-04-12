@@ -1,7 +1,7 @@
 ﻿#version 450 compatibility
 #extension GL_ARB_shading_language_packing : enable
 
-layout(location = 0) out vec4 skyfin;
+layout(location = 5) out vec4 skyfin;
 
 in vec2 texCoord;
 

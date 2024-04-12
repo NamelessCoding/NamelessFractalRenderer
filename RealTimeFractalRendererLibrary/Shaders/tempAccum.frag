@@ -1,8 +1,8 @@
 ﻿#version 420
 
-layout(location = 0) out vec4 tempAccum;
-layout(location = 1) out vec4 den1;
-layout(location = 2) out vec4 var1;
+layout(location = 5) out vec4 tempAccum;
+layout(location = 6) out vec4 den1;
+layout(location = 7) out vec4 var1;
 
 in vec2 texCoord;
 

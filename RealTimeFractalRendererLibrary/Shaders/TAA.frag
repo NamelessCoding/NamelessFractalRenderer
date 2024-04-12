@@ -2,9 +2,7 @@
 
 layout(binding = 0, Rgba16f) uniform image3D rcpos;
 
-layout(location = 0) out vec4 TAA;
-layout(location = 1) out vec4 prevPosition;
-layout(location = 2) out vec4 prevSecondPosition;
+layout(location = 4) out vec4 TAA;
 
 // prevSecondPosition
 in vec2 texCoord;
@@ -12,7 +10,6 @@ in vec2 texCoord;
 uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
-uniform sampler2D secondpos;
 
 // uniform sampler2D Acc;
 uniform sampler2D den1;
@@ -672,7 +669,4 @@ void main() {
   TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.05 +
                             texture2D(prevTAA, ProjectedCoordinates).w * 0.95,
                         0., 0.99));
-
-  prevPosition = texture2D(position, TC);
-  prevSecondPosition = texture2D(secondpos, TC);
 }

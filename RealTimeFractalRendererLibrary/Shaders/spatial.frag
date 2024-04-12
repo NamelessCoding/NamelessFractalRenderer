@@ -1,7 +1,7 @@
 ﻿
 
-layout(location = 0) out vec4 weigths;
-layout(location = 1) out vec4 outrad;
+layout(location = 3) out vec4 weigths;
+layout(location = 4) out vec4 outrad;
 
 in vec2 texCoord;
 
