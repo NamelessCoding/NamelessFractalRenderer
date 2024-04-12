@@ -294,7 +294,7 @@ namespace RealTimeFractalRendererLibrary
                 ScaleEverything = 1.0f;
             }
 
-                 
+            //Setup textures
             setupTex2D(colorfog2.Handle);          
             setupTex2D(colorfog.Handle);
             setupTex2D(watnorm.Handle);
@@ -316,49 +316,44 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(colortexSecondPosition.Handle, true, PixelInternalFormat.Rgba32f);
             setupTex2D(colortexReflection.Handle, false);
             setupTex2D(colortexSecondAlbedo.Handle, false);
-
-            skybuff = CreateFramebufferObject(skytex);
-            sunbuff = CreateFramebufferObject(suntex);
-            colorbuff2 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
-            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, colortexFogPos);
-
             setupTex2D(temporalWeigths.Handle, false);
             setupTex2D(temporalOutgoingRadiance.Handle, false);
             setupTex2D(temporalPosition.Handle, false, PixelInternalFormat.Rgba32f);
-            temporalbuff = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition);
-           
             setupTex2D(spatialWeigths.Handle, false);
             setupTex2D(spatialOutgoingRadiance.Handle, false);
-            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance);
-
             setupTex2D(TAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            TAAbuff = CreateFramebufferObject(TAA);
-
             setupTex2D(upscale.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
             setupTex2D(upscale2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
-            upscaleBuff = CreateFramebufferObject(upscale);
-
-            setupTex2D(prevTemporalWeigths.Handle, false);            
-            setupTex2D(prevTemporalOutgoingRadiance.Handle, false);           
+            setupTex2D(prevTemporalWeigths.Handle, false);
+            setupTex2D(prevTemporalOutgoingRadiance.Handle, false);
             setupTex2D(prevTemporalPosition.Handle, false);
-            setupTex2D(prevSpatialWeigths.Handle, false);    
+            setupTex2D(prevSpatialWeigths.Handle, false);
             setupTex2D(prevSpatialOutgoingRadiance.Handle, false);
-            setupTex2D(prevNormalDepth.Handle, true, PixelInternalFormat.Rgba32f);           
+            setupTex2D(prevNormalDepth.Handle, true, PixelInternalFormat.Rgba32f);
             setupTex2D(prevAcc.Handle, true);
             setupTex2D(prevTAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA, upscale2);
-            swapbuff2 = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
-       
             setupTex2D(den1.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             setupTex2D(den2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             setupTex2D(var1.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             setupTex2D(var2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            setupTex2D(tempAccum.Handle);
+
+            //Setup Framebuffer Objects
+            skybuff = CreateFramebufferObject(skytex);
+            sunbuff = CreateFramebufferObject(suntex);
+            colorbuff2 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
+            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, colortexFogPos);
+            temporalbuff = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition);
+            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance);
+            TAAbuff = CreateFramebufferObject(TAA);
+            upscaleBuff = CreateFramebufferObject(upscale);
+            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA, upscale2);
+            swapbuff2 = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
             den1buff = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo);
             den2buff = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo);
-                     
-            setupTex2D(tempAccum.Handle);
             tempAccumbuff = CreateFramebufferObject(tempAccum, den1, var1);
 
+            //Compile shader programs
             _skyShader = new Shader("Shaders/sky.vert", "Shaders/sky.frag");
             _sunShader = new Shader("Shaders/sun.vert", "Shaders/sun.frag", true);
             _testShader = new Shader("Shaders/Test.vert", "Shaders/Test.frag", true);
@@ -375,7 +370,6 @@ namespace RealTimeFractalRendererLibrary
             _upscale = new Shader("Shaders/upscale.vert", "Shaders/upscale.frag");
             _worl = new Shader("Shaders/worley.comp", false);
 
-            //tempAccum
             quadVBO = GL.GenBuffer();
             quadVAO = GL.GenVertexArray();
             quadEBO = GL.GenBuffer();
@@ -507,7 +501,7 @@ namespace RealTimeFractalRendererLibrary
 
             //We use the same fullscreen quad VAO during the whole frame
             GL.BindVertexArray(quadVAO);
-            //Seclect the VertexBufferObject
+            //Select the VertexBufferObject
             GL.BindBuffer(BufferTarget.ArrayBuffer, quadVBO);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, quadEBO);
 
