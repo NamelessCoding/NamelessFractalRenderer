@@ -125,6 +125,7 @@ namespace RealTimeFractalRendererLibrary
 
 
         private Shader _RC = default!;
+        private Shader _FL = default!;
 
         private readonly TextureBinding worley = new(TextureTarget.Texture3D);
 
@@ -290,7 +291,7 @@ namespace RealTimeFractalRendererLibrary
                 true, shadowScale, shadowScale);
             setupTex3D(worley.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcpos.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcfog.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcfog.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcnorm.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcrad.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex2D(colortex.Handle, false);
@@ -646,7 +647,8 @@ namespace RealTimeFractalRendererLibrary
             _denoiseShader = new Shader("Shaders/denoise1.vert", "Shaders/denoise1.frag");
             _TAAShader = new Shader("Shaders/TAA.vert", "Shaders/TAA.frag");
             _RC = new Shader("Shaders/RadianceCaching.comp", true);
-
+            _FL = new Shader("Shaders/FillTexture.comp", true);
+            //FillTexture.comp _FL
             _worl = new Shader("Shaders/worley.comp", false);
 
 
@@ -865,6 +867,17 @@ namespace RealTimeFractalRendererLibrary
 
             //Matrix4 lightproj2 = Matrix4.CreatePerspectiveFieldOfView(3.14159f / 1.2f, 1.0f, 0.01f, 120.0f);
 
+
+            _FL.Use();
+            GL.BindVertexArray(quadVAO);
+            _FL.SetVector3(_camera.Position, "viewPos");
+            _FL.SetVector3(prevCamPos, "lastViewPos");
+
+            GL.DispatchCompute(64, 64, 64);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+
+
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
 
             Matrix4 view = _camera.GetViewMatrix();
@@ -926,6 +939,7 @@ namespace RealTimeFractalRendererLibrary
 
             //===================================================
 
+            
             _RC.Use();
             GL.BindVertexArray(quadVAO);
            

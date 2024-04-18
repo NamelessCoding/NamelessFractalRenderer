@@ -1,0 +1,40 @@
+﻿
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+
+uniform vec3 viewPos;
+uniform vec3 lastViewPos;
+
+
+
+void main() {
+  // base pixel colour for image
+  // vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // get index in global work group i.e x,y position
+  // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+  vec3 delta = floor(lastViewPos) - floor(viewPos);
+
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+  vec3 prevPos = pos - delta;
+  // uvec3 pos = -delta
+  // if(pos.x < 0. || pos.x > 80. ||pos.y < 0. || pos.y > 80. ||pos.z < 0. ||
+  // pos.z > 80.  ){
+  //  return;
+  //}
+
+
+  vec4 infoFog = imageLoad(rcfog, ivec3(prevPos)).xyzw;
+  // float bl2 = imageLoad(rcpos, ivec3(prevPos)).w;
+
+  float bl2 = map(pos - 256. + floor(lastViewPos));
+
+  vec4 info = vec4(0.);
+
+  if(bl2 < .5){
+    imageStore(rcfog, ivec3(pos), vec4(1.));
+  }else{
+    imageStore(rcfog, ivec3(pos), vec4(0.));
+  }
+
+}

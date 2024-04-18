@@ -288,13 +288,13 @@ float fbm(vec3 p, vec3 cam) {
   // float a = texture(iChannel0, p).x*0.9;
 
   // float b = fbmss(p*122.);
-  p*= 0.7;
+  p*= 0.5;
   vec4 a = vec4(0.);
 
   a.x = texture3D(worl, p * 0.0011).g;
-  a.y = texture3D(worl, p * 0.011 + vec3(2.)).b;
-  a.z = texture3D(worl, p * 0.017 + vec3(4.)).a;
-  a.w = texture3D(worl, p * 0.0011 + vec3(4.)).x;
+  a.y = texture3D(worl, p * 0.021 + vec3(2.)).b;
+  a.z = texture3D(worl, p * 0.027 + vec3(4.)).a;
+  a.w = texture3D(worl, p * 0.021 + vec3(4.)).x;
 
   vec2 mr = texture3D(worl, p * 0.007).gx;
   /*
@@ -328,7 +328,7 @@ float fbm(vec3 p, vec3 cam) {
   // float b = texture3D(worl, p*22.).x;
   // b += max(fbmcc(p*.05)-0.4,0.);
   float Srb = clamp(
-      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);
+      remap(clamp((cam.z - 200.) / 215., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);
   // a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
   // a -= clamp((p.z)*0.4,0., 1.);
   // a = max(a,0.);
@@ -445,6 +445,8 @@ vec3 shadowS(vec3 pos) {
 vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 waves = vec3(0.00000519673, 0.0000121427, 0.0000296453);
   vec3 befo = p;
+    vec3 ccc = p;
+
   vec2 tts =
       boxIntersection(p - vec3(0., 0., 215.), d, vec3(100000., 100000., 0.1));
   if (tts.x > 0.  ) {
@@ -484,7 +486,6 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 accumother = vec3(0.);
   // if(intersect(p, vec3(0.,0.,0.), 8500.0, d, t)){
   // col = vec3(t.x);
-  vec3 ccc = p;
   vec3 cam = p;
   vec3 fin = p + d * t.y;
   vec3 div = vec3(fin - cam) / 40.;
@@ -517,12 +518,12 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   for (int i = 0; i < 40; i++) {
     // accum += ph(length(cam), reyleighH)*length(div);
     float density =
-        max(fbm(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.01, 0.);
+        max(fbm(cam * mult, cam) - minus - max(cam.z - 220.,0.) * 0.01, 0.);
     // density = smoothstep(0.,1.,density);
     density = clamp(density, 0., 1.);
     density = 1.0 - pow(1.0 - density, 4.);
     keepdensity += density;
-    if (density > 0.00001) {
+    if (density > 0.00001 && i > 2) {
       if (!firsth) {
         dist = length(cam - ccc);
         firsth = true;
@@ -539,7 +540,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
 
       for (int k = 0; k < 10; k++) {
         float density2 = max(
-            fbm(cam2 * mult, cam2) - minus - abs(cam2.z - 220.) * 0.01, 0.);
+            fbm(cam2 * mult, cam2) - minus - max(cam2.z - 220.,0.) * 0.01, 0.);
         // density2 = smoothstep(0.,1.,density2);
         density2 = clamp(density2, 0., 1.);
         density2 = 1.0 - pow(1.0 - density2, 4.);
@@ -576,7 +577,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
         accumulateLight +=
             (1. - exp(-density * 0.6)) * density * transmission *
             (pm2 + pr2 * 12.) * pow(0.5, octave) * 5. * sky2 *
-            (exp(-accum2 * 0.1 * pow(.5, octave)) * exp(-accum * 0.1));
+            (exp(-accum2 * 0.05 * pow(.5, octave)) * exp(-accum * 0.1));
 
         octave += 0.2;
       }
@@ -593,7 +594,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
     if(cam.z < 200. || cam.z > 260.){
       break;
     }
-    if(transmission < 0.5){
+    if(transmission < 0.2){
       break;
     }
     // if(length(cam)>7500.){break;}
@@ -669,7 +670,7 @@ void main() {
     final = final * mmm.w + pow(mmm.xyz, vec3(1.));
 
     float f = exp(-dist * .0028);
-    //final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
+    final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
     // sn = fog();
     // final += sunshafts;
     float mmmms = max(pow(dot(ldir2, vec3(0., 1., 0.)) * 0.5 + 0.5, 4.), 0.01);

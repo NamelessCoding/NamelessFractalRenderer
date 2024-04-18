@@ -861,7 +861,7 @@ return noise2(uv)*0.5+noise2(uv*2.0)*0.25+noise2(uv*4.)*0.125+noise2(uv*8.)*0.06
 
 float map(vec3 p) {
   float ls = 0.;
-  // p = p.xzy;
+   p = p.xzy;
   isWat = 0.;
   float c = 32.1;
   vec3 l33 = vec3(3., 1., 3.);
@@ -888,8 +888,8 @@ if(ssss.x > 0.9 && ssss.y < 0.5){
 //return city;
 return max(city, box(p, vec3(80., 100., 80.)));
 */
-
-  rough = 0.1;
+/*
+  rough = 1.;
   LoadLevel(Levels[7]);
   vec4 newstuff = fractalTEST(p / 5.);
   cccc = clamp(newstuff.xyz, 0., 0.99);
@@ -901,9 +901,9 @@ return max(city, box(p, vec3(80., 100., 80.)));
     rough = 1.;
   }
   return cc;
-
-  float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p) / 10.) * 10.;
-
+*/
+  float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p.xzy) / 10.) * 10.;
+/*
   float bsss = dxe(p / 0.1) * 0.09;
   float bsss2 = dze((vec3(0., -120., -120.) - p) / 65.) * 65. * 0.8;
   float fins = min(bsss2,
@@ -918,6 +918,7 @@ return max(city, box(p, vec3(80., 100., 80.)));
   }
 
   return fins;
+  */
   float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
   float sphere = mb(p / 15.).x * 15.;
   // float sphere = length(p) - 3.5;

@@ -1,7 +1,8 @@
-﻿
+﻿layout(binding = 3, Rgba16f) uniform image3D rcfog;
+
 
 bool renderSkyAndSun = true;
-bool removeWater = true;
+bool removeWater = false;
 bool useRadCache = true;
 // vec3 sunColor = mix(vec3(0.9, 0.8, 0.5), vec3(0.9,0.85, 0.8),
 // max(ldir.y,0.))*pow(max(dot(normalize(ldir), vec3(0., 1., 0.)),0.),3.);
@@ -170,9 +171,23 @@ float t = 0.01;
         if( h<precis||t>maxd ) break;
         t += h;
 */
+
+vec2 boxIntersectionXX( in vec3 ro, in vec3 rd, vec3 boxSize )
+{
+    vec3 m = 1.0/rd;
+    vec3 n = m*ro;
+    vec3 k = abs(m)*boxSize;
+    vec3 t1 = -n - k;
+    vec3 t2 = -n + k;
+    float tN = max( max( t1.x, t1.y ), t1.z );
+    float tF = min( min( t2.x, t2.y ), t2.z );
+    if( tN>tF || tF<0.0) return vec2(-1.0);
+    return vec2( tN, tF );
+}
+
 bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
            bool renderWat, inout bool hitswat, inout float isk2,
-           bool stopatwat = false) {
+           vec3 viewPos = vec3(0.), bool stopatwat = false) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   bool hitWat = false;
@@ -182,7 +197,44 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   isk2 = 0.;
   float epsl = epsilon;
   vec3 keepWP = cam;
-  for (int i = 0; i < 190; i++) {
+
+  bool hasHit = false;
+
+
+  vec3 rayDir = d;
+  vec3 rayPos = p;
+  ivec3 mapPos = ivec3(floor(rayPos + 0.));
+
+  vec3 deltaDist = 1.0 / abs(rayDir);
+  ivec3 rayStep = ivec3(sign(rayDir));
+  vec3 sideDist = (sign(rayDir) * (vec3(mapPos) - rayPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
+
+  ivec3 prevPos = mapPos; 
+
+  for(int i = 0; i < 164; i++){
+     ivec3 newP = ivec3((mapPos + 256. - floor(viewPos)));
+     if(newP.x >= 512. || newP.x < 0. || newP.y >= 512. || newP.y < 0 || newP.z >= 512. || newP.z < 0){
+        break;
+     }
+     if(imageLoad(rcfog, newP).x > 0.5){
+        vec2 I = vec2(0.);
+        I = boxIntersectionXX( rayPos - vec3(mapPos) - vec3(0.5), rayDir, vec3(0.5) );
+        if(I.x >= 0.){
+          hasHit = true;
+          p = rayPos + rayDir * I.x;
+          break;
+        }
+     }
+     bvec3 mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
+     sideDist += vec3(mask) * deltaDist;
+     mapPos += ivec3(vec3(mask)) * rayStep;
+
+  }
+  if(!hasHit){
+    return false;
+  }
+
+  for (int i = 0; i < 70; i++) {
     // p = cam + d*t;
 
     float A = map(p);
@@ -225,7 +277,7 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     }
 
     // t += dist;
-    epsl += epsilon * 0.1;
+    epsl = epsilon * (1.+ sqrt(length(cam-p))) ;
     p += d * dist;
   }
 

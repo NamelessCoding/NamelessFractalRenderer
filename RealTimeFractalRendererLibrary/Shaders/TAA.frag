@@ -584,7 +584,7 @@ void main() {
     if(DP < 15.){
       reflAm = 0.05;
     }
-    vec3 F22 = clamp(fresnelSchlick(vec3(reflAm), vec3(0.99),
+    vec3 F22 = clamp(fresnelSchlick(vec3(0.05), vec3(0.99),
                                     max(dot(normalize(wn.xyz), -wi), 0.)),
                      0., 1.);
    

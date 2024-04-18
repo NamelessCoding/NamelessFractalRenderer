@@ -5,7 +5,6 @@ layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 layout(binding = 0, Rgba16f) uniform image3D rcpos;
 layout(binding = 1, Rgba16f) uniform image3D rcnorm;
 layout(binding = 2, Rgba16f) uniform image3D rcrad;
-layout(binding = 3, Rgba16f) uniform image3D rcfog;
 uniform sampler2D skytex;
 uniform sampler2D suntex;
 
@@ -66,13 +65,8 @@ void main() {
            uint(1);
   vec3 N = imageLoad(rcnorm, ivec3(prevPos)).xyz;
 
-  vec4 infoFog = imageLoad(rcfog, ivec3(prevPos)).xyzw;
-  // float bl2 = imageLoad(rcpos, ivec3(prevPos)).w;
-
-  float bl2 = map(pos - 90. + floor(lastViewPos));
-
-  vec4 info = vec4(0.);
-
+  
+/*
   if ((l > 0.01)) {
     // info = vec4(pow(imageLoad(cimage1, ivec3(prevPos)).xyz, vec3(2.2)), 20.);
     imageStore(rcfog, ivec3(prevPos), vec4(cccc * 2., 20.));
@@ -96,7 +90,7 @@ void main() {
       mixdN = vec3(0.);
     }
     imageStore(rcfog, ivec3(pos), vec4(mixdN.xyz, mixd));
-  }
+  }*/
 
   if (length(N) < 0.01) {
     //(p+40.-floor(viewPos))*.9
@@ -141,7 +135,7 @@ void main() {
   vec3 wn = vec3(0.);
   bool hitswat = false;
   float ssd = 0.;
-  if (trace(p, dir, wp, wn, false, hitswat, ssd)) {
+  if (trace(p, dir, wp, wn, false, hitswat, ssd, viewPos)) {
 
     vec3 n = norm(p - dir * epsilon * 2.);
     if (mapPl(p) < 0. && removeWater) {
