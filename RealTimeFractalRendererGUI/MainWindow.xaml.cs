@@ -3,16 +3,22 @@ using OpenTK.Windowing.Common;
 using OpenTK.Wpf;
 using RealTimeFractalRendererLibrary;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Timers;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Window = System.Windows.Window;
 
 namespace RealTimeFractalRendererGUI
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        public Renderer Renderer => renderer;
         private Renderer renderer = default!;
         private bool isRendererInitialized = false;
         private bool resolutionChanged = true;
@@ -25,6 +31,7 @@ namespace RealTimeFractalRendererGUI
         private readonly Timer renderTimer = new(TimeSpan.FromSeconds(1.0/60.0));
         private bool isRendering = false;
         public event PropertyChangedEventHandler? PropertyChanged;
+        private readonly DispatcherTimer _framerateUpdateTimer;
 
         private float realYaw = 0.0f;
         //private float smoothedYaw = 0.0f;
@@ -32,9 +39,10 @@ namespace RealTimeFractalRendererGUI
         private float realPitch = 0.0f;
         //private float smoothedPitch = 0.0f;
 
-
-        public float Brightness { get; set; } = 1.0f;
-        public float Contrast { get; set; } = 1.0f;
+        /// <summary>
+        /// Used to measure framerate in FPS.
+        /// </summary>
+        public int FrameCounter { get; set; } = 0;
 
         public float CloudCoverage { get; set; } = 0.1f;
 
@@ -47,6 +55,8 @@ namespace RealTimeFractalRendererGUI
             get => renderer?.Camera.Yaw ?? 0;
             set => renderer.Camera.Yaw = value;
         }
+
+        public List<TextureBinding> Textures { get; set; } = [];
 
         public MainWindow()
         {
@@ -62,14 +72,23 @@ namespace RealTimeFractalRendererGUI
                 RenderContinuously = false,//avoid relying on WPF's CompositionTarget.Rendering
             });
 
+            //invoke frame render periodically according to the target framerate
             renderTimer.Elapsed += (s, e) => { 
                 if (!isRendering) 
                 { 
                     isRendering = true;
-                    Dispatcher.Invoke(display.InvalidateVisual, 
-                        System.Windows.Threading.DispatcherPriority.Render);
-                } 
+                    Dispatcher.Invoke(display.InvalidateVisual, DispatcherPriority.Render);
+                    FrameCounter++;
+                }
             };
+
+            //show and reset the frame counter periodically every second
+            _framerateUpdateTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Normal, (s, e) =>
+            {
+                OnPropertyChanged(nameof(FrameCounter));
+                FrameCounter = 0;
+            }, Dispatcher.CurrentDispatcher);
+            _framerateUpdateTimer.Start();
 
         }
 
@@ -79,6 +98,16 @@ namespace RealTimeFractalRendererGUI
             renderer = new Renderer();
             renderer.Load(new Vector2i(display.FrameBufferWidth, display.FrameBufferHeight));
             isRendererInitialized = true;
+
+            //query all texture fields from renderer using reflection
+            Textures = typeof(Renderer).GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(field => field.FieldType == typeof(TextureBinding))
+                .Select(field => (TextureBinding)field.GetValue(renderer)!) //assume all fields are non-null
+                .ToList();
+
+            //tell the gui that these displayed property values have been updated
+            OnPropertyChanged(nameof(Textures));
+            OnPropertyChanged(nameof(Renderer));
             renderTimer.Start();
         }
 
@@ -146,10 +175,9 @@ namespace RealTimeFractalRendererGUI
             }
 
             //update uniforms
-            renderer.SetBrightness(Brightness);
-            renderer.SetCloudCoverage(CloudCoverage);
-           // renderer.SetContrast(Contrast);
             renderer.SetLdir(XL, YL, ZL);
+            renderer.SetCloudCoverage(CloudCoverage);
+
             //TODO: add uniforms to update from gui
 
         }
@@ -201,6 +229,17 @@ namespace RealTimeFractalRendererGUI
         {
             Keyboard.ClearFocus();
             Keyboard.Focus(display);
+        }
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void ClearDebugTexButton_Click(object sender, RoutedEventArgs e)
+        {
+            Renderer.DebuggedTexture = null;
+            OnPropertyChanged(nameof(Renderer));
         }
     }
 }

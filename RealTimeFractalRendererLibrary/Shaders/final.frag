@@ -11,6 +11,7 @@ uniform sampler2D TAA;
 
 uniform sampler2D fogLO;
 uniform sampler2D watpos;
+uniform sampler2D debuggedTexture;
 
 uniform mat4 projection;
 
@@ -20,6 +21,8 @@ uniform float time;
 uniform vec3 viewPos;
 
 uniform float brightness;
+uniform int enableBlur;
+uniform int enableTextureDebugging;
 
 vec3 tonemap_uchimura2(vec3 v) {
   const float P = 1.0;  // max display brightness
@@ -595,6 +598,12 @@ vec3 lodbloom(vec2 iResolution, float lod) {
 }
 
 void main() {
+    if(enableTextureDebugging != 0)
+    {
+        outputColor = brightness*texture2D(debuggedTexture, texCoord*wh.x/wh.y);
+        return;
+    }
+
   //*texture2D(albedo, texCoord).xyz;
   // float RW = texture2D(weightS, texCoord).z;
   // vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
@@ -645,10 +654,10 @@ void main() {
   }
 
   vec3 color2 = vec3(0.);
-  if (brightness < 1.0) {
-    color2 = texture2D(fogLO, texCoord).xyz;
-  } else {
+  if (enableBlur != 0) {
     color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
+  } else {
+    color2 = texture2D(fogLO, texCoord).xyz;
   }
   // color2 = texture2D(fogLO, texCoord).xyz;
 
@@ -668,7 +677,7 @@ void main() {
   float exposure = clamp((0.5) * exp2(EV100), 0.00018, 1.);
   col = max(col, 0.);
   col /= exposure;
-  // col *= brightness;
+  col *= brightness;
 
   uint seedCam = uint(time);
   vec2 smallOffset =
