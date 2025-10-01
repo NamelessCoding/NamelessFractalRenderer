@@ -1,0 +1,220 @@
+﻿
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+
+uniform vec3 viewPos;
+uniform vec3 lastViewPos;
+//uniform float time;
+
+uniform mat4 invview;
+uniform mat4 invproj;
+
+uniform mat4 view;
+uniform mat4 proj;
+
+uniform mat4 prevview;
+uniform mat4 prevproj;
+
+struct packedvec3{
+  float x,y,z;
+};
+
+
+struct volumetricsBuffer {
+    packedvec3 colour;
+    packedvec3 weigthsTemp;
+    packedvec3 colourspat;
+    packedvec3 weigthsspat;
+    packedvec3 Loprev;
+    packedvec3 wprev;
+
+};
+layout(std430, binding=6) buffer volumebuff {
+    volumetricsBuffer volumenodes[];
+} volumessbo;
+
+
+uint maxID = 96;
+
+uint to1D(uint x, uint y, uint z){
+  return (x + y*maxID + z*maxID*maxID);
+}
+
+float near = 0.01;
+float far = 100.;
+//copied:
+//depth between -1 and 1
+//https://learnopengl.com/Advanced-OpenGL/Depth-testing
+float LinearizeDepth(float depth) 
+{
+    float z = depth * 2.0 - 1.0; // back to NDC 
+    return (2.0 * near * far) / (far + near - z * (far - near));	
+}
+
+//my own
+float lineardepthtonormal(float linear){
+  float l1 = 1./(2.*near*far);
+  float a = ((1./(linear*l1)) - far - near)/(far-near);
+  return 1.-(a*0.5+0.5);
+}
+//
+float lum(vec3 c) {
+  return sqrt(0.299 * c.x * c.x + 0.587 * c.y * c.y + 0.114 * c.z * c.z);
+}
+void main() {
+  // base pixel colour for image
+  // vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // get index in global work group i.e x,y position
+  // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+  uvec3 loc = (gl_GlobalInvocationID.xyz);
+
+  uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) +
+                uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
+           uint(1);
+
+   
+  float phi = 2.*3.14159*rndf(r);
+  float theta = 3.14159*rndf(r); 
+  vec3 rand_dir = normalize(
+    vec3(
+      cos(phi)*sin(theta),
+      cos(theta),
+      sin(phi)*sin(theta)
+    )
+  );
+
+
+  vec2 uv = (pos.xy+0.5)/96.;
+
+vec4 p22 =
+      vec4((clamp(uv, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
+  // p22.xy += smallOffset*1.;
+
+  vec3 dir = (invproj * p22).xyz / (invproj * p22).w;
+  dir = normalize(mat3(invview) * dir);
+
+
+
+  float depthy = (pos.z+0.5)/96.;
+  //float linDepth = LinearizeDepth(depthy)*(30./far);
+  depthy = depthy*15.;
+
+
+  float findepth = lineardepthtonormal(depthy);
+
+  vec4 pp = vec4(uv*2.-1., findepth*2.-1., 1.);
+  vec4 pp2 = invproj*pp;
+  vec4 pp3 = invview*vec4(pp2/pp2.w);
+
+  vec3 position = pp3.xyz;
+
+
+  uint sds = to1D(uint(loc.x), uint(loc.y), uint(loc.z));
+
+ 
+
+  volumetricsBuffer vv = volumessbo.volumenodes[sds];
+
+
+  float RM = vv.weigthsspat.x;
+  float RW = vv.weigthsspat.z;
+  float Rw = vv.weigthsspat.y;
+  vec3 LO = vec3(vv.colourspat.x, vv.colourspat.y, vv.colourspat.z);
+
+
+   const int maxiterations = 9;
+  // std::vector<RESERVOIR> QN;
+  // QN.push_back(Rs);
+  // Sample init = InitialSampleBuffer[index];
+  float Z = RM;
+
+  for (int s = 0; s < maxiterations; s++) {
+    
+     float phi = 2.*3.14159*rndf(r);
+     float theta = 3.14159*rndf(r); 
+     vec3 rand_dir = normalize(
+      vec3(
+        cos(phi)*sin(theta),
+        cos(theta),
+        sin(phi)*sin(theta)
+      )
+    );
+    
+    vec3 pp = position + rand_dir*2.;
+
+    vec4 prevp = vec4(pp, 1.);
+    prevp = view*prevp;
+    prevp = proj*prevp;
+    prevp /= prevp.w;
+
+    vec2 aa = prevp.xy * 0.5 + 0.5;
+    vec3 sssm = vec3(aa*96., (LinearizeDepth(prevp.z*0.5 + 0.5)/15.)*96.);
+    bool isinside = sssm.x >= 0. && sssm.x < 96. && sssm.y >= 0. && sssm.y < 96. && sssm.z >= 0. && sssm.z < 96.;
+    if(!isinside){    
+      continue;
+    }
+    uint sdsPP = to1D(uint(sssm.x), uint(sssm.y), uint(sssm.z));
+    volumetricsBuffer vv2 = volumessbo.volumenodes[sdsPP];
+    float RnM = vv.weigthsTemp.x;
+    float RnW = vv.weigthsTemp.z;
+    float Rnw = vv.weigthsTemp.y;
+
+    vec3 RnLo = vec3(vv.colour.x, vv.colour.y, vv.colour.z);
+    
+    float pq = lum(RnLo) ;
+    
+
+    Rw /= max(RM, 1.);
+    RM = min(RM, 500.);
+    Rw *= RM;
+    float M0 = RM;
+    float upd = pq * RnW * RnM;
+    Rw = Rw + upd;
+    RM = M0 + RnM;
+ 
+    if (rndf(r) < (upd / max(Rw, 0.000001))) {
+      LO = RnLo;
+
+    }
+     Z += RnM;
+  }
+
+
+  float  phat = lum(LO);
+  if (Z * phat < 0.001) {
+    RW = 0.0;
+  } else {
+    RW = Rw / (Z * phat);
+  }
+
+  packedvec3 colfin;  
+  colfin.x = LO.x;
+  colfin.y = LO.y;
+  colfin.z = LO.z;
+  vv.colourspat = colfin;
+
+
+  packedvec3 wt;  
+  wt.x = RM;
+  wt.y = Rw;
+  wt.z = RW;
+  vv.weigthsspat = wt;
+
+  volumessbo.volumenodes[sds] = vv;
+
+
+/*
+uniform mat4 invview;
+uniform mat4 invproj;
+
+uniform mat4 view;
+uniform mat4 proj;
+
+uniform mat4 prevview;
+uniform mat4 prevproj;
+*/
+
+}

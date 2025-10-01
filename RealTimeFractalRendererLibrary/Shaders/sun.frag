@@ -89,26 +89,28 @@ void main() {
   vec2 uv = texCoord * 2. - 1.;
   vec3 p = vec3(lpos + vec3(B * uv.x + -T * uv.y) * 200.);
   vec3 cam = p;
+  if(renderSkyAndSun){
+    if (traceSun(p, dir, 380., time)) {
+      vec4 sspace = lightproj * lightview * vec4(p, 1.);
 
-  if (traceSun(p, dir, 380.)) {
-    vec4 sspace = lightproj * lightview * vec4(p, 1.);
+      sspace.xyz /= sspace.w;
+      vec3 coords = sspace.xyz * 0.5f + 0.5f;
 
-    sspace.xyz /= sspace.w;
-    vec3 coords = sspace.xyz * 0.5f + 0.5f;
-
-    finCoords = ivec2(coords.xy * scale);
-    pos = p;
-    lengthSun = coords.z;
+      finCoords = ivec2(coords.xy * scale);
+      pos = p;
+      lengthSun = coords.z;
     // lengthSun = length(p-cam);
-  } else {
-    vec4 sspace = lightproj * lightview * vec4(p, 1.);
+    } else {
+      vec4 sspace = lightproj * lightview * vec4(p, 1.);
 
-    sspace.xyz /= sspace.w;
-    vec3 coords = sspace.xyz * 0.5f + 0.5f;
+      sspace.xyz /= sspace.w;
+      vec3 coords = sspace.xyz * 0.5f + 0.5f;
 
-    finCoords = ivec2(coords.xy * scale);
-    lengthSun = coords.z;
+      finCoords = ivec2(coords.xy * scale);
+      lengthSun = coords.z;
+    }
   }
+  
 
   // vec3 cloudsPos(vec3 p, vec3 d, vec3 lig, inout float dist){
   float dist = 100.;

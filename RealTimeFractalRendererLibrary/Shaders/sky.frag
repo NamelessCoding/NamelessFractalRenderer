@@ -75,8 +75,200 @@ vec3 Brr(vec3 wave) {
   return 8. * pow(3.14159, 3.) *
          (pow(n * n - 1.0, 2.) / (3. * N * wave * wave * wave * wave));
 }
+vec3 BsR(vec3 wave, float h, float H){
+float n = 1.00029;
+vec3 N = vec3(2.504)*pow(10., 25.);
+vec3 a = (8.*pow(3.14159,3.)*pow(n*n-1.,2.))/(3.*N*pow(wave,vec3(4.)));
+float b = exp(-(h/H));
+return a*b;
+}
 
 vec3 sky(vec3 p, vec3 d, vec3 lig) {
+  float hhh = 6400.;
+  float hhh2 = 1220.;
+
+  p = vec3(0., 0., hhh);
+  float sphrad = 6420.;
+  
+    vec2 t = vec2(0.);
+
+  intersect22(p, vec3(0., 0., 0.), sphrad, d, t);
+  vec3 fin = p + d * t.y;
+  float dist = length(fin-p)/30.;
+  
+  vec3 wavelengths = vec3(700., 520., 420.);
+  //lig.z = clamp(lig.z, 0., 1.);
+
+  float reyleighH = 6420.;
+  float MieH = 6420.;
+
+  vec3 accumulateLight = vec3(0.);
+  vec3 accumulateLightMie = vec3(0.);
+    // col = vec3(t.x);
+    vec3 m = p;
+
+    vec3 cam = p;
+   
+
+    vec3 accum = vec3(0.);
+    vec3 accum2 = vec3(0.);
+
+    ///////////////////////////////////
+    float PMMM = PM(max(dot(d, lig), 0.), 0.76);
+    float PRRR = RayleighPhase(max(dot(d, lig), 0.0));
+    vec3 coefficients = vec3(33.1, 13.5, 5.8);
+    float Bs = 10.;
+    vec3 Be0 = Be(coefficients, 0.0, 2000.);
+    // vec3 BRrgb = vec3(6.5, 1.73, 2.30);
+    vec3 BRrgb = Brr(wavelengths * 0.00039);
+    //vec3 BRrgb = boreyleigh(max(dot(d, lig), 0.0), wavelengths*0.00000000001);
+    vec3 BMrgb = vec3(0.001);
+    ///////////////////////////////////
+    vec3 pms = BMrgb*2000.;
+    for (int i = 0; i < 30; i++) {
+        vec3 rayl = PRRR*BRrgb*BsR(wavelengths*0.0000000001, cam.z, reyleighH);
+        rayl = PRRR*BRrgb;
+        float ph1 = exp(-(abs(cam.z-hhh2)/reyleighH))*length(fin-p);
+        float ph0 = exp(-(abs(cam.z-hhh2)/MieH))*length(fin-p);
+
+        accum += ph1;
+        accum2 += ph0;
+        vec3 cam2 = cam;
+        
+        vec2 t22 = vec2(0.);
+
+          intersect22(cam, vec3(0., 0., 0.), sphrad, lig, t22);
+          vec3 fin2 = cam + lig * t22.y;
+          float dist2 = length(fin2-cam)/30.;
+          vec3 accum22 = vec3(0.);
+          vec3 accum11 = vec3(0.);
+        for (int k = 0; k < 30; k++) {
+            float ph2 = exp(-(abs(cam2.z-cam.z-hhh2)/MieH))*length(fin2-cam);
+            float ph3 = exp(-(abs(cam2.z-cam.z-hhh2)/reyleighH))*length(fin2-cam);
+
+           accum22 += ph2;
+           accum11 += ph3;
+          cam2 += lig*dist2;
+       
+        }
+        
+        //rayl*ph1 + PMMM*BMrgb*ph0
+        //rayl*ph3+PMMM*BMrgb*ph2;
+        vec3 v1 = rayl*accum + pms*accum2;
+        vec3 v2 = rayl*accum11+pms*accum22;
+        
+        accumulateLight += 0.00001
+      *dist*((exp(-(v1)*.00009)) * ((exp(-((v2))*.000191))))*
+      (rayl*240. + PMMM*pms*520.);
+//accumulateLight += 1.-exp(-((accum2)*dist2)*0.001);
+      
+      if (cam.z < 6360.) {
+        break;
+      }
+      cam += d*dist;
+    
+    
+  }
+ // return (exp(-(accum)*dist*0.1));
+ //return accum*0.1;
+  return max(accumulateLight * 1.4,
+             0.);
+ 
+}
+
+vec3 skysdfsg(vec3 p, vec3 d, vec3 lig) {
+  float hhh = 6400.;
+  float hhh2 = 1220.;
+
+  p = vec3(0., 0., hhh);
+  float sphrad = 6420.;
+  
+    vec2 t = vec2(0.);
+
+  intersect22(p, vec3(0., 0., 0.), sphrad, d, t);
+  vec3 fin = p + d * t.y;
+  float dist = length(fin-p)/30.;
+  
+  vec3 wavelengths = vec3(700., 520., 420.);
+  //lig.z = clamp(lig.z, 0., 1.);
+
+  float reyleighH = 6420.;
+  float MieH = 6420.;
+
+  vec3 accumulateLight = vec3(0.);
+  vec3 accumulateLightMie = vec3(0.);
+    // col = vec3(t.x);
+    vec3 m = p;
+
+    vec3 cam = p;
+   
+
+    vec3 accum = vec3(0.);
+    vec3 accum2 = vec3(0.);
+
+    ///////////////////////////////////
+    float PMMM = PM(max(dot(d, lig), 0.), 0.76);
+    float PRRR = RayleighPhase(max(dot(d, lig), 0.0));
+    vec3 coefficients = vec3(33.1, 13.5, 5.8);
+    float Bs = 10.;
+    vec3 Be0 = Be(coefficients, 0.0, 2000.);
+    // vec3 BRrgb = vec3(6.5, 1.73, 2.30);
+    vec3 BRrgb = Brr(wavelengths * 0.00039);
+    //vec3 BRrgb = boreyleigh(max(dot(d, lig), 0.0), wavelengths*0.00000000001);
+    vec3 BMrgb = vec3(0.001);
+    ///////////////////////////////////
+    vec3 pms = BMrgb*2000.;
+    for (int i = 0; i < 30; i++) {
+        vec3 rayl = PRRR*BRrgb*BsR(wavelengths*0.0000000001, cam.z, reyleighH);
+        rayl = PRRR*BRrgb;
+        float ph1 = exp(-(abs(cam.z-hhh2)/reyleighH))*length(fin-p);
+        float ph0 = exp(-(abs(cam.z-hhh2)/MieH))*length(fin-p);
+
+        accum += ph1;
+        accum2 += ph0;
+        vec3 cam2 = cam;
+        
+        vec2 t22 = vec2(0.);
+
+          intersect22(cam, vec3(0., 0., 0.), sphrad, lig, t22);
+          vec3 fin2 = cam + lig * t22.y;
+          float dist2 = length(fin2-cam)/30.;
+          vec3 accum22 = vec3(0.);
+          vec3 accum11 = vec3(0.);
+        for (int k = 0; k < 30; k++) {
+            float ph2 = exp(-(abs(cam2.z-cam.z-hhh2)/MieH))*length(fin2-cam);
+            float ph3 = exp(-(abs(cam2.z-cam.z-hhh2)/reyleighH))*length(fin2-cam);
+
+           accum22 += ph2;
+           accum11 += ph3;
+          cam2 += lig*dist2;
+       
+        }
+        
+        //rayl*ph1 + PMMM*BMrgb*ph0
+        //rayl*ph3+PMMM*BMrgb*ph2;
+        vec3 v1 = rayl*accum + pms*accum2;
+        vec3 v2 = rayl*accum11+pms*accum22;
+        
+        accumulateLight += 0.00001
+      *dist*((exp(-(v1)*.00009)) * ((exp(-((v2))*.000191))))*
+      (rayl*240. + PMMM*pms*520.);
+//accumulateLight += 1.-exp(-((accum2)*dist2)*0.001);
+      
+      if (cam.z < 6360.) {
+        break;
+      }
+      cam += d*dist;
+    
+    
+  }
+ // return (exp(-(accum)*dist*0.1));
+ //return accum*0.1;
+  return max(accumulateLight * 1.4,
+             0.);
+ 
+}
+vec3 skyzzz2(vec3 p, vec3 d, vec3 lig) {
   p = vec3(0., 0., 6400.);
   vec3 wavelengths = vec3(700., 530., 420.);
   lig.z = clamp(lig.z, 0., 1.);
@@ -154,7 +346,7 @@ vec3 sky(vec3 p, vec3 d, vec3 lig) {
 
         accumulateLight +=
             (exp(-pow(t1 * 0.0054, vec3(1.))) * exp(-t2 * 0.028)) *
-            length(div * 1.) * .0005 * (PRRR * BRrgb * 230. + PMMM * 10.) *
+            length(div * 1.) * .0005 * (PRRR * BRrgb * 230. + PMMM * 50.) *
             mix(vec3(0.9, 0.4, 0.2), vec3(0.9),
                 clamp(dot(lig, vec3(0., 0., 1.)) * 4., 0., 1.));
 
@@ -279,22 +471,28 @@ float b = fbmss(p*0.1);
 return clamp((Srb)*b,0.,1.);
 }
 
+float fbmww(vec3 p, vec3 cam){
 
 
-float fbm(vec3 p, vec3 cam) {
+float b = fbmss(p*0.065);
+
+  float Srb = clamp(
+      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+
+return clamp(b,0.,1.);
+}
+
+
+float fbm(vec3 p, vec3 startPoint, vec3 endPoint){
   // p.yz = rot(p.yz, iTime*0.3);
   // float a = texture(iChannel0, p).x*0.5 +texture(iChannel0, p*2.).y*0.25+
   // texture(iChannel0, p*4.).z*0.125+texture(iChannel0, p*8.).x*0.0625;
   // float a = texture(iChannel0, p).x*0.9;
 
   // float b = fbmss(p*122.);
-  p*= 0.5;
-  vec4 a = vec4(0.);
+  p*= 0.09;
+  vec4 a = texture3D(worl, p * 0.021);
 
-  a.x = texture3D(worl, p * 0.0011).g;
-  a.y = texture3D(worl, p * 0.021 + vec3(2.)).b;
-  a.z = texture3D(worl, p * 0.027 + vec3(4.)).a;
-  a.w = texture3D(worl, p * 0.021 + vec3(4.)).x;
 
   vec2 mr = texture3D(worl, p * 0.007).gx;
   /*
@@ -324,11 +522,11 @@ float fbm(vec3 p, vec3 cam) {
   // b-= a.w;
   // b = max(b-1.2-max(1.-a.w*a.x,0.), 0.);
   b *= ( mr.y) * 0.9;
-  b = max(b - 1.7, 0.);
+  b = max(b - 2.4, 0.);
   // float b = texture3D(worl, p*22.).x;
   // b += max(fbmcc(p*.05)-0.4,0.);
-  float Srb = clamp(
-      remap(clamp((cam.z - 200.) / 215., 0., 0.09), 0., 0.09, 0.1, 1.), 0., 1.);
+float Srb = clamp(remap(clamp(p.z/6800., 0., 0.09), 0., 0.09, 0., 1.),0.,1.);
+
   // a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
   // a -= clamp((p.z)*0.4,0., 1.);
   // a = max(a,0.);
@@ -340,6 +538,45 @@ float fbm(vec3 p, vec3 cam) {
   // float density = exp(-cap*0.00002);
   return clamp(((Srb)*b), 0., 1.);
 }
+
+
+
+float fbmssd(vec3 p, vec3 cam){
+
+
+float b = fbmss(p*0.065);
+
+  float Srb = clamp(
+      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+
+return clamp(b,0.,1.);
+}
+
+float fbm2(vec3 p, vec3 cam){
+
+
+float b = fbmss(p*0.065);
+b = max(b- abs(cam.z - 280.) * 0.015, 0.);
+float b2 = fbmss(p*0.065);
+b2 = max(b2- abs(cam.z - 220.) * 0.015, 0.);
+
+float b3 = fbmss(vec3(p.x, p.y*0.1, p.z)*0.025);
+//b3 = (sin(p.x*0.001)+cos(p.z))*0.5+0.5;
+//b3 = max(b3-0.4,0.);
+b3 = max(b3- abs(cam.z - 300.) * 0.015, 0.);
+//return b3;
+  float Srb = clamp(
+      remap(clamp((cam.z - 200.) / 15., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+
+float m = texture3D(worl, p*0.0031).x;
+m = max(m-0.4,0.);
+//return m;
+float k = (b*0.95);
+k = max(k,0.);
+
+return clamp(b2*0.95+k+b3*0.96,0.,1.);
+}
+
 
 void swap(inout float t1, inout float t2) {
   float m = t1;
@@ -439,27 +676,313 @@ vec3 shadowS(vec3 pos) {
 }
 */
 
-
+float box(vec3 p, vec3 a){
+  vec3 s = abs(p)-a;
+  return max(s.x, max(s.y, s.z));
+}
 
 
 vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
+  vec3 befo = p;
+ 
+  float transmission = 1.0;
+  vec3 Ex = vec3(1.0);
+    vec3 ccc = p;
+
+  for(int i = 0; i < 5; i++){
+      float dist = box(vec3(0., 0., 220.)-p, vec3(15000., 15000., 1.));
+      if(dist < 0.01){
+          break;
+      }
+      p+=dist*d;
+  }
+ 
+  vec3 accumulateLight = vec3(0.);
+
+  vec3 cam = p;
+
+  vec3 accum = vec3(0.);
+  float minus = 0.29;
+  float mult = 1.2;
+
+ 
+  vec3 sky2 = sky(vec3(0.), lig, lig)*mix(vec3(0.9, 0.7, 0.2), vec3(1.),lig.z);
+  float pr2 = PR(max(dot(d, lig), 0.));
+  float keepdensity = 0.;
+  bool firsth = false;
+  vec3 firstHit = p;
+  float stepsize = 2.;
+  for (int i = 0; i < 60; i++) {
+    float density =
+        max(fbmssd(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.015, 0.);
+    density = clamp(density, 0., 1.);
+    density = 1.0 - pow(1.0 - density, 2.);
+    if (density > 0.00001) {
+      if (!firsth) {
+        dist = length(cam - ccc);
+        firsth = true;
+        firstHit = cam;
+        stepsize = 2.;
+      }
+      accum += density * 10.6;
+      // accum11 += ph(length(cam)-6500., MieH)*length(div);
+
+      vec3 accum2 = vec3(0.);
+      // float accum3 = 0.;
+      // energy = energy*(1.0-rayleighcoefficients);
+      vec3 cam2 = cam;
+        float transmission2 = 1.;
+      for (int k = 0; k < 13; k++) {
+        float density2 = max(
+            fbmssd(cam2 * mult, cam2) - minus - abs(cam2.z - 220.) * 0.015, 0.);
+        // density2 = smoothstep(0.,1.,density2);
+        density2 = clamp(density2, 0., 1.);
+        density2 = 1.0 - pow(1.0 - density2, 2.);
+
+        // accum2 += ph(cam2.z, 1300.)*30.;
+        accum2 += density2 * 60.1;
+        transmission2 *= 1.-density2;
+        // accum3 += ph(length(cam2)-6500., MieH)*length(div2);
+        cam2 += lig * (1. - 0.2 * random3d(cam2) + float(k)*0.0);
+      }
+
+      transmission *= 1.0 - density;
+
+    
+      float octave = 0.;
+
+      for (int i = 0; i < 8; i++) {
+   
+        vec3 pm2 = vec3((PM(max(dot(d, lig), 0.), 0.76))) * 114. +
+                   vec3((PM(max(dot(d, lig), 0.), pow(0.5, octave)))) * 11.5 +
+                   vec3((PM(max(dot(d, lig), 0.), -0.5))) * 41.;
+       //  pm2 *= mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
+       //  0., 1.)), 0.));
+           vec3 colr = max(sky2,0.);
+           vec3 colr2 = max(7.-sky2, 0.);
+        accumulateLight +=
+            (1. - exp(-density *colr * 3.6)) * density * transmission *
+            (pm2*12. + pr2 * 12.) * pow(0.5, octave) * 3.  *
+            (exp(-accum2 * colr2 * 0.15 * pow(.5, octave)) * exp(-accum * colr2 * 0.1));
+
+        octave += 1.;
+      }
+
+    } 
+
+    cam += d * (stepsize - 0.5 * random3d(cam));
+      if(transmission < 0.15){
+          break;
+      }
+  }
+ 
+  return vec4(accumulateLight * 1.3, transmission);
+}
+
+
+
+
+vec4 clouds2fff(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
+  vec3 waves = vec3(0.00000519673, 0.0000121427, 0.0000296453);
+  vec3 befo = p;
+  vec3 ccc = p;
+
+
+  p = vec3(0., 0., 6350.);
+  //vec2 tts = sphereIntersection(p, d, 6500.);
+  //vec2 boxIntersection(in vec3 ro, in vec3 rd, vec3 boxSize) {
+
+  vec2 tts = boxIntersection(p-vec3(0., 0., 6500.), d, vec3(15000., 15000., 1.));
+  vec2 tts2 = boxIntersection(p-vec3(0., 0., 6900.), d, vec3(15000., 15000., 1.));
+
+  // vec2 tts2 = sphereIntersection(p, d, 6600.);
+
+  vec3 startPoint = p + d * tts.x;
+  vec3 endPoint = p + d * tts2.y;
+
+  vec3 movDir = (endPoint - startPoint) / 40.;
+
+  lowp float transmission = 1.0;
+  vec3 Ex = vec3(1.0);
+
+  float phase = PM(max(dot(d, lig), 0.), 0.76);
+
+  vec3 wavelengths = vec3(680., 550., 440.);
+
+  vec2 t = vec2(0.);
+  vec3 energy = vec3(1.); // 0000296453
+  vec3 rayleighcoefficients = vec3(0.00000519673, 0.0000121427, 0.0000296453);
+  vec3 T = vec3(0.);
+  float reyleighH = 8500.;
+  float MieH = 1200.;
+
+  vec3 accumulateLight = vec3(0.);
+  vec3 accumulateLightMie = vec3(0.);
+  vec3 accumother = vec3(0.);
+  // if(intersect(p, vec3(0.,0.,0.), 8500.0, d, t)){
+  // col = vec3(t.x);
+  vec3 cam = startPoint;
+  vec3 fin = p + d * t.y;
+  vec3 div = vec3(fin - cam) / 40.;
+  // vec3 precomputed = ((vec3(5.8,13.5,33.1)))*exp(-6.);
+  // vec3 precomputed2 = vec3(0.210)*exp(-5.);
+  float mm = length(cam - fin);
+  // vec3 energyLoss = exp(-rayleighcoefficients*mm);
+  float Is = 3.;
+  vec3 Ip = vec3(0.);
+  lowp vec3 accum = vec3(0.);
+  float accum11 = 0.;
+  lowp float mult = 1.0;
+  lowp float minus = 0.06;
+  lowp float zz = max(dot(vec3(0., 0., 1.), lig), 0.);
+  /////////////
+  // vec3 br = boreyleighconstant(wavelengths.zyx*0.0005);
+
+  ////////////
+  // float pm = PM(max(dot(vec3(0.,0.,1.),lig),0.), 0.76)*5.;
+  // float pr = PR(max(dot(vec3(0.,0.,1.),lig),0.))*2.;
+  // vec3 sky2 = skyp3( normalize(vec3(0.,1.0,0.8)), lig);
+  // vec3 sky(vec3 p, vec3 d, vec3 lig){
+  lowp vec3 sky2 = sky(vec3(0.), normalize(lig), lig);
+  lowp float pr2 = PR(max(dot(d, lig), 0.));
+  float keepdensity = 0.;
+  bool firsth = false;
+  vec3 firstHit = p;
+  float stepsize = 3.;
+  for (int i = 0; i < 20; i++) {
+    // accum += ph(length(cam), reyleighH)*length(div);
+    lowp float density = max(fbm(cam * mult, startPoint, endPoint) - minus -
+                            max(cam.z - 6500., 0.) * 0.001,
+                        0.);
+    // density = smoothstep(0.,1.,density);
+    density = clamp(density, 0., 1.);
+    density = 1.0 - pow(1.0 - density, 4.);
+    keepdensity += density;
+    if (density > 0.00001) {
+      if (!firsth) {
+        dist = length(cam - ccc);
+        firsth = true;
+        firstHit = cam;
+        stepsize = 1.;
+      }
+      accum += density * 20.6;
+      // accum11 += ph(length(cam)-6500., MieH)*length(div);
+
+      lowp vec3 accum2 = vec3(0.);
+      // float accum3 = 0.;
+      // energy = energy*(1.0-rayleighcoefficients);
+      vec3 cam2 = cam;
+     // vec2 tts2l = sphereIntersection(cam2, lig, 6600.);
+  vec2 tts2l = boxIntersection(p-vec3(0., 0., 6600.), d, vec3(15000., 15000., 1.));
+
+      vec3 endPointLig = cam2 + lig * tts2l.y;
+      vec3 movLig = (endPointLig - cam2) / 10.;
+
+      for (int k = 0; k < 10; k++) {
+        lowp float density2 = max(fbm(cam2 * mult, cam, endPointLig) - minus -
+                                 max(cam2.z - 6500., 0.) * 0.001,
+                             0.);
+        // density2 = smoothstep(0.,1.,density2);
+        density2 = clamp(density2, 0., 1.);
+        density2 = 1.0 - pow(1.0 - density2, 4.);
+
+        // accum2 += ph(cam2.z, 1300.)*30.;
+        accum2 += density2 * 30.1;
+        // accum3 += ph(length(cam2)-6500., MieH)*length(div2);
+        cam2 += lig * 5. * max(random3d(cam2), 0.65);
+      }
+
+      Ex = Ex * exp(-accum2 * 0.01) *
+           (1.0 - exp(-accum2 * max(zz, 0.05) * 310.8));
+      transmission *= 1.0 - density;
+
+      // sky(vec3 p, vec3 d, vec3 lig){
+      /*accumulateLight += density * max(Ex, 0.0) * (1.0-exp(-density*0.07)) *
+                              (pm2 * exp(-pow(.9,octave) * 0.1 *accum2) * 24.4 *
+         sky2 + pr2  * exp(-.1  *pow(.9,octave) * accum2)*26.
+                              + exp(-.1 * accum * (1.0 - zz * 0.9)) * 20. *sky2
+                               ) ;*/
+
+      lowp float octave = 0.;
+
+     //float octave = 0.;
+
+      for (int i = 0; i < 8; i++) {
+   
+        vec3 pm2 = vec3((PM(max(dot(d, lig), 0.), 0.76))) * 114. +
+                   vec3((PM(max(dot(d, lig), 0.), pow(0.5, octave)))) * 11.5 +
+                   vec3((PM(max(dot(d, lig), 0.), -0.5))) * 41.;
+         pm2 *= mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
+         0., 1.)), 0.));
+          vec3 colr = max(sky2*0.5,0.05);
+           vec3 colr2 = max(4.-clamp(sky2, 0., 4.), 0.05)*34.;
+        accumulateLight +=
+            (1. - exp(-density   * 2.6)) * density * transmission *
+            (pm2*12. + pr2 * 12.) * pow(0.5, octave) * 1. * sky2  *
+            (exp(-accum2  * 0.5  * pow(.5, octave)) * exp(-accum   * 0.2));
+
+        octave += 1.;
+      }
+
+    } // else{
+      // vec3 shadowS(vec3 pos) {
+
+    //  sunShaf += shadowS(cam)*10.;
+
+    //}
+    //    octave += 1.0;
+
+    cam += d * 5. * max(random3d(cam), 0.65);
+
+    
+
+    // if(length(cam)>7500.){break;}
+  }
+  // accumulateLight *= sky2;
+
+  /*
+  vec3 drn = (firstHit - befo)/30.;
+  for(int i = 0; i < 30; i++){
+    befo += drn*max(random3d(befo),0.7);
+    sunShaf += shadowS(befo)*10.*PM(max(dot(d,lig),0.),0.76);
+  }
+  */
+  return vec4(accumulateLight * 1.3, transmission);
+}
+
+
+vec4 clouds2fs(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 waves = vec3(0.00000519673, 0.0000121427, 0.0000296453);
   vec3 befo = p;
     vec3 ccc = p;
-
+/*
   vec2 tts =
       boxIntersection(p - vec3(0., 0., 215.), d, vec3(100000., 100000., 0.1));
   if (tts.x > 0.  ) {
     p += d * tts.x;
-  }/*else if(tts.x > 0. && p.z > 230.){
+  }
+  */
+
+
+
+   p = vec3(0., 0., 6300.);
+  vec2 tts =
+      sphereIntersection(p, d, 6500.);
+  vec2 tts2 = sphereIntersection(p,d,7000.);
+
+  vec3 startPoint = p + d * tts.y;
+  vec3 endPoint = p + d * tts2.y;
+
+
+  vec3 movDir = (endPoint - startPoint)/20.;
+
+  /*else if(tts.x > 0. && p.z > 230.){
       tts =
       boxIntersection(p - vec3(0., 0., 220.), d, vec3(100000., 100000., 10.1));
     p += d * tts.x;
   }
 */
-  if(length(befo-p) > 400.){
-    return vec4(0.,0.,0., 1.);
-  }
+ 
 
   // vec3 drn = (p - befo)/20.;
   // for(int i = 0; i < 20; i++){
@@ -486,7 +1009,7 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 accumother = vec3(0.);
   // if(intersect(p, vec3(0.,0.,0.), 8500.0, d, t)){
   // col = vec3(t.x);
-  vec3 cam = p;
+  vec3 cam = startPoint;
   vec3 fin = p + d * t.y;
   vec3 div = vec3(fin - cam) / 40.;
   // vec3 precomputed = ((vec3(5.8,13.5,33.1)))*exp(-6.);
@@ -498,7 +1021,8 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   vec3 accum = vec3(0.);
   float accum11 = 0.;
   float mult = 1.0;
-  float minus = max(1.0-cloudCoverage,0.);
+  float minus = max(1.-cloudCoverage,0.);
+  //minus = 0.;
   float zz = max(dot(vec3(0., 0., 1.), lig), 0.);
   /////////////
   // vec3 br = boreyleighconstant(wavelengths.zyx*0.0005);
@@ -515,15 +1039,16 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
   bool firsth = false;
   vec3 firstHit = p;
   float stepsize = 3.;
-  for (int i = 0; i < 40; i++) {
+  for (int i = 0; i < 20; i++) {
     // accum += ph(length(cam), reyleighH)*length(div);
-    float density =
-        max(fbm(cam * mult, cam) - minus - max(cam.z - 220.,0.) * 0.01, 0.);
+   // float density =
+    //    max(fbm(cam * mult, startPoint, endPoint) - minus-  max(cam.z - 6500.,0.)*0.01 , 0.);
+    float density = 0.;
     // density = smoothstep(0.,1.,density);
     density = clamp(density, 0., 1.);
     density = 1.0 - pow(1.0 - density, 4.);
     keepdensity += density;
-    if (density > 0.00001 && i > 2) {
+    if (density > 0.00001 ) {
       if (!firsth) {
         dist = length(cam - ccc);
         firsth = true;
@@ -537,18 +1062,23 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
       // float accum3 = 0.;
       // energy = energy*(1.0-rayleighcoefficients);
       vec3 cam2 = cam;
+      vec2 tts2l = vec2(0.);
+
+      vec3 endPointLig = cam2 + lig * tts2l.y;
+      vec3 movLig = (endPointLig - cam2)/10.;
 
       for (int k = 0; k < 10; k++) {
-        float density2 = max(
-            fbm(cam2 * mult, cam2) - minus - max(cam2.z - 220.,0.) * 0.01, 0.);
+        //float density2 = max(
+        //    fbm(cam2 * mult, cam, endPointLig) - minus -  max(cam2.z - 6500.,0.)*0.01, 0.);
+        float density2 = 1.;
         // density2 = smoothstep(0.,1.,density2);
         density2 = clamp(density2, 0., 1.);
         density2 = 1.0 - pow(1.0 - density2, 4.);
 
         // accum2 += ph(cam2.z, 1300.)*30.;
-        accum2 += density2 * 50.1;
+        accum2 += density2 * 30.1;
         // accum3 += ph(length(cam2)-6500., MieH)*length(div2);
-        cam2 += lig * (1. - 0.2 * random3d(cam2));
+        cam2 += lig*10. * max(random3d(cam2),0.7);
       }
 
       Ex = Ex * exp(-accum2 * 0.01) *
@@ -568,15 +1098,15 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
         // vec3 pm2 =
         // vec3((PM(max(dot(d,lig),0.),0.76)*40.+PM(max(dot(d,lig),0.),pow(0.5,
         // octave)))*12.*max(1.0-zz,0.8));
-        vec3 pm2 = vec3((PM(max(dot(d, lig), 0.), 0.76))) * 140. +
+        vec3 pm2 = vec3((PM(max(dot(d, lig), 0.), 0.76))) * 40. +
                    vec3((PM(max(dot(d, lig), 0.), pow(0.5, octave)))) * 13.5 +
                    vec3((PM(max(dot(d, lig), 0.), -0.5))) * 40.;
-        // pm2 *= mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
-        // 0., 1.)), 0.));
+         //pm2 *= mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
+         //0., 1.)), 0.));
 
         accumulateLight +=
-            (1. - exp(-density * 0.6)) * density * transmission *
-            (pm2 + pr2 * 12.) * pow(0.5, octave) * 5. * sky2 *
+            (1. - exp(-density * 0.4)) * density * transmission *
+            (pm2 + pr2 * 12.) * pow(0.5, octave) * 6. * sky2 *
             (exp(-accum2 * 0.05 * pow(.5, octave)) * exp(-accum * 0.1));
 
         octave += 0.2;
@@ -590,13 +1120,13 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
     //}
     //    octave += 1.0;
 
-    cam += d * (1. - 0.5 * random3d(cam));
-    if(cam.z < 200. || cam.z > 260.){
-      break;
-    }
-    if(transmission < 0.2){
-      break;
-    }
+    cam += d*10. * max(random3d(cam),0.7);
+   //if(cam.z > 6500.){
+   //     break;
+    //}
+   // if(transmission< 0.25){
+   //   break;
+    //}
     // if(length(cam)>7500.){break;}
   }
   // accumulateLight *= sky2;
@@ -608,8 +1138,298 @@ vec4 clouds2(vec3 p, vec3 d, vec3 lig, inout float dist, inout vec3 sunShaf) {
     sunShaf += shadowS(befo)*10.*PM(max(dot(d,lig),0.),0.76);
   }
   */
+  return vec4(clamp(accumulateLight * 1.3, 0., 10.), transmission);
+}
+
+
+
+
+vec4 clouds2xx(vec3 p, vec3 d, vec3 lig, inout float dist) {
+  vec3 befo = p;
+ 
+  float transmission = 1.0;
+  vec3 Ex = vec3(1.0);
+    vec3 ccc = p;
+
+
+  vec3 accumulateLight = vec3(0.);
+
+  vec3 cam = p;
+
+  vec3 accum = vec3(0.);
+  float minus = 0.38;
+  float mult = 1.4;
+
+ 
+  vec3 sky2 = sky(vec3(0.), lig, lig);
+  float pr2 = PR(max(dot(d, lig), 0.));
+  float keepdensity = 0.;
+  bool firsth = false;
+  vec3 firstHit = p;
+  float stepsize = 8.;
+  for (int i = 0; i < 70; i++) {
+    float density =
+        max(fbmww(cam * mult, cam) - minus - abs(cam.z - 220.) * 0.015, 0.);
+    density = clamp(density, 0., 1.);
+    density = 1.0 - pow(1.0 - density, 2.);
+    if (density > 0.00001) {
+      if (!firsth) {
+        dist = length(cam - ccc);
+        firsth = true;
+        firstHit = cam;
+        stepsize = 5.;
+      }
+      accum += density * 10.6;
+      // accum11 += ph(length(cam)-6500., MieH)*length(div);
+
+      vec3 accum2 = vec3(0.);
+      // float accum3 = 0.;
+      // energy = energy*(1.0-rayleighcoefficients);
+      vec3 cam2 = cam;
+        float transmission2 = 1.;
+      for (int k = 0; k < 13; k++) {
+        float density2 = max(
+            fbmww(cam2 * mult, cam2) - minus - abs(cam2.z - 220.) * 0.015, 0.);
+        // density2 = smoothstep(0.,1.,density2);
+        density2 = clamp(density2, 0., 1.);
+        density2 = 1.0 - pow(1.0 - density2, 2.);
+
+        // accum2 += ph(cam2.z, 1300.)*30.;
+        accum2 += density2 * 80.1;
+        transmission2 *= 1.-density2;
+        // accum3 += ph(length(cam2)-6500., MieH)*length(div2);
+        cam2 += lig * (7. - 1.2 * random3d(cam2) + float(k)*0.0);
+      }
+
+      transmission *= 1.0 - density;
+
+    
+      float octave = 0.;
+
+      for (int i = 0; i < 8; i++) {
+   
+        vec3 pm2 = vec3((PM(max(dot(d, lig), 0.), 0.76))) * 114. +
+                   vec3((PM(max(dot(d, lig), 0.), pow(0.5, octave)))) * 11.5 +
+                   vec3((PM(max(dot(d, lig), 0.), -0.5))) * 41.;
+       //  pm2 *= mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
+       //  0., 1.)), 0.));
+           vec3 colr = max(sky2,0.);
+           vec3 colr2 = max(5.-sky2, 0.);
+        accumulateLight +=
+            (1. - exp(-density *colr * 3.6)) * density * transmission *
+            (pm2*22. + pr2 * 12.) * pow(0.5, octave) * 3.  *
+            (exp(-accum2 * colr2 * 0.05 * pow(.5, octave)) * exp(-accum * colr2 * 0.1));
+
+        octave += 1.;
+      }
+
+    } 
+
+    cam += d * (stepsize - 0.5 * random3d(cam));
+      if(transmission < 0.5){
+          break;
+      }
+  }
+ 
   return vec4(accumulateLight * 1.3, transmission);
 }
+
+vec3 skyzzzzz(vec3 p, vec3 d, vec3 lig) {
+  float hhh = 6400.;
+  float hhh2 = 1220.;
+
+  p = vec3(0., 0., hhh);
+  float sphrad = 6420.;
+  
+    vec2 t = vec2(0.);
+
+  intersect22(p, vec3(0., 0., 0.), sphrad, d, t);
+  vec3 fin = p + d * t.y;
+  float dist = length(fin-p)/30.;
+  
+  vec3 wavelengths = vec3(700., 520., 420.);
+  //lig.z = clamp(lig.z, 0., 1.);
+
+  float reyleighH = 6420.;
+  float MieH = 6420.;
+
+  vec3 accumulateLight = vec3(0.);
+  vec3 accumulateLightMie = vec3(0.);
+    // col = vec3(t.x);
+    vec3 m = p;
+
+    vec3 cam = p;
+   
+
+    vec3 accum = vec3(0.);
+    vec3 accum2 = vec3(0.);
+
+    ///////////////////////////////////
+    float PMMM = PM(max(dot(d, lig), 0.), 0.76);
+    float PRRR = RayleighPhase(max(dot(d, lig), 0.0));
+    vec3 coefficients = vec3(33.1, 13.5, 5.8);
+    float Bs = 10.;
+    vec3 Be0 = Be(coefficients, 0.0, 2000.);
+    // vec3 BRrgb = vec3(6.5, 1.73, 2.30);
+    vec3 BRrgb = Brr(wavelengths * 0.00039);
+    //vec3 BRrgb = boreyleigh(max(dot(d, lig), 0.0), wavelengths*0.00000000001);
+    vec3 BMrgb = vec3(0.001);
+    ///////////////////////////////////
+    vec3 pms = BMrgb*2000.;
+    for (int i = 0; i < 30; i++) {
+        vec3 rayl = PRRR*BRrgb*BsR(wavelengths*0.0000000001, cam.z, reyleighH);
+        rayl = PRRR*BRrgb;
+        float ph1 = exp(-(abs(cam.z-hhh2)/reyleighH))*length(fin-p);
+        float ph0 = exp(-(abs(cam.z-hhh2)/MieH))*length(fin-p);
+
+        accum += ph1;
+        accum2 += ph0;
+        vec3 cam2 = cam;
+        
+        vec2 t22 = vec2(0.);
+
+          intersect22(cam, vec3(0., 0., 0.), sphrad, lig, t22);
+          vec3 fin2 = cam + lig * t22.y;
+          float dist2 = length(fin2-cam)/30.;
+          vec3 accum22 = vec3(0.);
+          vec3 accum11 = vec3(0.);
+        for (int k = 0; k < 30; k++) {
+            float ph2 = exp(-(abs(cam2.z-cam.z-hhh2)/MieH))*length(fin2-cam);
+            float ph3 = exp(-(abs(cam2.z-cam.z-hhh2)/reyleighH))*length(fin2-cam);
+
+           accum22 += ph2;
+           accum11 += ph3;
+          cam2 += lig*dist2;
+       
+        }
+        
+        //rayl*ph1 + PMMM*BMrgb*ph0
+        //rayl*ph3+PMMM*BMrgb*ph2;
+        vec3 v1 = rayl*accum + pms*accum2;
+        vec3 v2 = rayl*accum11+pms*accum22;
+        
+        accumulateLight += 0.00001
+      *dist*((exp(-(v1)*.00009)) * ((exp(-((v2))*.000191))))*
+      (rayl*240. + PMMM*pms*520.);
+//accumulateLight += 1.-exp(-((accum2)*dist2)*0.001);
+      
+      if (cam.z < 6360.) {
+        break;
+      }
+      cam += d*dist;
+    
+    
+  }
+ // return (exp(-(accum)*dist*0.1));
+ //return accum*0.1;
+  return max(accumulateLight * 1.4,
+             0.);
+ 
+}
+vec4 clouds2sdf(vec3 p, vec3 d, vec3 lig, inout float dist) {
+  vec3 befo = p;
+ 
+  float transmission = 1.0;
+  vec3 Ex = vec3(1.0);
+    vec3 ccc = p;
+
+  for(int i = 0; i < 5; i++){
+      float dist2 = box(vec3(0., 0., 220.)-p, vec3(15000., 15000., 1.));
+      if(dist2 < 0.01){
+         // break;
+      }
+      p+=dist2*d;
+  }
+ 
+  vec3 accumulateLight = vec3(0.);
+
+  vec3 cam = p;
+
+  vec3 accum = vec3(0.);
+  float minus = 0.43;
+  float mult = 0.25;
+
+ 
+  vec3 sky2 = skyzzzzz(vec3(0.), lig, lig);
+  float pr2 = PR(max(dot(d, lig), 0.));
+  float keepdensity = 0.;
+  bool firsth = false;
+  vec3 firstHit = p;
+  float stepsize = 8.;
+  float t = 8.;
+  for (int i = 0; i < 70; i++) {
+  
+     cam = befo + d * t*float(i);
+      t += 0.1;
+    float density =
+        max(fbm2(cam * mult, cam) - minus , 0.);
+    density = clamp(density, 0., 1.);
+    density = 1.0 - pow(1.0 - density, 2.);
+    if (density > 0.00001) {
+      if (!firsth) {
+        dist = length(cam - ccc);
+        firsth = true;
+        firstHit = cam;
+        stepsize = 5.;
+      }
+      accum += density * 10.6;
+      // accum11 += ph(length(cam)-6500., MieH)*length(div);
+
+      vec3 accum2 = vec3(0.);
+      // float accum3 = 0.;
+      // energy = energy*(1.0-rayleighcoefficients);
+      vec3 cam2 = cam;
+        float transmission2 = 1.;
+      for (int k = 0; k < 43; k++) {
+        float density2 = max(
+            fbm2(cam2 * mult, cam2) - minus , 0.);
+        // density2 = smoothstep(0.,1.,density2);
+        density2 = clamp(density2, 0., 1.);
+        density2 = 1.0 - pow(1.0 - density2, 2.);
+
+        // accum2 += ph(cam2.z, 1300.)*30.;
+        accum2 += density2 * 25.1;
+        transmission2 *= 1.-density2;
+        // accum3 += ph(length(cam2)-6500., MieH)*length(div2);
+        cam2 += lig * (1. - 0.2 * random3d(cam2) + float(k)*0.0);
+      }
+
+      transmission *= 1.0 - density;
+
+    
+      float octave = 0.;
+
+      for (int i = 0; i < 8; i++) {
+   
+        vec3 pm2 = vec3((PM(max(dot(d, lig), 0.), 0.76))) * 114. +
+                   vec3((PM(max(dot(d, lig), 0.), pow(0.5, octave)))) * 11.5 +
+                   vec3((PM(max(dot(d, lig), 0.), -0.5))) * 41.;
+       //  pm2 *= mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
+       //  0., 1.)), 0.));
+           vec3 colr = max(sky2,0.);
+           vec3 colr2 = max(15.-sky2, 0.);
+        accumulateLight +=
+            (1. - exp(-density *colr * 3.6)) * density * transmission *
+            (pm2*32. + pr2 * 32.) * pow(0.35, octave) * 1.  *
+            (exp(-accum2 * colr2 * 0.025 * pow(.5, octave)) * exp(-accum * colr2 * 0.1))*mix(vec3(0.9,0.6,0.2), vec3(0.9), max(dot(lig, vec3(0.,
+         0., 1.)), 0.));
+
+        octave += 1.;
+      }
+
+    } 
+
+    
+      if(transmission < 0.5){
+          break;
+      }
+              //cam += d * (t - 0.2 * random3d(cam));
+
+  }
+ 
+  return vec4(accumulateLight * 1.3, transmission);
+}
+
 
 #define BAYER_LIMIT 16
 #define BAYER_LIMIT_H 4
@@ -626,11 +1446,15 @@ void main() {
   vec2 smallOffset =
       ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
 
-  vec2 thetaphi =
-      (((texCoord)*2.0) - vec2(1.0)) * vec2(3.1415926535897932384626433832795,
-                                            1.5707963267948966192313216916398);
-  vec3 rayDirection = vec3(cos(thetaphi.y) * cos(thetaphi.x), sin(thetaphi.y),
-                           cos(thetaphi.y) * sin(thetaphi.x));
+  float phi = texCoord.x * 2. * 3.14159;
+  float theta = texCoord.y * 3.14159;
+
+  vec3 rayDirection = normalize(vec3(
+    cos(phi)*sin(theta),
+    sin(phi)*sin(theta),
+    cos(theta)
+  ));
+
   ivec2 iFragCoord = ivec2(texCoord * wh);
 
   int index = int(time) % BAYER_LIMIT;
@@ -654,12 +1478,16 @@ void main() {
     float dist = 0.;
     vec3 posit = vec3(0.);
     vec3 sunshafts = vec3(0.);
-    vec4 mmm = vec4(0.);
+    vec4 mmm = vec4(0.,0.,0.,1.);
     vec3 sunsh = vec3(0.);
-    mmm = clouds2(vec3(0., 0., 180. ), d, normalize(vec3(lig.xy, abs(lig.z))),
-                  dist, sunsh);
-    mmm.rgb *= max(dot(ldir2, vec3(0., 1., 0.)), 0.1);
-   //mmm.rgb = pow(mmm.rgb, vec3(1.24));
+  //  mmm = clouds2sdf(vec3(0., 0., 160. ), d, normalize(vec3(lig.xy, (lig.z))),
+       //           dist);
+                  //clouds2xx
+           //       mmm = clouds2xx(vec3(0., 0., 160. ), d, normalize(vec3(lig.xy, (lig.z))),
+           //       dist);
+ //   mmm.rgb *= max(dot(ldir2, vec3(0., 1., 0.)), 0.001);
+ //  mmm.rgb = pow(mmm.rgb, vec3(1.24));
+  // mmm.rgb *= 0.125;
     // }else{
     //   mmm = clouds2(vec3(0.,0.,5200.),d,vec3(lig.),dist,0.01);
     //   mmm.rgb *= 0.01;
@@ -669,9 +1497,12 @@ void main() {
     vec3 skys = final;
     final = final * mmm.w + pow(mmm.xyz, vec3(1.));
 
-    float f = exp(-dist * .0028);
-    final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
+    //float f = exp(-dist * .0001);
+    //final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
     // sn = fog();
+   //  final = final*mmm.w + pow(mmm.xyz*max(lig.z,0.01), vec3(1.));
+    float f = exp(-dist * .0001);
+   // final.xyz = final.xyz * f + skys.xyz * (1.0 - f);
     // final += sunshafts;
     float mmmms = max(pow(dot(ldir2, vec3(0., 1., 0.)) * 0.5 + 0.5, 4.), 0.01);
     col = final * mmmms;

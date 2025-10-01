@@ -1,5 +1,5 @@
 ﻿#version 430
-
+uniform float time;
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
   seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
@@ -21,6 +21,10 @@ float box(vec3 p, vec3 c) {
 vec3 pal(float t, vec3 a) { return 0.5 + 0.5 * cos(2. * 3.14159 * t + a); }
 
 float escape = 0.;
+bool issubsurface = false;
+
+
+vec3 FOSpec = vec3(1.);
 
 #define SceneRadius 100.0
 #define DetailLevel 4.
@@ -397,11 +401,12 @@ float fractal_de15(vec3 p) {
   return length(p) / s;
 }
 
-float fractal_de46(vec3 p) {
+float fractal_de46(vec3 p, float iterLower = 1.) {
   float s = 2.;
   float e = 0.;
   escape = 0.;
-  for (int j = 0; ++j < 7;) {
+  float iteration = max(7.*iterLower, 1.);
+  for (int j = 0; ++j < int(iteration);) {
     p.xz = abs(p.xz) - 2.3, p.z > p.x ? p = p.zyx : p,
     p.z = 1.5 - abs(p.z - 1.3 + sin(p.z) * .2), p.y > p.x ? p = p.yxz : p,
     p.x = 3. - abs(p.x - 5. + sin(p.x * 3.) * .2), p.y > p.x ? p = p.yxz : p,
@@ -470,7 +475,7 @@ float jb(vec3 p) {
   }
   return min(length(p.xz) - .1, p.y) / s;
 }
-vec3 mb(vec3 p) {
+vec3 mb(vec3 p, float iterLower = 1.) {
   p.xyz = p.xzy;
   vec3 z = p;
   vec3 dz = vec3(0.0);
@@ -479,6 +484,8 @@ vec3 mb(vec3 p) {
   float dr = 1.0;
 
   float t0 = 1.0;
+  float uiter = max(9.*iterLower, 1.);
+
   for (int i = 0; i < 9; ++i) {
     r = length(z);
     if (r > 2.0)
@@ -606,16 +613,17 @@ float fbmss(vec2 p) {
 
 mat2 zx(float a) { return mat2(cos(a), sin(a), -sin(a), cos(a)); }
 
-float deWATER(vec3 p) {
+float deWATER(vec3 p, float t) {
   float e, i = 0., j, f, a, w;
   // p.yz *= zx( .7 );
-  f = .3;
+  f = .2;
   i < 45. ? p : p -= .001;
   e = p.y + 5.;
+  //t = 0.;
   for (a = j = .9; j++ < 30.; a *= .8) {
     vec2 m = vec2(1.) * zx(j);
-    // float x = dot( p.xz, m ) * f + t + t; // time varying behavior
-    float x = dot(p.xz, m) * f + 0.;
+     float x = dot( p.xz, m ) * f + t + t; // time varying behavior
+    //float x = dot(p.xz, m) * f + 0.;
     w = exp(sin(x) - 1.);
     p.xz -= m * w * cos(x) * a;
     e -= w * a;
@@ -624,18 +632,72 @@ float deWATER(vec3 p) {
   return e;
 }
 
+
+float sumWaves(float x){
+  float sumstuff = 0.;
+  for(int i = 0; i < 10; i++){
+    sumstuff += abs(sin(x*float(i)))/(float(i)+1.);
+  }
+  return (2.-sumstuff)*0.5;
+}
+
+vec2 rotXXX22(vec2 a, float c){
+  float l = length(a);
+  if(l < 0.001){
+    return vec2(0.);
+  }
+
+  a = normalize(a);
+  float ang = (a.y < 0.)?2.*3.14159 - acos(a.x):acos(a.x);
+  ang += c;
+  return l*vec2(cos(ang), sin(ang));
+}
+//(a+bi)(c+di)
+//ac + adi + bic - bd
+
+vec2 rotXXX(vec2 a, float t){
+vec2 b = vec2(cos(t), sin(t));
+  return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x );
+}
+
+float rotatewaves(vec2 py, float times){
+  float addsm = 0.;
+  times *= 0.004;
+  for(int i = 0; i < 25; i++){
+    float k = 1.61803398874989;
+    // for(int i = 0; i < 150; i++){
+    float m = (float(i) / 25.);
+    float r = 2. * 3.14159 * k * float(i);
+   // vec2 coords = vec2(m * cos(r), m * sin(r)) * CoCSize
+    py = rotXXX(py, r);
+    vec2 waterDir = normalize(vec2(1., 1.))*times*122.5;
+    float a = abs(sin(py.x*float(i)-2.*float(i)+waterDir.x))/(float(i)+1.);
+    float b = abs(sin(py.y*float(i)+3.*float(i)+waterDir.y))/(float(i)+1.);
+    addsm += (2. - a*0.5) + (2. - b*0.5);
+   // addsm += (sumWaves(py.x-2.*float(i)+waterDir.x) + sumWaves(py.y+3.*float(i)+waterDir.y));
+  }
+  return addsm / 15.;
+}
+
+
+
+
 float isWat = 0.;
-float mapPl(vec3 p) {
-  // p.y -= 1.;
-  return deWATER(p / 0.6) * 0.6;
+float mapPl(vec3 p, float times) {
+   p.y -= 1.;
+  return deWATER(p / 0.6, times) * 0.6;
 
   p = p.xzy;
-  p.x *= 0.6;
-  p.y *= 1.;
-  float plane =
-      p.z + (2. + ((sin(p.x + cos(p.y)) + cos(p.y + sin(p.x))) * 0.03 +
-                   (sin(p.x * 5. + cos(p.y)) + cos(p.z * 5. + sin(p.x * 2.))) *
-                       0.005));
+  p.x *= .1;
+  p.y *= .2;
+  p.z += 12.;
+ // float plane =
+   //   p.z + (2. + ((sin(p.x + cos(p.y)) + cos(p.y + sin(p.x))) * 0.03 +
+    //               (sin(p.x * 5. + cos(p.y)) + cos(p.z * 5. + sin(p.x * 2.))) *
+    //                   0.005));
+
+float plane = p.z - ((rotatewaves(p.xy, times))*1.7);
+//plane = p.z-4.;
   // rough = 0.001; cccc = vec3(0.6, 0.7, 0.9);
   // plane += fbmss(p.xy);
   return plane;
@@ -683,7 +745,7 @@ vec4 fractalTEST(vec3 p) {
   return vec4(clamp(orbit, 0., 1.), sdBox2(p, vec3(6.0)) / scale);
 }
 
-struct Level {
+struct Level2 {
   float FracScale, FracAng1, FracAng2;
   vec3 FracShift, FracCol;
   vec4 MarblePos, FlagPos;
@@ -691,57 +753,57 @@ struct Level {
 };
 
 const int levelnum = 6;
-const Level[] Levels = Level[](
+const Level2[] Levels = Level2[](
     // Jump the crater
-    Level(1.8, -0.12, 0.5, vec3(-2.12, -2.75, 0.49), vec3(0.42, 0.38, 0.19),
+    Level2(1.8, -0.12, 0.5, vec3(-2.12, -2.75, 0.49), vec3(0.42, 0.38, 0.19),
           vec4(-2.95862, 2.68825, -1.11868, 0.035),
           vec4(2.95227, 2.65057, 1.11848, 0.035), false),
     // Too many trees
-    Level(1.9073f, -9.83f, -1.16f, vec3(-3.508, -3.593, 3.295),
+    Level2(1.9073f, -9.83f, -1.16f, vec3(-3.508, -3.593, 3.295),
           vec3(-0.34, 0.12, -0.08), vec4(-3.40191, 4.14347, -3.48312, 0.04),
           vec4(3.40191, 4.065, 3.48312, 0.04), false),
     // Hole in one
-    Level(2.02f, -1.57f, 1.62f, vec3(-3.31f, 6.19f, 1.53f),
+    Level2(2.02f, -1.57f, 1.62f, vec3(-3.31f, 6.19f, 1.53f),
           vec3(0.12f, -0.09f, -0.09f), vec4(3.18387f, 5.99466f, 0.0f, 0.009f),
           vec4(0.0f, -6.25f, 0.0f, 0.009f), false),
     // Around the world
-    Level(1.65f, 0.37f, 5.26f, vec3(-1.41f, -0.22f, -0.77f),
+    Level2(1.65f, 0.37f, 5.26f, vec3(-1.41f, -0.22f, -0.77f),
           vec3(0.14f, -1.71f, 0.31f), vec4(0.0f, 2.29418f, 0.0f, 0.01f),
           vec4(0.0f, -2.25f, 0.0f, 0.01f), true),
     // Beware Of Bumps
-    Level(1.66f, 1.52f, 0.19f, vec3(-3.83f, -1.94f, -1.09f),
+    Level2(1.66f, 1.52f, 0.19f, vec3(-3.83f, -1.94f, -1.09f),
           vec3(0.42f, 0.38f, 0.19f), vec4(0.68147f, 2.80038f, 2.52778f, 0.02f),
           vec4(0.0f, 2.84448f, -2.71705f, 0.02f), false),
     // Mountain Climbing
-    Level(1.58f, -1.45f, 3.95f, vec3(-1.55f, -0.13f, -2.52f),
+    Level2(1.58f, -1.45f, 3.95f, vec3(-1.55f, -0.13f, -2.52f),
           vec3(-1.17f, -0.4f, -1.0f), vec4(0.0f, 3.36453f, 2.28284f, 0.02f),
           vec4(0.0f, 3.68893f, -0.604513f, 0.02f), false),
     // Mind the gap
-    Level(1.81, -4.84, -2.99, vec3(-2.905, 0.765, -4.165),
+    Level2(1.81, -4.84, -2.99, vec3(-2.905, 0.765, -4.165),
           vec3(0.251, 0.337, 0.161), vec4(-4.63064f, 3.8365f, 0.0f, 0.022f),
           vec4(4.63f, 3.61f, 0.0f, 0.022f), false),
     // The Sponge
-    Level(1.88f, 1.52f, 4.91f, vec3(-4.54f, -1.26f, 0.1f),
+    Level2(1.88f, 1.52f, 4.91f, vec3(-4.54f, -1.26f, 0.1f),
           vec3(-1.0f, 0.3f, -0.43f), vec4(-2.8896f, 3.76526f, 0.0f, 0.03f),
           vec4(2.88924f, 3.73f, 0.0f, 0.03f), false),
     // Build Up Speed
-    Level(2.08f, -4.79f, 3.16f, vec3(-7.43f, 5.96f, -6.23f),
+    Level2(2.08f, -4.79f, 3.16f, vec3(-7.43f, 5.96f, -6.23f),
           vec3(0.16f, 0.38f, 0.15f), vec4(6.06325f, 6.32712f, 0.0f, 0.023f),
           vec4(0.0f, 6.72f, 0.0f, 0.023f), false),
     // Around The Citadel
-    Level(2.0773f, -9.66f, -1.34f, vec3(-1.238f, -1.533f, 1.085f),
+    Level2(2.0773f, -9.66f, -1.34f, vec3(-1.238f, -1.533f, 1.085f),
           vec3(0.42f, 0.38f, 0.19f), vec4(1.03543f, 1.06432f, 1.22698f, 0.01f),
           vec4(-1.39536f, 0.641835f, 0.0f, 0.01f), false),
     // Top Of The Citadel
-    Level(2.0773f, -9.66f, -1.34f, vec3(-1.238f, -1.533f, 1.085f),
+    Level2(2.0773f, -9.66f, -1.34f, vec3(-1.238f, -1.533f, 1.085f),
           vec3(0.42f, 0.38f, 0.19f), vec4(1.04172f, 1.41944f, 1.09742f, 0.005f),
           vec4(-1.04172f, 1.414f, -1.09742f, 0.005f), false),
     // Mega Citadel
-    Level(1.4731, 0.0f, 0.0f, vec3(-10.27, 3.28, -1.90), vec3(1.17, 0.07, 1.27),
+    Level2(1.4731, 0.0f, 0.0f, vec3(-10.27, 3.28, -1.90), vec3(1.17, 0.07, 1.27),
           vec4(-0.05, 14.69, 0.02, 0.009), vec4(-14.76, 0.01, -0.00, 0.009),
           false));
 
-void LoadLevel(Level LVL) {
+void LoadLevel(Level2 LVL) {
   iFracScale = LVL.FracScale;
   iFracAng1 = LVL.FracAng1 + 0.0 * sin(3.1);
   iFracAng2 = LVL.FracAng2 + 0.0 * cos(3.1);
@@ -763,10 +825,10 @@ float dze(vec3 p) {
 }
 float dxe(vec3 p) {
   float S = 1.0f;
-  float time = 0.;
+  float timev = 0.;
   float R, e;
   p.y += p.z;
-  p = vec3(log(R = length(p)) - time, asin(-p.z / R), atan(p.x, p.y) + time);
+  p = vec3(log(R = length(p)) - timev, asin(-p.z / R), atan(p.x, p.y) + timev);
   for (e = p.y - 1.5f; S < 6e2; S += S)
     e += sqrt(abs(dot(sin(p.zxy * S), cos(p * S)))) / S;
   return e * R * 0.1f;
@@ -859,7 +921,146 @@ float fbm(vec3 uv){
 return noise2(uv)*0.5+noise2(uv*2.0)*0.25+noise2(uv*4.)*0.125+noise2(uv*8.)*0.0625;
 }
 
-float map(vec3 p) {
+vec3 Rotate(vec3 z,float AngPFXY,float AngPFYZ,float AngPFXZ) {
+        float sPFXY = sin(radians(AngPFXY)); float cPFXY = cos(radians(AngPFXY));
+        float sPFYZ = sin(radians(AngPFYZ)); float cPFYZ = cos(radians(AngPFYZ));
+        float sPFXZ = sin(radians(AngPFXZ)); float cPFXZ = cos(radians(AngPFXZ));
+
+        float zx = z.x; float zy = z.y; float zz = z.z; float t;
+
+        // rotate BACK
+        t = zx; // XY
+        zx = cPFXY * t - sPFXY * zy; zy = sPFXY * t + cPFXY * zy;
+        t = zx; // XZ
+        zx = cPFXZ * t + sPFXZ * zz; zz = -sPFXZ * t + cPFXZ * zz;
+        t = zy; // YZ
+        zy = cPFYZ * t - sPFYZ * zz; zz = sPFYZ * t + cPFYZ * zz;
+        return vec3(zx,zy,zz);
+}
+
+float espv = 0.;
+float desfff( vec3 p ) {
+    float Scale = 1.34f;
+    float FoldY = 1.025709f;
+    float FoldX = 1.025709f;
+    float FoldZ = 0.035271f;
+    float JuliaX = -1.763517f;
+    float JuliaY = 0.392486f;
+    float JuliaZ = -1.734913f;
+    float AngX = -51.080209f;
+    float AngY = 0.0f;
+    float AngZ = -29.096322f;
+    float Offset = -3.036726f;
+    int EnableOffset = 1;
+    int Iterations = 80;
+    float Precision = 1.0f;
+    // output _sdf c = _SDFDEF)
+
+    vec4 OrbitTrap = vec4(1,1,1,1);
+    float u2 = 1;
+    float v2 = 1;
+    if(EnableOffset!=0)p = Offset+abs(vec3(p.x,p.y,p.z));
+
+    vec3 p0 = vec3(JuliaX,JuliaY,JuliaZ);
+    float l = 0.0;
+    int i=0;
+    espv = 0.;
+    for (i=0; i<Iterations; i++) {
+        p = Rotate(p,AngX,AngY,AngZ);
+        p.x=abs(p.x+FoldX)-FoldX;
+        p.y=abs(p.y+FoldY)-FoldY;
+        p.z=abs(p.z+FoldZ)-FoldZ;
+        p=p*Scale+p0;
+        l=length(p);
+        float rr = dot(p,p);
+        espv += exp(-0.2*dot(p,p));
+    }
+    return Precision*(l)*pow(Scale, -float(i));
+}
+
+
+float glassMap(vec3 p){
+     p = p.xzy;
+
+    float sphere2 = length(vec3(0., -10., 10.) - p) - 3.5;
+    return sphere2;
+}
+
+ float demuine(vec3 p0){
+    vec4 p = vec4(p0, 1.);
+    escape = 0.;
+    p=abs(p);
+    if(p.x < p.z)p.xz = p.zx;
+    if(p.z < p.y)p.zy = p.yz;
+    if(p.y < p.x)p.yx = p.xy;
+    for(int i = 0; i < 12; i++){
+      if(p.x < p.z)p.xz = p.zx;
+      if(p.z < p.y)p.zy = p.yz;
+      if(p.y < p.x)p.yx = p.xy;
+      p = abs(p);
+      p*=(1.9/clamp(dot(p.xyz,p.xyz),0.1,1.));
+      p.xyz-=vec3(0.2,1.9,0.6);
+      escape += exp(-0.2*dot(p.xyz,p.xyz)); 
+    }
+    float m = 1.2;
+    p.xyz-=clamp(p.xyz,-m,m);
+    return (length(p.xyz)/p.w);
+  }
+vec3 RotateXS(vec3 z,float AngPFXY,float AngPFYZ,float AngPFXZ) {
+        float sPFXY = sin(radians(AngPFXY)); float cPFXY = cos(radians(AngPFXY));
+        float sPFYZ = sin(radians(AngPFYZ)); float cPFYZ = cos(radians(AngPFYZ));
+        float sPFXZ = sin(radians(AngPFXZ)); float cPFXZ = cos(radians(AngPFXZ));
+
+        float zx = z.x; float zy = z.y; float zz = z.z; float t;
+
+        // rotate BACK
+        t = zx; // XY
+        zx = cPFXY * t - sPFXY * zy; zy = sPFXY * t + cPFXY * zy;
+        t = zx; // XZ
+        zx = cPFXZ * t + sPFXZ * zz; zz = -sPFXZ * t + cPFXZ * zz;
+        t = zy; // YZ
+        zy = cPFYZ * t - sPFYZ * zz; zz = sPFYZ * t + cPFYZ * zz;
+        return vec3(zx,zy,zz);
+}
+
+float deTT( vec3 p ) {
+    float Scale = 1.34f;
+    float FoldY = 1.5709f;
+    float FoldX = 1.425709f;
+    float FoldZ = 0.035271f;
+    float JuliaX = -1.763517f;
+    float JuliaY = 1.92486f;
+    float JuliaZ = -1.734913f;
+    float AngX = -51.080209f;
+    float AngY = 0.4f;
+    float AngZ = -19.096322f;
+    float Offset = -3.036726f;
+    int EnableOffset = 1;
+    int Iterations = 80;
+    float Precision = 1.0f;
+    // output _sdf c = _SDFDEF)
+
+    vec4 OrbitTrap = vec4(1,1,1,1);
+    float u2 = 1;
+    float v2 = 1;
+    if(EnableOffset==1)p = Offset+abs(vec3(p.x,p.y,p.z));
+
+    vec3 p0 = vec3(JuliaX,JuliaY,JuliaZ);
+    float l = 0.0;
+    int i=0;
+    for (i=0; i<Iterations; i++) {
+        p = RotateXS(p,AngX,AngY,AngZ);
+        p.x=abs(p.x+FoldX)-FoldX;
+        p.y=abs(p.y+FoldY)-FoldY;
+        p.z=abs(p.z+FoldZ)-FoldZ;
+        p=p*Scale+p0;
+        l=length(p);
+        float rr = dot(p,p);
+    }
+    return Precision*(l)*pow(Scale, -float(i));
+}
+//tuk
+float map(vec3 p, float iTime) {
   float ls = 0.;
    p = p.xzy;
   isWat = 0.;
@@ -870,6 +1071,9 @@ float map(vec3 p) {
   l = 0.;
   rough = 1.;
   cccc = vec3(0.5);
+issubsurface = false;
+ 
+  //return mm;
 //p.y *= -1.;
 //p.y *= 0.5;
 /*p.y -= 55.;
@@ -888,20 +1092,21 @@ if(ssss.x > 0.9 && ssss.y < 0.5){
 //return city;
 return max(city, box(p, vec3(80., 100., 80.)));
 */
-/*
-  rough = 1.;
+
+  /*rough = 0.1;
   LoadLevel(Levels[7]);
   vec4 newstuff = fractalTEST(p / 5.);
   cccc = clamp(newstuff.xyz, 0., 0.99);
-  float ab = dfe(p / 15.) * 15.;
+  float ab = dfe(p.xzy / 5.) * 5.;
   float bb = newstuff.w * 5.;
   float cc = min(bb, bb);
   if (cc == ab) {
     cccc = pal(escape, vec3(0.9, 0.6, 0.2));
     rough = 1.;
   }
-  return cc;
-*/
+  cccc = vec3(0.5, 0.9, 0.5);
+  return cc;*/
+
   float aa3 = jb((vec3(-15.0, -2.7, 3.0) - p.xzy) / 10.) * 10.;
 /*
   float bsss = dxe(p / 0.1) * 0.09;
@@ -914,39 +1119,42 @@ return max(city, box(p, vec3(80., 100., 80.)));
 
   if(fins == bsss2){
         cccc = pal(escape, vec3(0.4, 0.4, 0.8));
-
+issubsurface = true;
   }
 
-  return fins;
-  */
-  float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
-  float sphere = mb(p / 15.).x * 15.;
-  // float sphere = length(p) - 3.5;
-  float sphere2 = length(vec3(0., 25., 0.) - p) - 3.5;
-  float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
+  return fins;*/
+ // float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
+float sphere = mb(p / 15.).x * 15.;
+ //float sphere = length(p) - 13.5;
+float sphere2 = length(vec3(0., 25., 0.) - p) - 3.5;
+float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
+
+ //float mm = desfff(p/3.)*3.;
 
   // float tree = deT(p);
 
   /////////////////////
-  /*
+  
          vec3 pos = p.xzy;
-          const float dLeaves = deTree2( (pos + vec3( 0.0f, 7.0f, 0.0f ))/6.
-     )*6.; float sceneDist = dLeaves; if ( sceneDist == dLeaves  ) {
+          const float dLeaves = deTree2( (pos + vec3( 0.0f, 7.0f, 0.0f ))/6.)*6.; 
+     float sceneDist = dLeaves; 
+     if ( sceneDist == dLeaves  ) {
               //hitPointSurfaceType = DIFFUSE;
               //const float noiseValue = 0.25f * perlinfbm( vec3( p.xyz ), 0.9f,
-     6 );
+    // 6 );
               //hitPointColor = vec3( 0.06f, 0.13f, 0.02f ) * ( 1.0f -
-     noiseValue ); cccc = vec3(0.2, 0.9, 0.2); rough = 0.1;
+     //noiseValue ); 
+              cccc = vec3(0.2, 0.9, 0.2); rough = 0.1;
           }
 
           const float dTrunk = deTree( (pos + vec3( 0.0f, 7.0f, 0.0f ))/6. )*6.;
           sceneDist = min( sceneDist, dTrunk );
           if ( sceneDist == dTrunk  ) {
               cccc = vec3(0.9);
-              rough = 1.;
+              rough = 0.1;
 
               //hitPointSurfaceType = WOOD;
-          }*/
+          }
 
   // return sceneDist;
   ///////////////////////
@@ -954,35 +1162,48 @@ return max(city, box(p, vec3(80., 100., 80.)));
   // float sphere = mandelbox(p/2.)*2.;
 
   // float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-  float final = min(min(aa, aa),
-                    min(aa3, min(sphere, min(sphere2, min(sphere3, sphere3)))));
+  float final = min(min(aa3, aa3),
+                    min(aa3, min(sphere2, min(sphere3, min(sceneDist, sphere)))));
+
+ // float final = min(aa, min(aa3, sphere3));
+
   // float final = min(aa, min(aa3, min(sphere, sphere)));
   // float final = min(aa3, sphere);
   // if(final == b2)l = 3.;
   // if(final == c1)c = vec3(0.9,0.1,0.1);
   // if(final == c2)c = vec3(0.1,0.9,0.1);
-  if (final == aa) {
-    rough = 1.0;
-    cccc = pal(escape * 2., vec3(0.8, 0.4, 0.4));
-  }
+
+//if(final == mm){
+//  rough = 0.1;
+ //   cccc = pal(espv, vec3(0.9,0.2,0.9));
+
+//}
+
+//  if (final == aa) {
+ //   rough = 1.;
+ //   cccc = pal(escape * 0.5, vec3(0.8, 0.4, 0.4));
+ // }
   if (final == aa3) {
-    rough = 1.0;
+    rough = .1;
     cccc = pal(escape333, vec3(0.4, 0.4, 0.8));
+    //cccc = vec3(0.7);
+    issubsurface = false;
   }
   if (final == sphere) {
-    rough = 0.01;
+    rough = 0.1;
     l = 0.;
     cccc = vec3(0.9);
+    issubsurface = false;
   }
   if (final == sphere2) {
     rough = 1.;
     l = 3.;
-    cccc = vec3(0.9);
+    cccc = vec3(0.9, 0.2, 0.2);
   }
   if (final == sphere3) {
     rough = 1.;
     l = 3.;
-    cccc = vec3(0.2, 0.2, 0.8);
+    cccc = vec3(0.9, 0.2, 0.8);
   }
 
   // if(final == plane){}
@@ -992,16 +1213,18 @@ return max(city, box(p, vec3(80., 100., 80.)));
   // return fractal_de46(p/5.)*5.;
 }
 
-/*
-float map(vec3 p){
+
+float mapdg(vec3 p){
+  p.y -= 3.;
 rough = 1.;
 cccc = vec3(1.);
 l = 0.;
 
 return fractal(p/10.)*10.;
-}*/
-/*
-float map(vec3 p){
+}
+
+float map1231(vec3 p){
+ // return length(p)-4.;
         l = 0.;
     rough = 0.1;
         cccc = vec3(1.);
@@ -1031,7 +1254,7 @@ float map(vec3 p){
 return final;
 
 }
-*/
+
 
 float smin_op(float a, float b, float k) {
   float h = max(0., k - abs(b - a)) / k;
@@ -1161,7 +1384,9 @@ vec2 rot(vec2 a, float c) {
   c = c * pi / 180.;
   // pythagoras theorem
   float l = length(a);
-
+  if(l < 0.0001){
+    return vec2(0.);
+  }
   a /= l;
 
   float ang = (a.y < 0.) ? 2. * pi - acos(a.x) : acos(a.x);
@@ -1171,13 +1396,14 @@ vec2 rot(vec2 a, float c) {
 }
 
 float prob = 1.;
-/*
-float map(vec3 p){
+
+float mapgdf(vec3 p){
     cccc = vec3(0.9);
     rough = 0.01;
     l = 0.;
     prob = 1.;
     p = p.xzy;
+    p.z -= 17.;
         float aa2 = DEer((vec3(0.,5.,-10.0)-p)/10.)*10.;
         vec3 pos = vec3(-14.,-15.,-20.0)-p;
         pos.xy = rot(pos.xy, 180.);
@@ -1197,13 +1423,13 @@ float map(vec3 p){
     vec3 color = vec3(0.5,0.5,0.8);
    // if(final == aa){a2 = 0.1;prob=0.9;c=vec3(0.5);}
        if(final == aa2){rough = 0.1;prob = 0.1;cccc=pal(escape,
-vec3(0.9,0.9,0.2)); l=escape*0.00;} if(final == aa22){rough = 1.;prob =
+vec3(0.9,0.9,0.2)); l=escape*0.00;} if(final == aa22){rough = 0.2;prob =
 0.8;cccc=pal(escape2, vec3(0.2,0.9,0.9)); l=escape2*0.000;}
 
 
     return final;
 }
-*/
+
 
 float DEer222(vec3 p0) {
   // p0 = mod(p0, 2.)-1.;
@@ -1270,8 +1496,8 @@ sin(p.y*0.1), cos(p.z*0.1))*0.5 + 0.5;}
     return final;
 }*/
 
-/*
-float map(vec3 p){
+
+float mapxxxz(vec3 p){
         l = 0.;
     rough = 1.;
         cccc = vec3(1.);
@@ -1289,12 +1515,13 @@ float final = min(mand, min(bx,sx));
 if(final == sx){ l = 32.;cccc=vec3(1.); }
 return final;
 
-}*/
-/*
-float map(vec3 p){
+}
+
+float map213(vec3 p){
     l = 0.;
     rough = 1.;
     cccc = vec3(1.);
+    p.y -= 15.;
 p = p.xzy;
 p.y *= -1.;
 
@@ -1324,7 +1551,7 @@ a),b),c1),c2),c3),mand),mand),mand);
 return final;
 
 }
-*/
+
 
 // 2D rotation function
 mat2 rot33(float a) { return mat2(cos(a), sin(a), -sin(a), cos(a)); }
@@ -1514,9 +1741,9 @@ float fractal_de7(vec3 p) {
 }
 
 ////////////////////////////////////
-/*
-float map(vec3 p){
-    p = p.xzy;
+
+float mapsdfsg(vec3 p){
+    //p = p.xzy;
     p.y *= -1.;
     cccc = vec3(0.9,0.8,0.6);
     rough = 1.0;
@@ -1537,13 +1764,18 @@ float map(vec3 p){
     if(final == aa){rough = 1.0;cccc=pal(escape,vec3(0.5,0.8,0.4));}
 
     return final;
-}*/
+}
 
+vec3 orbittt = vec3(0.);
 #define fold45(p) (p.y > p.x) ? p.yx : p
 float dexx(vec3 p) {
-  float scale = 2.1, off0 = .8, off1 = .3, off2 = .83;
-  vec3 off = vec3(2., .2, .1);
+ // p.xzy = mod(p.xzy-3., 6.)-3.;
+  float scale = 2.1, off0 = .99, off1 = .13, off2 = .83;
+   // vec3 off = vec3(sin((2.+time*0.1)*0.5)*0.3 + 2., .2, .1);
+vec3 off = vec3(2., .2, 0.1);
+ // vec3 off = vec3(2.+((time*0.01)*0.4), 2.+(-(time*0.01)*0.4), .1);
   float s = 1.0;
+  orbittt = vec3(0.);
   escape = 0.;
   for (int i = 0; ++i < 20;) {
     p.xy = abs(p.xy);
@@ -1561,7 +1793,43 @@ float dexx(vec3 p) {
     p += off;
     s *= scale;
     escape += exp(-0.2 * dot(p, p));
+    orbittt = max(orbittt, p.xzy * 2. * vec3(0.9, 0.3, 0.2));
+
   }
+  //return box(p, vec3(0.51)) / s;
+  return length(p) / s;
+}
+
+
+float dexxtime(vec3 p, float iTime) {
+ // p.xzy = mod(p.xzy-3., 6.)-3.;
+  float scale = 2.1, off0 = .99, off1 = .13, off2 = .83;
+   // vec3 off = vec3(sin((2.+time*0.1)*0.5)*0.3 + 2., .2, .1);
+vec3 off = vec3(2., .2-sin(iTime)*0.1, 0.1);
+ // vec3 off = vec3(2.+((time*0.01)*0.4), 2.+(-(time*0.01)*0.4), .1);
+  float s = 1.0;
+  orbittt = vec3(0.);
+  escape = 0.;
+  for (int i = 0; ++i < 20;) {
+    p.xy = abs(p.xy);
+    p.xy = fold45(p.xy);
+    p.y -= off0;
+    p.y = -abs(p.y);
+    p.y += off0;
+    p.x += off1;
+    p.xz = fold45(p.xz);
+    p.x -= off2;
+    p.xz = fold45(p.xz);
+    p.x += off1;
+    p -= off;
+    p *= scale;
+    p += off;
+    s *= scale;
+    escape += exp(-0.2 * dot(p, p));
+    orbittt = max(orbittt, p.xzy * 2. * vec3(0.9, 0.3, 0.2));
+
+  }
+  //return box(p, vec3(0.51)) / s;
   return length(p) / s;
 }
 
@@ -1583,12 +1851,16 @@ float dezzz2(vec3 p) {
   }
   return length(cross(p, normalize(vec3(1)))) / s - 0.005;
 }
+float dx = 0.;
 float dexxx(vec3 p) {
   p = sin(2.8 * p + 5. * sin(p * .3));
   float s = 2., e;
-  for (int i = 0; i++ < 6;)
+  dx = 0.;
+  for (int i = 0; i++ < 6;){
     p = abs(p - 1.7) - 1.5, s *= e = 2.3 / clamp(dot(p, p), .3, 1.2),
     p = abs(p) * e;
+    dx += exp(-0.2*dot(p,p));
+  }
   return length(p.zy) / s;
 }
 
@@ -1661,13 +1933,31 @@ float dezzz2xxx(vec3 p0) {
   p.xyz -= clamp(p.xyz, -m, m);
   return (length(p.xyz) / p.w);
 }
-/*
-float map(vec3 p){
+float mms = 0.;
+float de234(vec3 p){
+    p=mod(p,2.)-1.;
+    p=abs(p)-1.;
+    mms = 0.;
+    if(p.x < p.z)p.xz=p.zx;
+    if(p.y < p.z)p.yz=p.zy;
+    if(p.x < p.y)p.xy=p.yx;
+    float s=1.;
+    for(int i=0;i<10;i++){
+      float r2=2./clamp(dot(p,p),.1,1.);
+      p=abs(p)*r2-vec3(.6,.6,3.5);
+      s*=r2;
+      mms += exp(-0.2*dot(p,p));
+    }
+    return length(p)/s;
+  }
+float mapdfhfghrty(vec3 p, float iTime){
+  p.y -= 22.;
   p = p.xzy;
   p.z *= -1.;
   cccc = vec3(0.9,0.8,0.6);
   rough = 1.0;
   l = 0.;
+  FOSpec = vec3(0.04);
   //float a = box(vec3(0.,4.,-5.)-p, vec3(10.,10.,0.2));
   //float b = box(vec3(0.,4.,5.)-p, vec3(10.,10.,0.2));
   //float c1 = box(vec3(7.,4.,0.)-p, vec3(0.2,10.,10.));
@@ -1675,25 +1965,36 @@ float map(vec3 p){
   //float c3 = box(vec3(0.,9.,0.)-p, vec3(10.,0.2,10.));
   float b2 = box(vec3(0.,0.,-2.)-p, vec3(20.,20.,.1));
   vec3 c = vec3(10., 10., 1.);
-  float b3 = box(vec3(0.,0.,15.)-p, vec3(20.,20.,.1));
-
-  float aa = dexx(p/10.)*10.;
-  float bbb = jb((vec3(0., 16., 0.)-p.xzy)/10.)*10.;
-  float aa2 = dezzz2((vec3(0., 0., 12.)-p)/12.)*12.;
-    //  aa2 = max(aa2, box(vec3(0., 0., 12.)-p, vec3(16.)));
+  float b3 = box(vec3(0.,0.,5.)-p, vec3(20.,20.,.1));
+//  b3 = box(vec3(0.,0.,0.)-p, vec3(1., 1., 200.));
+  // b3 = length(vec3(0.,0.,2.)-p)-4.;
+//add time
+  float aa = dexxtime(p/20., 0.)*20.;
+  float bbb = jb((vec3(0., 26., 0.)-p.xzy)/10.)*10.;
+ // float aa2 = de234((vec3(0., 0., 12.)-p)/12.)*12.;
+ //    aa2 = max(aa2, box(vec3(0., 0., 12.)-p, vec3(12.)));
 
   //float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-  float final = min(min(aa, bbb),min(b2, b3));
-  if(final == b2){l = 20.;cccc = vec3(0.2,0.8,0.9);}
-      if(final == b3){l = 20.;cccc = vec3(0.9, 0.5, 0.2);}
+  float final = min(min(bbb, aa),min(bbb, bbb));
+  if(final == b2){l = .5;cccc = vec3(0.2,0.8,0.9);}
+     if(final == b3){l = .5;cccc = vec3(0.9);}
 
   //if(final == c1)c = vec3(0.9,0.1,0.1);
   //if(final == c2)c = vec3(0.1,0.9,0.1);
-   if(final == aa){rough = 0.1;cccc=vec3(0.9);}
-  if(final == bbb){rough = 1.;cccc=pal(escape333*0.5, vec3(0.9,0.6,0.2));}
-  if(final == aa2){rough = 1.; cccc=vec3(0.8);}
+   if(final == aa){rough = 0.1;cccc=pal(escape*0.25, vec3(0.9,0.6,0.2));
+    //FOSpec = cccc;
+    vec3 ccol = clamp(orbittt, 0., 1.);
+    if(ccol.g > 0.99){
+      l = 0.7;
+      cccc = vec3(0.9, 0.5, 0.2);
+    }
+   // cccc = vec3(0.5);
+    //cccc = ccol;
+   }
+  if(final == bbb){rough = 1.;cccc=pal(escape333*0.5, vec3(0.2,0.9,0.2));}
+ /// if(final == aa2){rough = 1.; cccc=pal(mms, vec3(0.9, 0.6, 0.2));}
   return final;
-}*/
+}
 
 // Plane with normal n (n is normalized) at some distance from the origin
 float fPlane(vec3 p, vec3 n, float distanceFromOrigin) {
@@ -1886,13 +2187,13 @@ float de333(vec3 p) {
 
   return sceneDist;
 }
-/*
-float map(vec3 p) {
+
+float maptry(vec3 p) {
   // p = p.xzy;
   p.y += 45.;
   // p.z *= -1.;
   cccc = vec3(0.9, 0.8, 0.6);
-  rough = 0.2;
+  rough = 1.;
   l = 0.;
   // float a = box(vec3(0.,4.,-5.)-p, vec3(10.,10.,0.2));
   // float b = box(vec3(0.,4.,5.)-p, vec3(10.,10.,0.2));
@@ -1900,35 +2201,38 @@ float map(vec3 p) {
   // float c2 = box(vec3(-7.,4.,0.)-p, vec3(0.2,10.,10.));
   // float c3 = box(vec3(0.,9.,0.)-p, vec3(10.,0.2,10.));
   float a = de333(p / 10.) * 10.;
+  a = max(a, box(vec3(0., 45., 0.)-p, vec3(90., 30., 90.)));
   cccc = hitPointColor;
   if (hitPointSurfaceType == EMISSIVE) {
     l = 14.;
   }
   return a;
 }
-*/
-/*
-float map(vec3 p){
+
+
+float map123145(vec3 p){
     p = p.xzy;
+    p.z -= 22.;
     p.z *= -1.;
     cccc = vec3(0.9,0.8,0.6);
     rough = 1.0;
     l = 0.;
 
     float bbb = jb((vec3(0., 16., 0.)-p.xzy)/5.)*5.;
-    float aa2 = dexx(p/13.)*13.;
+    float aa2 = dexx(p/23.)*23.;
     //float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
     float final = min(aa2, bbb);
 
     //if(final == c1)c = vec3(0.9,0.1,0.1);
     //if(final == c2)c = vec3(0.1,0.9,0.1);
     if(final == bbb){rough = 1.0;cccc=pal(escape333, vec3(0.9,0.6,0.8));}
-    if(final == aa2){rough = 0.1; cccc = vec3(0.9,0.6,0.2);}
+    if(final == aa2){rough = 0.1; cccc = pal(dx, vec3(0.9, 0.5, 0.2));}
     return final;
 }
-*/
-/*
-float map(vec3 p){
+
+
+float mapsdfshg(vec3 p){
+  p.y -= 32.;
     p = p.xzy;
     p.z *= -1.;
     cccc = vec3(0.9,0.8,0.6);
@@ -1949,7 +2253,7 @@ float map(vec3 p){
       //  aa2 = max(aa2, box(vec3(0., 0., 12.)-p, vec3(16.)));
 
     //float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-    float final = min(min(aa, bbb),min(aa, aa));
+    float final = min(min(aa, bbb),min(aa, b2));
     if(final == b2){l = 7.;cccc = vec3(0.2,0.8,0.9);}
         if(final == b3){l = 14.;cccc = vec3(0.9, 0.5, 0.2);}
 
@@ -1959,7 +2263,7 @@ float map(vec3 p){
     if(final == bbb){rough = 0.1;cccc=vec3(0.9,0.67,0.2);}
     if(final == aa2){rough = 1.; cccc=vec3(0.8);}
     return final;
-}*/
+}
 /*
 float map(vec3 p){
     p = p.xzy;
@@ -1989,11 +2293,11 @@ float fractal_de51(vec3 p) {
   return length(p) / 6e3 - .001;
 }
 
-/*
-float map(vec3 p){
+
+float mapsx(vec3 p){
 
     cccc = vec3(0.9,0.8,0.6);
-    rough = 1.;
+    rough = 0.1;
     l = 0.;
       //  return length(p)-3.;
     p = p.xzy;
@@ -2007,19 +2311,24 @@ float map(vec3 p){
     float aa2 = fractal_de51((vec3(-20.0,28.0,13.0)-p)/10.)*10.;
     float aa3 = fractal_de15((vec3(-15.0,-2.7,3.0)-p)/10.)*10.;
     float aa = fractal_de46((vec3(-5.0,25.0,13.0)-p)/10.)*10.;
+     //float mm = desfff(p/1.)*1.;
 
     //float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-    float final = min(min(aa,aa2),aa3);
+    float final = min(min(aa,aa2),min(b2,b2));
     if(final == b2)l = 3.;
     //if(final == c1)c = vec3(0.9,0.1,0.1);
     //if(final == c2)c = vec3(0.1,0.9,0.1);
-    if(final == aa||final == aa2){rough
-= 1.;cccc=pal(escape*2.,vec3(0.8,0.4,0.4));} if(final == aa3){rough =
-0.1;cccc=vec3(0.9);}
+    if(final == aa||final == aa2){rough= 0.1;cccc=pal(escape*2.,vec3(0.8,0.4,0.4));} 
+    if(final == aa3){rough =0.1;cccc=vec3(0.9);}
+
+  //if(final == mm){
+ //  rough = 0.1;
+  //  cccc = pal(espv, vec3(0.9, 0.5, 0.2));
+ // }
 
     return final;
 }
-*/
+
 vec3 fold(vec3 p0) {
   vec3 p = p0;
   // if(abs(p.x) > 1.)p.x = 1.0-p.x;
@@ -2062,29 +2371,171 @@ float DE3(vec3 p0) {
   return length(p.xz) * 0.25;
 }
 
-/*
-float map(vec3 p){
+vec3 Rotat2e(vec3 z,float AngPFXY,float AngPFYZ,float AngPFXZ) {
+        float sPFXY = sin(radians(AngPFXY)); float cPFXY = cos(radians(AngPFXY));
+        float sPFYZ = sin(radians(AngPFYZ)); float cPFYZ = cos(radians(AngPFYZ));
+        float sPFXZ = sin(radians(AngPFXZ)); float cPFXZ = cos(radians(AngPFXZ));
+
+        float zx = z.x; float zy = z.y; float zz = z.z; float t;
+
+        // rotate BACK
+        t = zx; // XY
+        zx = cPFXY * t - sPFXY * zy; zy = sPFXY * t + cPFXY * zy;
+        t = zx; // XZ
+        zx = cPFXZ * t + sPFXZ * zz; zz = -sPFXZ * t + cPFXZ * zz;
+        t = zy; // YZ
+        zy = cPFYZ * t - sPFYZ * zz; zz = sPFYZ * t + cPFYZ * zz;
+        return vec3(zx,zy,zz);
+}
+
+float deBB( vec3 p ) {
+    float Scale = 1.34f;
+    float FoldY = 1.025709f;
+    float FoldX = 1.025709f;
+    float FoldZ = 0.035271f;
+    float JuliaX = -1.763517f;
+    float JuliaY = 0.392486f;
+    float JuliaZ = -1.734913f;
+    float AngX = -80.00209f;
+    float AngY = 0.0f;
+    float AngZ = -28.096322f;
+    float Offset = -3.036726f;
+    int EnableOffset = 1;
+    int Iterations = 80;
+    float Precision = 1.0f;
+    // output _sdf c = _SDFDEF)
+
+    vec4 OrbitTrap = vec4(1,1,1,1);
+    float u2 = 1.;
+    float v2 = 1.;
+    if(EnableOffset != 0)p = Offset+abs(vec3(p.x,p.y,p.z));
+
+    vec3 p0 = vec3(JuliaX,JuliaY,JuliaZ);
+    float l = 0.0;
+    int i=0;
+        espv = 0.;
+
+    for (i=0; i<Iterations; i++) {
+        p = Rotat2e(p,AngX,AngY,AngZ);
+        p.x=abs(p.x+FoldX)-FoldX;
+        p.y=abs(p.y+FoldY)-FoldY;
+        p.z=abs(p.z+FoldZ)-FoldZ;
+        p=p*Scale+p0;
+        l=length(p);
+        espv += exp(-0.2*dot(p,p));
+
+        float rr = dot(p,p) + 1.5f;
+        // OrbitTrap.r = max( OrbitTrap.r, rr );
+    }
+    // hitColor = vec3( OrbitTrap.r, abs( 10.0f * p.xy ) );
+    return Precision*(l)*pow(Scale, -float(i));
+}
+
+float pps = 0.;
+vec3 orbitSSSSw = vec3(0.);
+
+float deFractal4x(vec3 p0){
+    vec4 p = vec4(p0, 1.);
+    p=abs(p);
+      orbitSSSSw = vec3(0.);
+
+    if(p.x < p.z)p.xz = p.zx;
+    if(p.z < p.y)p.zy = p.yz;
+    if(p.y < p.x)p.yx = p.xy;
+    pps = 0.;
+    for(int i = 0; i < 10; i++){
+      if(p.x < p.z)p.xz = p.zx;
+      if(p.z < p.y)p.zy = p.yz;
+      if(p.y < p.x)p.yx = p.xy;
+      p.xyz = abs(p.xyz);
+      p*=(1.8/clamp(dot(p.xyz,p.xyz),-1.0,1.));
+      p.xyz-=vec3(0.3,1.9,0.4);
+      pps += exp(-0.2*dot(p.xyz,p.xyz));
+      orbitSSSSw = max(orbitSSSSw, p.xzy * 2. * vec3(0.2, 0.9, 0.9));
+
+    }
+    float m = 1.5;
+    p.xyz-=clamp(p.xyz,-m,m);
+    return length(p.xyz)/p.w;
+  }
+  float mapsdfgccc(vec3 p){
+    cccc = vec3(0.9);
+    rough = 0.2;
+    issubsurface = false;
+    l = 0.;
+    p = p.xzy;
+        p.z += 15.5;
+//p *= 0.5;
+float scale = 1.;
+float scale2 = 1.;
+
+ vec3 pos = vec3(-1.1,15.3,1.4)-p;
+    pos.yz = rot(pos.yz, 90.);
+                float aa = 0.;    
+  aa = deBB((pos)/(2.*scale2))*(2.*scale2);
+  vec3 pos2 = vec3(22.1,15.3,1.4)-p;
+    pos2.yz = rot(pos2.yz, 90.);
+ // aa = min(aa, deBB((pos2-p)/(2.*scale2))*(2.*scale2));
+aa *= 0.75;
+    vec3 ppp = vec3(10., -10., 20.)-p;
+    float aax = deFractal4x((ppp)/(12.*scale))*(12.*scale);
+
+   
+  float final = min(aax, aa);
+
+    if(final == aa){
+    rough = 1.0;
+    cccc=pal(espv, vec3(0.9,0.2,0.9));
+    l = 0.;
+    issubsurface = false;
+    
+    //c = vec3(0.9);
+    }
+    
+  
+    if(final == aax){
+        cccc = pal(pps, vec3(0.9, 0.6, 0.2));
+       
+        rough = 0.1;
+        vec3 cx = clamp(orbitSSSSw, 0., 1.);
+
+        if(cx.z > 0.9 && cx.x < 0.25){
+            l = 1.;
+            cccc = vec3(0.2, 0.5, 0.9);
+        }
+        //ref = false;
+    }
+
+
+return final;
+
+  }
+
+float mapyyys(vec3 p){
     p = p.xzy;
     cccc = vec3(0.9);
-    rough = 1.;
+    rough = 0.2;
     l = 0.;
+    issubsurface = false;
     //float a = box(vec3(0.,4.,-5.)-p, vec3(10.,10.,0.2));
     //float b = box(vec3(0.,4.,5.)-p, vec3(10.,10.,0.2));
     //float c1 = box(vec3(7.,4.,0.)-p, vec3(0.2,10.,10.));
     //float c2 = box(vec3(-7.,4.,0.)-p, vec3(0.2,10.,10.));
     //float c3 = box(vec3(0.,9.,0.)-p, vec3(10.,0.2,10.));
-    float b2 = box(vec3(0.,-4.5,0.)-p, vec3(8.,0.00000000000004,8.));
-    float aa = DE3((vec3(42.,55.,-21.)-p)/5.)*5.;
+    float b2 = box(vec3(0.,-4.5,0.)-p, vec3(18.,0.00000000000004,18.));
+    float aa = DE3((vec3(42.,55.,-21.)-p)/25.)*25.;
+    // float mm = desfff(p/5.)*5.;
 
     //float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-    float final = min(aa,b2);
+    float final = min(aa,min(b2, b2));
     if(final == b2)l = 13.;
+   // if(final == mm){cccc = pal(espv, vec3(0.9, 0.2, 0.9));rough = 0.2;    issubsurface = true;}
     //if(final == c1)c = vec3(0.9,0.1,0.1);
     //if(final == c2)c = vec3(0.1,0.9,0.1);
     if(final == aa){rough = 0.1;cccc=vec3(0.9);}
 
     return final;
-}*/
+}
 
 #define repid(p, r) (floor((p + r * .5) / r))
 #define rep(p, r) (mod(p - r * .5, r) - r * .5)
@@ -2221,13 +2672,14 @@ vec4 volumeMap3(vec3 p) {
   float d = sdSquareEmission(p);
   return vec4(vec3(1., 0.01, 0.001) * .2, d);
 }
-/*
-float map(vec3 p) {
+
+float mammmp(vec3 p) {
 
     l = 0.;
-    rough = 0.1;
+    rough = 1.;
+    p.y += 5.;
     cccc = vec3(0.1);
-
+issubsurface = false;
     float d = sdFloor(p);
 
     d = ost(d, sdWall(p), 1.0, 5.0);
@@ -2243,7 +2695,9 @@ float map(vec3 p) {
     vec4 ds = volumeMap3(p);
 
     float ms = min(a.w, min(b.w, min(c.w, ds.w)));
-    d = min(d, ms);
+     float mmx = desfff(p/3.)*3.;
+
+    d = min(d, min(ms, mmx));
 
     if(d == ms){
         l = 3.;
@@ -2256,10 +2710,14 @@ float map(vec3 p) {
         }else if(d == ds.w){
             cccc = ds.xyz;
         }
+
+    }else if(d == mmx){
+      cccc = pal(espv, vec3(0.2, 0.6, 0.9));
+      issubsurface = false;
     }
 
     return d;
-}*/
+}
 
 // https://iquilezles.org/articles/distfunctions
 float sdBoxsss(vec3 p, vec3 b) {

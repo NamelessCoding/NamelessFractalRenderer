@@ -1,16 +1,22 @@
-﻿layout(binding = 3, Rgba16f) uniform image3D rcfog;
+﻿layout(binding = 3, Rgba32f) uniform image3D rcfog;
 
+float RMS = 0.;
 
 bool renderSkyAndSun = true;
 bool removeWater = false;
 bool useRadCache = true;
+
+bool doGLass = false;
+
 // vec3 sunColor = mix(vec3(0.9, 0.8, 0.5), vec3(0.9,0.85, 0.8),
 // max(ldir.y,0.))*pow(max(dot(normalize(ldir), vec3(0., 1., 0.)),0.),3.);
 vec3 sunColor = vec3(0.9, 0.8, 0.5);
-float sunStrength = 6.;
-float skyStrength = 6.;
+float sunStrength = 2.25;
+float skyStrength = 2.25;
 
 float epsilon = 0.01;
+float sssStepSize = 0.5;
+
 
 vec3 randomSpherePoint(vec2 rand) {
   float ang1 = (rand.x + 1.0) * 3.14159; // [-1..1) -> [0..2*PI)
@@ -48,7 +54,7 @@ bool traceVolume(inout vec3 p, vec3 d, inout uint r, inout vec3 tt,
   for (int i = 0; i < 280; i++) {
     // p = cam + d*t;
 
-    float dist = map(p);
+    float dist = map(p,0.);
     // float precis = 0.001 * t;
     if (rndf(r) < clamp(0.05 * dist, 0.01, 0.95)) {
       //  if(rndf(r) < exp(-0.2*dist)){
@@ -90,23 +96,23 @@ vec3 calcGradient(in vec3 pos) {
   const vec3 v1 = vec3(1.0, 0.0, 0.0);
   const vec3 v2 = vec3(0.0, 1.0, 0.0);
   const vec3 v3 = vec3(0.0, 0.0, 1.0);
-  return (vec3(map(pos + v1 * eps), map(pos + v2 * eps), map(pos + v3 * eps)) -
-          vec3(map(pos - v1 * eps), map(pos - v2 * eps), map(pos - v3 * eps))) /
+  return (vec3(map(pos + v1 * eps,0.), map(pos + v2 * eps,0.), map(pos + v3 * eps,0.)) -
+          vec3(map(pos - v1 * eps,0.), map(pos - v2 * eps,0.), map(pos - v3 * eps,0.))) /
          (2.0 * eps);
 }
 vec3 calcGradientCheap(in vec3 pos, in float original) {
   const vec3 v1 = vec3(1.0, 0.0, 0.0);
   const vec3 v2 = vec3(0.0, 1.0, 0.0);
   const vec3 v3 = vec3(0.0, 0.0, 1.0);
-  return (vec3(map(pos + v1 * eps), map(pos + v2 * eps), map(pos + v3 * eps)) -
+  return (vec3(map(pos + v1 * eps,0.), map(pos + v2 * eps,0.), map(pos + v3 * eps,0.)) -
           vec3(original)) /
          (eps);
 }
 // 2 samples
 vec2 sceneK_2(vec3 start, vec3 end, vec3 dir) {
   float dist = 0.0;
-  dist = map(start);
-  float dist2 = map(end);
+  dist = map(start,0.);
+  float dist2 = map(end,0.);
 
   float lam = abs(dist - dist2) / length(start - end);
 
@@ -114,7 +120,7 @@ vec2 sceneK_2(vec3 start, vec3 end, vec3 dir) {
 }
 vec2 sceneK_13(vec3 start, vec3 end, vec3 dir) {
   float dist = 0.0;
-  dist = map(start);
+  dist = map(start,0.);
 
   vec3 gs = calcGradient(start);
   vec3 ge = calcGradient(end);
@@ -127,15 +133,15 @@ vec2 sceneK_13(vec3 start, vec3 end, vec3 dir) {
   return vec2(lam, dist);
 }
 float calcGradientDir(in vec3 pos, vec3 dir, in float original) {
-  return abs(map(pos + dir * eps) - original) / (eps);
+  return abs(map(pos + dir * eps,0.) - original) / (eps);
 }
 float calcGradientDirCentered(in vec3 pos, vec3 dir) {
-  return abs(map(pos + dir * eps) - map(pos - dir * eps)) / (eps * 2.0);
+  return abs(map(pos + dir * eps,0.) - map(pos - dir * eps,0.)) / (eps * 2.0);
 }
 
 vec2 sceneK_4(vec3 start, vec3 end, vec3 dir) {
   float dist = 0.0;
-  dist = map(start);
+  dist = map(start,0.);
 
   float fds = calcGradientDir(start, dir, dist);
   float fde = calcGradientDirCentered(end, dir);
@@ -145,20 +151,28 @@ vec2 sceneK_4(vec3 start, vec3 end, vec3 dir) {
   return vec2(lam, dist);
 }
 
-vec3 norm(vec3 p) {
+vec3 norm(vec3 p, float times) {
   float k = epsilon * 2.;
   return normalize(
-      vec3(map(vec3(p.x + k, p.yz)) - map(vec3(p.x - k, p.yz)),
-           map(vec3(p.x, p.y + k, p.z)) - map(vec3(p.x, p.y - k, p.z)),
-           map(vec3(p.x, p.y, p.z + k)) - map(vec3(p.x, p.y, p.z - k))));
+      vec3(map(vec3(p.x + k, p.yz),times) - map(vec3(p.x - k, p.yz),times),
+           map(vec3(p.x, p.y + k, p.z),times) - map(vec3(p.x, p.y - k, p.z),times),
+           map(vec3(p.x, p.y, p.z + k),times) - map(vec3(p.x, p.y, p.z - k),times)));
 }
 
-vec3 normWat(vec3 p) {
+vec3 normWat(vec3 p, float times) {
   float k = epsilon * 2.;
   return normalize(
-      vec3(mapPl(vec3(p.x + k, p.yz)) - mapPl(vec3(p.x - k, p.yz)),
-           mapPl(vec3(p.x, p.y + k, p.z)) - mapPl(vec3(p.x, p.y - k, p.z)),
-           mapPl(vec3(p.x, p.y, p.z + k)) - mapPl(vec3(p.x, p.y, p.z - k))));
+      vec3(mapPl(vec3(p.x + k, p.yz),times) - mapPl(vec3(p.x - k, p.yz), times),
+           mapPl(vec3(p.x, p.y + k, p.z),times) - mapPl(vec3(p.x, p.y - k, p.z),times),
+           mapPl(vec3(p.x, p.y, p.z + k),times) - mapPl(vec3(p.x, p.y, p.z - k), times)));
+}
+
+vec3 normGlass(vec3 p) {
+  float k = epsilon * 2.;
+  return normalize(
+      vec3(glassMap(vec3(p.x + k, p.yz)) - glassMap(vec3(p.x - k, p.yz)),
+           glassMap(vec3(p.x, p.y + k, p.z)) - glassMap(vec3(p.x, p.y - k, p.z)),
+           glassMap(vec3(p.x, p.y, p.z + k)) - glassMap(vec3(p.x, p.y, p.z - k))));
 }
 
 /*
@@ -185,8 +199,21 @@ vec2 boxIntersectionXX( in vec3 ro, in vec3 rd, vec3 boxSize )
     return vec2( tN, tF );
 }
 
-bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
-           bool renderWat, inout bool hitswat, inout float isk2,
+vec3 someoneisreallyretarded(vec3 p){
+  float k = epsilon*2.;
+  return normalize(
+    vec3(
+        glassMap(vec3(p.x + k, p.yz))-glassMap(vec3(p.x - k, p.yz)),
+        glassMap(vec3(p.x, p.y + k, p.z))-glassMap(vec3(p.x, p.y - k, p.z)),
+        glassMap(vec3(p.xy, p.z + k))-glassMap(vec3(p.xy, p.z - k))
+    )
+  );
+}
+
+
+bool traceInit(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
+           bool renderWat, inout bool hitswat, inout float isk2,float times,
+            inout vec3 glassP, inout vec3 glassN, inout bool hasHitGlass,
            vec3 viewPos = vec3(0.), bool stopatwat = false) {
   vec3 cam = p;
   // p += d*epsilon*2.;
@@ -198,62 +225,86 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
   float epsl = epsilon;
   vec3 keepWP = cam;
 
-  bool hasHit = false;
+
+  bool hasHit = true;
 
 
   vec3 rayDir = d;
   vec3 rayPos = p;
-  ivec3 mapPos = ivec3(floor(rayPos + 0.));
+ // ivec3 mapPos = ivec3(floor(rayPos + 0.));
 
-  vec3 deltaDist = 1.0 / abs(rayDir);
-  ivec3 rayStep = ivec3(sign(rayDir));
-  vec3 sideDist = (sign(rayDir) * (vec3(mapPos) - rayPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
+  
+  //vec3 prevPos = mapPos; 
+  bool managedToHit = true;
 
-  ivec3 prevPos = mapPos; 
-
-  for(int i = 0; i < 164; i++){
-     ivec3 newP = ivec3((mapPos + 256. - floor(viewPos)));
-     if(newP.x >= 512. || newP.x < 0. || newP.y >= 512. || newP.y < 0 || newP.z >= 512. || newP.z < 0){
-        break;
-     }
-     if(imageLoad(rcfog, newP).x > 0.5){
-        vec2 I = vec2(0.);
-        I = boxIntersectionXX( rayPos - vec3(mapPos) - vec3(0.5), rayDir, vec3(0.5) );
-        if(I.x >= 0.){
-          hasHit = true;
-          p = rayPos + rayDir * I.x;
-          break;
-        }
-     }
-     bvec3 mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
-     sideDist += vec3(mask) * deltaDist;
-     mapPos += ivec3(vec3(mask)) * rayStep;
-
+  p = rayPos;
+  
+  float boostEps = 1.;
+  
+  if(managedToHit){
+   // boostEps = 6.;
   }
-  if(!hasHit){
-    return false;
-  }
+  //float iterShit = 0.;
 
-  for (int i = 0; i < 70; i++) {
+int iters = 180;
+//if(!managedToHit){
+ // iters = 60;
+//}
+
+  for (int i = 0; i < iters; i++) {
     // p = cam + d*t;
 
-    float A = map(p);
+    float A = map(p,times);
     float dist = A;
     if (!hitWat && renderWat) {
-      float B = mapPl(p);
+      float B = mapPl(p, times);
 
       dist = min(dist, B);
     }
+
+    if(!hasHitGlass && doGLass){
+        float C = glassMap(p);
+
+        dist = min(dist, C);
+    } 
+
     // float precis = 0.001 * t;
 
-    if (dist < epsl && abs(dist - A) < epsl && !hitWat) {
+    if (dist < epsl && abs(dist - A) < epsl && !hitWat && !hasHitGlass) {
+      
+      return true;
+    }
+
+     if (dist < epsl && !hasHitGlass && doGLass) {
+      glassP = p;
+      //keepWP = watp;
+      glassN = someoneisreallyretarded(p - d * epsl);
+      hasHitGlass = true;
+     // hitWat = true;
+      // if(dot(d, watn) < -0.1){
+      //    d = normalize(refract(d, normalize(watn), 0.1));
+      //}
+      float indexofcantthinkcauseofsomeone = .87; 
+      vec3 dir = refract(d, glassN, indexofcantthinkcauseofsomeone);
+      vec3 pos = p+dir*0.1;
+      for(int i = 0; i < 50; i++){
+        if(glassMap(pos) > 0.01 && i > 4){
+          break;
+        }
+        pos += dir*0.1;
+      }
+      //not gonna refract a second time for now
+      p = pos;
+      d = dir;
+      //  continue;
+    } else if (dist < epsl && abs(dist - A) < epsl) {
       return true;
     }
 
     if (dist < epsl && !hitWat && renderWat) {
       watp = p;
       keepWP = watp;
-      watn = normWat(p - d * epsl);
+      watn = normWat(p - d * epsl, times);
       hitswat = true;
       hitWat = true;
       // if(dot(d, watn) < -0.1){
@@ -263,11 +314,11 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
         return true;
       }
       //  continue;
-    } else if (dist < epsl) {
+    } else if (dist < epsl && abs(dist - A) < epsl) {
       return true;
     }
 
-    if (length(cam - p) > 1260.) {
+    if (length(cam - p) > 360.) {
       if (hitWat && renderWat) {
         isk2 = 1.;
         p = keepWP;
@@ -277,7 +328,10 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     }
 
     // t += dist;
-    epsl = epsilon * (1.+ sqrt(length(cam-p))) ;
+    epsl = epsilon * (1.+ boostEps*sqrt(length(cam-p))) ;
+   // iterShit = exp(-A*1.1);
+   //epsl = epsilon;
+    //epsl = (epsilon * 20.) / (float(i+1));
     p += d * dist;
   }
 
@@ -286,13 +340,226 @@ bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
     p = keepWP;
     return true;
   }
+  /*if(managedToHit){
+        float disss = length(prevPos - p)*0.5;
+        ivec3 newP = ivec3((vec3(prevPos)*3. - floor(viewPos)*3. )+ 128.);
+        //vec3 newDir = vec3(12., 0., 0.);
+        vec3 norm = imageLoad(rcfog, ivec3(newP)).xyz;
+        norm.z = 1. + disss;
+        imageStore(rcfog, ivec3(newP), vec4(norm, imageLoad(rcfog, ivec3(newP)).w));
+  }*/
+  return false;
+}
 
+bool trace(inout vec3 p, vec3 d, inout vec3 watp, inout vec3 watn,
+           bool renderWat, inout bool hitswat, inout float isk2,float times,
+           vec3 viewPos = vec3(0.), bool stopatwat = false) {
+  vec3 cam = p;
+  // p += d*epsilon*2.;
+  bool hitWat = false;
+  watp = cam;
+  watn = vec3(0.);
+  hitswat = false;
+  isk2 = 0.;
+  float epsl = epsilon;
+  vec3 keepWP = cam;
+
+
+  bool hasHit = true;
+
+
+  vec3 rayDir = d;
+  vec3 rayPos = p;
+ // ivec3 mapPos = ivec3(floor(rayPos + 0.));
+
+  
+  //vec3 prevPos = mapPos; 
+  bool managedToHit = true;
+  /*
+  float prevDist = 0.;
+  for(int i = 0; i < 60; i++){
+    //- floor(viewPos)
+    //- floor(viewPos)*2.
+     ivec3 newP = ivec3((vec3(rayPos)*3. - floor(viewPos)*3. )+ 128.);
+     vec3 normalCurrently = imageLoad(rcfog, newP).xyz;
+     if(newP.x >= 256. || newP.x < 0. || newP.y >= 256. || newP.y < 0 || newP.z >= 256. || newP.z < 0){
+        //return false;
+        p = rayPos;
+        break;
+     }
+     float distanc = imageLoad(rcfog, newP).w*0.79;
+    float phi = normalCurrently.x;
+    float theta = normalCurrently.y;
+    vec3 normal = normalize(
+      vec3(
+        cos(phi)*sin(theta),
+        cos(theta),
+        sin(phi)*sin(theta)
+      )
+    );
+     if(distanc < 0.3 ){
+        distanc = 0.1;
+       // if(dot(normal, rayDir) >= 0. && distanc > 0.2){
+       //   distanc = 0.2;
+       // }
+     }
+    // if(dot(normalCurrently, rayDir) >= 0. && distanc > 0.1 && distanc < 0.3){
+
+      //  distanc *= 14.;
+     //}
+   // if(distanc < 1.){
+    
+//&& normalCurrently.z > 1.
+       // if(dot(normal, rayDir) < 0.&& distanc > 0.1 && distanc < 0.3 ){
+       ///     distanc *= 14.;
+           // distanc = normalCurrently.z;
+      //  }
+    //}
+
+    //if(dot(normal, rayDir) < 0.&& distanc > 0.1 && distanc < 0.3&& normalCurrently.z > 1. ){
+            //distanc *= 14.;
+        //    distanc = normalCurrently.z-1.;
+       // }
+
+
+     if(distanc < 0.15){
+        //  p = rayPos + rayDir * I.x ;
+          //float A = map(rayPos);
+          //if(A < 0.05){
+            //rayPos -= rayDir * prevDist;
+            bool toexit = false;
+            float A = 0.;
+            for(int k = 0; k < 10; k++){
+              A = map(rayPos)*1.;
+              if(A < 0.05){
+                toexit = true;
+                break;
+              }
+              rayPos += rayDir*A;
+            }
+            
+            //if(distanc > 0.1){
+              
+            //}
+            distanc = A;
+            if(toexit){
+                 break;
+            }else{
+              rayPos += rayDir*0.15;
+              managedToHit = false;
+            }
+           
+         // }
+          //else{
+          //  rayPos += rayDir * 1.;
+         // }
+         
+     }
+
+     
+
+     //if(abs(12. - directionSofar.x) < 0.01){
+     //   distanc = 0.5;
+     //}
+      
+
+   //  float simiral = max(dot(directionSofar, rayDir),0.);
+
+      //if(directionSofar.x < 0.5){
+      //  distanc = 10.1;
+      //}
+
+      //*exp(-length(worldCenter - rayPos))
+      rayPos += rayDir * max(distanc, 0.);
+      prevDist = distanc;
+
+  }
+  vec3 prevPos = rayPos;
+  */
+  p = rayPos;
+  
+  float boostEps = 1.;
+  
+  if(managedToHit){
+   // boostEps = 6.;
+  }
+  //float iterShit = 0.;
+
+int iters = 180;
+//if(!managedToHit){
+ // iters = 60;
+//}
+
+  for (int i = 0; i < iters; i++) {
+    // p = cam + d*t;
+
+    float A = map(p, times);
+    float dist = A;
+    if (!hitWat && renderWat) {
+      float B = mapPl(p, times);
+
+      dist = min(dist, B);
+    }
+    // float precis = 0.001 * t;
+
+    if (dist < epsl && abs(dist - A) < epsl && !hitWat) {
+      
+      return true;
+    }
+
+    if (dist < epsl && !hitWat && renderWat) {
+      watp = p;
+      keepWP = watp;
+      watn = normWat(p - d * epsl, times);
+      hitswat = true;
+      hitWat = true;
+      // if(dot(d, watn) < -0.1){
+      //    d = normalize(refract(d, normalize(watn), 0.1));
+      //}
+      if (stopatwat) {
+        return true;
+      }
+      
+    } else if (dist < epsl) {
+      return true;
+    }
+
+    if (length(cam - p) > 360.) {
+      if (hitWat && renderWat) {
+        isk2 = 1.;
+        p = keepWP;
+        return true;
+      }
+      return false;
+    }
+
+    // t += dist;
+    epsl = epsilon * (1.+ boostEps*sqrt(length(cam-p))) ;
+   // iterShit = exp(-A*1.1);
+   //epsl = epsilon;
+    //epsl = (epsilon * 20.) / (float(i+1));
+    p += d * dist;
+  }
+
+  if (hitWat && renderWat) {
+    isk2 = 1.;
+    p = keepWP;
+    return true;
+  }
+  /*if(managedToHit){
+        float disss = length(prevPos - p)*0.5;
+        ivec3 newP = ivec3((vec3(prevPos)*3. - floor(viewPos)*3. )+ 128.);
+        //vec3 newDir = vec3(12., 0., 0.);
+        vec3 norm = imageLoad(rcfog, ivec3(newP)).xyz;
+        norm.z = 1. + disss;
+        imageStore(rcfog, ivec3(newP), vec4(norm, imageLoad(rcfog, ivec3(newP)).w));
+  }*/
   return false;
 }
 
 // https://www.shadertoy.com/view/llKfD1
 bool trace222(inout vec3 ro, vec3 rd, inout vec3 watp, inout vec3 watn,
-              bool renderWat, inout bool hitswat, bool stopatwat = false,
+              bool renderWat, inout bool hitswat,float times, bool stopatwat = false,
               float isk2 = 0.) {
 
   float w = 1.2;
@@ -303,10 +570,10 @@ bool trace222(inout vec3 ro, vec3 rd, inout vec3 watp, inout vec3 watn,
   float eps2 = epsilon;
   vec3 p = ro;
 
-  float t = map(p);
+  float t = map(p,times);
 
   if (renderWat) {
-    float B = mapPl(p);
+    float B = mapPl(p,times);
 
     t = min(t, B);
   }
@@ -324,10 +591,10 @@ bool trace222(inout vec3 ro, vec3 rd, inout vec3 watp, inout vec3 watn,
 
   for (int i = 0; i < 182; i++) {
     p = ro + rd * t;
-    float A = map(p);
+    float A = map(p, times);
     float f = A;
     if (!hitWat && renderWat) {
-      float B = mapPl(p);
+      float B = mapPl(p,times);
 
       f = min(f, B);
     }
@@ -339,10 +606,10 @@ bool trace222(inout vec3 ro, vec3 rd, inout vec3 watp, inout vec3 watn,
       relaxed = false;
       t += prevDt * (1.0 - w);
       p = ro + rd * t;
-      float As = map(p);
+      float As = map(p,times);
       f = As;
       if (!hitWat && renderWat) {
-        float B = mapPl(p);
+        float B = mapPl(p,times);
 
         f = min(f, B);
       }
@@ -368,7 +635,7 @@ bool trace222(inout vec3 ro, vec3 rd, inout vec3 watp, inout vec3 watn,
       ro = p;
       watp = p;
       // keepWP = watp;
-      watn = normWat(p - rd * eps2);
+      watn = normWat(p - rd * eps2,times);
       hitswat = true;
       hitWat = true;
       // if(dot(d, watn) < -0.1){
@@ -408,14 +675,14 @@ bool traceSun2(inout vec3 ro, vec3 rd, float mxd) {
   float eps2 = epsilon;
   vec3 p = ro;
 
-  float t = map(p);
+  float t = map(p,0.);
 
   float dt = 0.0;
   float stepCtr = 0.0;
 
   for (int i = 0; i < 182; i++) {
     p = ro + rd * t;
-    float A = map(p);
+    float A = map(p,0.);
     float f = A;
 
     dt = f * w;
@@ -425,7 +692,7 @@ bool traceSun2(inout vec3 ro, vec3 rd, float mxd) {
       relaxed = false;
       t += prevDt * (1.0 - w);
       p = ro + rd * t;
-      float As = map(p);
+      float As = map(p,0.);
       f = As;
 
       dt = f * w;
@@ -452,16 +719,16 @@ bool traceSun2(inout vec3 ro, vec3 rd, float mxd) {
   return false;
 }
 
-bool traceSun(inout vec3 p, vec3 d, float maxDist) {
+bool traceSun(inout vec3 p, vec3 d, float maxDist, float iTime) {
   vec3 cam = p;
   // p += d*epsilon*2.;
   p += d * 30.;
   float epsl = epsilon;
 
-  for (int i = 0; i < 180; i++) {
+  for (int i = 0; i < 380; i++) {
     // p = cam + d*t;
 
-    float dist = map(p);
+    float dist = map(p, iTime);
     // float precis = 0.001 * t;
 
     if (dist < epsl) {
@@ -473,7 +740,7 @@ bool traceSun(inout vec3 p, vec3 d, float maxDist) {
 
     // t += dist;
     p += d * dist;
-    epsl += epsilon * 0.01;
+    epsl += epsilon * 0.001;
   }
   return false;
 }
@@ -484,7 +751,7 @@ bool traceShadow(inout vec3 p, vec3 d) {
   for (int i = 0; i < 80; i++) {
     // p = cam + d*t;
 
-    float dist = map(p);
+    float dist = map(p, 0.);
     // float precis = 0.001 * t;
 
     if (dist < epsilon * 4.) {

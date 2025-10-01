@@ -22,9 +22,9 @@ void main() {
   vec4 a3 = texture2D(spatWe, texCoord * 1.);
   vec4 a4 = texture2D(spatLO, texCoord * 1.);
 
-  tempwe = a;
-  templ = a1;
-  temppos = a2;
+  //tempwe = a;
+ //templ = a1;
+  //temppos = a2;
   spatw = a3;
   spatl = a4;
 }

@@ -1,0 +1,99 @@
+﻿
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+
+uniform vec3 viewPos;
+uniform vec3 lastViewPos;
+//uniform float time;
+
+uniform mat4 invview;
+uniform mat4 invproj;
+
+uniform mat4 view;
+uniform mat4 proj;
+
+uniform mat4 prevview;
+uniform mat4 prevproj;
+
+struct packedvec3{
+  float x,y,z;
+};
+
+
+struct volumetricsBuffer {
+    packedvec3 colour;
+    packedvec3 weigthsTemp;
+    packedvec3 colourspat;
+    packedvec3 weigthsspat;
+    packedvec3 Loprev;
+    packedvec3 wprev;
+
+};
+layout(std430, binding=6) buffer volumebuff {
+    volumetricsBuffer volumenodes[];
+} volumessbo;
+
+
+layout(std430, binding=7) buffer volumebuff2 {
+    volumetricsBuffer volumenodes2[];
+} volumessbo2;
+
+
+uint maxID = 96;
+
+uint to1D(uint x, uint y, uint z){
+  return (x + y*maxID + z*maxID*maxID);
+}
+
+float near = 0.01;
+float far = 100.;
+//copied:
+//depth between -1 and 1
+//https://learnopengl.com/Advanced-OpenGL/Depth-testing
+float LinearizeDepth(float depth) 
+{
+    float z = depth * 2.0 - 1.0; // back to NDC 
+    return (2.0 * near * far) / (far + near - z * (far - near));	
+}
+
+//my own
+float lineardepthtonormal(float linear){
+  float l1 = 1./(2.*near*far);
+  float a = ((1./(linear*l1)) - far - near)/(far-near);
+  return 1.-(a*0.5+0.5);
+}
+//
+
+void main() {
+  // base pixel colour for image
+  // vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // get index in global work group i.e x,y position
+  // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+  uvec3 loc = (gl_GlobalInvocationID.xyz);
+
+  uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) +
+                uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
+           uint(1);
+
+   
+  uint sds = to1D(uint(loc.x), uint(loc.y), uint(loc.z));
+
+  volumetricsBuffer vv = volumessbo.volumenodes[sds];
+  volumessbo2.volumenodes2[sds] = vv;
+
+
+/*
+uniform mat4 invview;
+uniform mat4 invproj;
+
+uniform mat4 view;
+uniform mat4 proj;
+
+uniform mat4 prevview;
+uniform mat4 prevproj;
+*/
+
+}

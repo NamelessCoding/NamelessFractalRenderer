@@ -9,7 +9,7 @@ in vec2 texCoord;
 uniform sampler2D TAA;
 
 uniform vec2 wh;
-
+uniform float scale;
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
   seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
@@ -87,8 +87,8 @@ vec3 lodbloom(vec2 iResolution, float lod) {
       4.0 / 273.0, 16.0 / 273.0, 26.0 / 273.0, 16.0 / 273.0, 4.0 / 273.0,
       1.0 / 273.0, 4.0 / 273.0,  7.0 / 273.0,  4.0 / 273.0,  1.0 / 273.0};
   for (int i = 0; i < 25; i++) {
-    vec2 coords2 = vec2(float(i % 5) - 2., float(i / 5) - 2.) * lod * 5.;
-    vec2 newCords = (texCoord * iResolution + coords2) / iResolution;
+    vec2 coords2 = vec2(float(i % 5) - 2., float(i / 5) - 2.) * 5.;
+    vec2 newCords = (texCoord * scale * iResolution + coords2) / iResolution;
     accumBloom +=
         clamp(textureLod(TAA, newCords, ceil(log2(max(wh.x, wh.y)) * lod)).xyz,
               0., 1.) *
@@ -116,12 +116,12 @@ void main() {
 
   // vec3 lodbloom(vec2 iResolution, float lod){
 
-  vec3 bloom = lodbloom(iResolution, 0.1);
-  bloom += lodbloom(iResolution, 0.2);
-  bloom += lodbloom(iResolution, 0.3);
-  bloom += lodbloom(iResolution, 0.4);
-  bloom += lodbloom(iResolution, 0.5);
-  bloom += lodbloom(iResolution, 0.6);
+  vec3 bloom = lodbloom(iResolution, 0.2);
+  //bloom += lodbloom(iResolution, 0.3);
+  //bloom += lodbloom(iResolution, 0.4);
+  //bloom += lodbloom(iResolution, 0.5);
+ // bloom += lodbloom(iResolution, 0.6);
+  //bloom += lodbloom(iResolution, 0.7);
 
   // upp = vec4(clamp(texture(TAA, texCoord).xyz,0.,1000.), 1.);
   upp = vec4(bloom / 6., 0.);

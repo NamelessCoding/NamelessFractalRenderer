@@ -2,9 +2,10 @@
 
 layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
-layout(binding = 0, Rgba16f) uniform image3D rcpos;
-layout(binding = 1, Rgba16f) uniform image3D rcnorm;
+layout(binding = 0, Rgba32f) uniform image3D rcpos;
+layout(binding = 1, Rgba32f) uniform image3D rcnorm;
 layout(binding = 2, Rgba16f) uniform image3D rcrad;
+
 uniform sampler2D skytex;
 uniform sampler2D suntex;
 
@@ -13,7 +14,7 @@ uniform sampler2D suntex;
 // uniform mat4 invview;
 // uniform mat4 invproj;
 // uniform vec2 wh;
-uniform float time;
+//uniform float time;
 // uniform float time2;
 
 uniform vec3 viewPos;
@@ -65,8 +66,9 @@ void main() {
            uint(1);
   vec3 N = imageLoad(rcnorm, ivec3(prevPos)).xyz;
 
-  
-/*
+      //  ivec3 newP = ivec3((p + 90. - floor(viewPos)));
+  /*vec3 worldPos = (prevPos + floor(viewPos))-90.;
+  float bl2 = map(worldPos);
   if ((l > 0.01)) {
     // info = vec4(pow(imageLoad(cimage1, ivec3(prevPos)).xyz, vec3(2.2)), 20.);
     imageStore(rcfog, ivec3(prevPos), vec4(cccc * 2., 20.));
@@ -125,7 +127,7 @@ void main() {
   vec3 dir = angledircos(N.xzy, r).xzy;
   vec3 shd = vec3(0.);
   vec3 currCol = vec3(0.);
-  p += N * epsilon * 2.;
+  p += N * epsilon * 4.;
   vec3 pd = p;
   float isEM = 0.;
   vec3 cmmm = p;
@@ -135,16 +137,16 @@ void main() {
   vec3 wn = vec3(0.);
   bool hitswat = false;
   float ssd = 0.;
-  if (trace(p, dir, wp, wn, false, hitswat, ssd, viewPos)) {
+  if (trace(p, dir, wp, wn, false, hitswat, ssd, float(time)*0.04 ,viewPos)) {
 
-    vec3 n = norm(p - dir * epsilon * 2.);
-    if (mapPl(p) < 0. && removeWater) {
-      cccc *= vec3(0.2, 0.6, 0.9);
+    vec3 n = norm(p - dir * epsilon * 2., float(time)*0.04);
+    if (mapPl(p, float(time)*0.04 ) < 0. && removeWater) {
+     // cccc *= vec3(0.2, 0.6, 0.9);
     }
     vec3 brdf = cccc;
 
     if (l > 0.01) {
-      currCol += l * cccc;
+      currCol += l * cccc/3.14159;
       isEM = 1.;
     }
     // p += n * epsilon*2.;
@@ -160,7 +162,7 @@ void main() {
       vec3 newNorm = imageLoad(rcnorm, newP).xyz;
 
       if (length(newNorm) > 0.01) {
-        currCol += brdf * imageLoad(rcrad, newP).xyz * 0.5;
+        currCol += max(dot(dir, N),0.)* brdf * imageLoad(rcrad, newP).xyz /3.14159;
       }
       // }
 
@@ -175,7 +177,7 @@ void main() {
             sunStrength *
             mix(vec3(0.9, 0.7, 0.5), vec3(0.9, 0.85, 0.8), max(ldir.y, 0.)) *
             pow(max(dot(normalize(ldir), vec3(0., 1., 0.)), 0.),
-                3.); /// max(length(p-cmmm)*length(p-cmmm),0.1);
+                2.); /// max(length(p-cmmm)*length(p-cmmm),0.1);
         //     }
         // }
       }
@@ -201,14 +203,16 @@ n),0.)*sunStrength*sunColor*pow(max(dot(ldir, vec3(0.,0.,1.)),0.), 2.);
       // currCol = (cccc)*skyp2(dir.xzy, ldir)*skyStrength;
       // currCol += sky(vec3(0.), dir.xzy, normalize(ldir).xzy)*
       // max(dot(normalize(ldir).xzy, vec3(0.,0.,1.)),0.34)*skyStrength;
-      vec3 rayDirection = dir.xzy;
+      vec3 rayDirection = dir;
+                          rayDirection.y *= -1.;
+
       rayDirection = normalize(rayDirection);
-      vec2 TX = vec2((atan(rayDirection.z, rayDirection.x) /
-                      6.283185307179586476925286766559) +
-                         0.5,
-                     acos(rayDirection.y) / 3.1415926535897932384626433832795);
-      currCol += texture2D(skytex, TX).rgb *
-                 max(dot(normalize(ldir).xzy, vec3(0., 0., 1.)), 0.34) *
+      vec2 a = normalize(rayDirection.xy);
+        float x = (a.y < 0.)?2.*3.14159 - acos(a.x):acos(a.x);
+        x /= 2.*3.14159;
+        float y = acos(rayDirection.z)/3.14159;
+        vec2 TX = vec2(x,y); 
+      currCol += texture2D(skytex, TX).rgb  *
                  skyStrength;
     }
   }

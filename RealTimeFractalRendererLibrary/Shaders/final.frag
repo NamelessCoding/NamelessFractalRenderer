@@ -2,27 +2,33 @@
 out vec4 outputColor;
 in vec2 texCoord;
 
-layout(binding = 0, Rgba16f) uniform image3D rcpos;
+layout(binding = 0, Rgba32f) uniform image3D rcpos;
 
+uniform sampler2D color;
 uniform sampler2D normal;
 uniform sampler2D albedo;
-
+uniform sampler2D var1;
 uniform sampler2D TAA;
 
 uniform sampler2D fogLO;
 uniform sampler2D watpos;
 uniform sampler2D debuggedTexture;
 
+uniform sampler2D position;
+
 uniform mat4 projection;
 
 uniform vec2 wh;
-uniform float time;
+//uniform float time;
 
 uniform vec3 viewPos;
 
 uniform float brightness;
 uniform int enableBlur;
 uniform int enableTextureDebugging;
+
+uniform mat4 prevview;
+uniform mat4 prevproj;
 
 vec3 tonemap_uchimura2(vec3 v) {
   const float P = 1.0;  // max display brightness
@@ -645,7 +651,7 @@ void main() {
   // Color = kaw(Color);
   bool mixen = false;
   if (fov < 3.14159 * 0.3) {
-    fc = 4.;
+    fc = 3.;
     mixen = true;
   }
 
@@ -661,20 +667,45 @@ void main() {
   }
   // color2 = texture2D(fogLO, texCoord).xyz;
 
+ uint seedCam2 = uint(time);
+  vec2 smallOffset2 =
+      ((vec2(rndf(seedCam2), rndf(seedCam2))) * 2. - 1.) / wh;
+  vec3 currPos = texture2D(position, texCoord-smallOffset2).xyz;
+/*
+  vec4 view = vec4(currPos, 1.);
+  vec4 mm = prevproj*prevview*view;
+  mm.xyz /= mm.w;
+  mm.xy = mm.xy*0.5+0.5;
+
+  vec2 motion = texCoord - mm.xy;
+  vec2 mov = normalize(motion);
+  float movamount = length(motion);
+  vec2 startPos = texCoord;
+  vec3 accum = vec3(0.);
+  for(int i = 0; i < 20; i++){
+    	startPos += mov*movamount*0.2*exp(-depth*0.1);
+
+      startPos = clamp(startPos, 0., 1.);
+      accum += texture2D(fogLO, startPos).xyz;
+  }
+
+  color2 = accum/20.;
+  */
   // vec3 lodbloom(vec2 iResolution, float lod){
   vec3 blm = lodbloom(wh, 2.);
-  // color2 = mix(color2, pow(blm, vec3(1.2))*2., 0.2);
-  color2 += clamp(pow(blm, vec3(1.5)) * 0.6, 0., 10.);
-
+   //color2 = mix(color2, blm, 0.01);
+  //color2 = blm*1.;
+  //color2 = texture2D(TAA, texCoord).rgb;
+  //color2 = texture2D(color, texCoord).www/20.;
   vec3 col = color2;
 
   vec2 iResolution = wh;
   vec3 N = texture2D(normal, texCoord).xyz;
 
   float avgLuma =
-      pow(textureLod(fogLO, texCoord, ceil(log2(max(wh.x, wh.y)))).a, 2.);
+      pow(textureLod(fogLO, texCoord, ceil(log2(max(wh.x, wh.y))*0.95)).a, 2.);
   float EV100 = log2(avgLuma * 100. / 65.);
-  float exposure = clamp((0.5) * exp2(EV100), 0.00018, 1.);
+  float exposure = clamp((1.) * exp2(EV100), 0.000018, 1.);
   col = max(col, 0.);
   col /= exposure;
   col *= brightness;
@@ -683,21 +714,28 @@ void main() {
   vec2 smallOffset =
       ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
 
+//col = texture2D(var1, texCoord).xxx;
+
+if(brightness >= 1.0 || true  ){
   if (texture2D(albedo, texCoord).w < 0.5) {
-    col = srgb_to_oklch(col);
-    col.z *= 1.2;
-    col.y *= 1.2;
+   /* col = srgb_to_oklch(col);
+    col.z *= 1.1;
+    col.y *= 1.1;
     col.x *= 0.7;
-    col = oklch_to_srgb(col);
+    col = oklch_to_srgb(col);*/
     //   col = pow(col, vec3(1.2, 1.5, 1.8));
     col = tonemap(col);
 
   } else {
     col = srgb_to_oklch(col);
-    col.x *= 0.6;
+    col.x *= 0.83;
     col = oklch_to_srgb(col);
     col = do_agx(vec4(col, 1.)).xyz;
-  }
 
+  }
+}else{
+    col = tonemap(col);
+}
+  
   outputColor = vec4(gamma_correct(col), 1.);
 }

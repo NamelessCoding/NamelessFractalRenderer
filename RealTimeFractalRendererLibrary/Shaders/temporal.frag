@@ -40,6 +40,12 @@ float lum(vec3 c) {
 
 void main() {
   vec2 fragCoord = texCoord * wh;
+
+  //vec2 fragCoord = texCoord * wh;
+
+  if(int(fragCoord.x) % 2 == int(time)%2 && int(fragCoord.y) % 2 == int(time)%2){
+      //discard;
+   }
   uint r = uint(uint(fragCoord.x) * uint(1973) +
                 uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
            uint(1);
@@ -87,12 +93,13 @@ void main() {
   float Rw = weigthR.y;
   float RW = weigthR.z;
   vec3 LO = texture2D(prevL, ProjectedCoordinates).xyz;
-
+  float ADDLO = texture2D(prevL, ProjectedCoordinates).w;
   if (outsc) {
-    RM = 0.;
-    RW = 0.;
-    Rw = 0.;
-    LO = InitSampleLO;
+    //RM = 0.;
+   // RW = 0.;
+   // Rw = 0.;
+   // LO = InitSampleLO;
+   // ADDLO = texture2D(color, texCoord).w;
   }
 
   //  vec3 test = LO*0.9 + InitSampleLO*0.1;
@@ -118,6 +125,7 @@ void main() {
   /// bool changed = false;
   if (rndf(r) < w / max(Rw, 0.001)) {
     LO = InitSampleLO;
+    ADDLO = texture2D(color, texCoord).w;
     // isK = globalIllum.w;
     _pst = pst;
     //_nst = nst;
@@ -132,7 +140,7 @@ void main() {
   }
 
   weigths = vec4(RM, Rw, RW, 1.0);
-  outrad = vec4(clamp(LO, 0., 1000.), 1.0);
+  outrad = vec4(clamp(LO, 0., 1000.), ADDLO);
   outpos = _pst;
 
   // weigths;

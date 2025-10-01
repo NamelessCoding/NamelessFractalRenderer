@@ -4,6 +4,7 @@ using OpenTK.Mathematics;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
 
 namespace RealTimeFractalRendererLibrary
 {
@@ -27,6 +28,53 @@ namespace RealTimeFractalRendererLibrary
             1, 2, 3    // second triangle
         ];
 
+
+        /*private struct volumeStruct
+        {
+            public float colour_x, colour_y, colour_z;
+            public float wx, wy, wz;
+            public float colour_xs, colour_ys, colour_zs;
+            public float wxs, wys, wzs;
+
+        }*/
+
+        private struct volumeStruct
+        {
+            public Vector3 col, weigths, colspat, weightsspat, prevLO, prevw;
+
+        }
+
+        private struct Level
+        {
+            //public Vector3 col, weigths, colspat, weightsspat, prevLO, prevw;
+            public uint isEmpty;
+
+        }
+        private struct radianceCache
+        {
+            //public Vector3 col, weigths, colspat, weightsspat, prevLO, prevw;
+            public Vector3 col;
+            public Vector3 pos;
+            public Vector3 normal;
+
+        }
+
+        /* [StructLayout(LayoutKind.Explicit, Size = 64)]
+         public struct volumeStruct
+         {
+             [FieldOffset(0)]
+             public Vector3 col;
+
+             [FieldOffset(16)]
+             public Vector3 weigths;
+
+             [FieldOffset(32)]
+             public Vector3 colspat;
+
+             [FieldOffset(48)]
+             public Vector3 weightsspat;
+         }*/
+
         private readonly TextureBinding colortex = new(nameof(colortex));
         private readonly TextureBinding colortexHoldInfo = new(nameof(colortexHoldInfo));
 
@@ -39,6 +87,11 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding colortexSecondPosition = new(nameof(colortexSecondPosition));
         private readonly TextureBinding colortexSecondAlbedo = new(nameof(colortexSecondAlbedo));
 
+
+        private readonly TextureBinding sssTex = new(nameof(sssTex));
+        private readonly TextureBinding sssTexDenoise = new(nameof(sssTexDenoise));
+
+
         private readonly TextureBinding watpos = new(nameof(watpos));
         private readonly TextureBinding watnorm = new(nameof(watnorm));
 
@@ -46,6 +99,14 @@ namespace RealTimeFractalRendererLibrary
         private Shader _initShader = default!;
         private readonly TextureBinding colorfog = new(nameof(colorfog));
         private readonly TextureBinding colorfog2 = new(nameof(colorfog2));
+
+
+
+        int Buffer1;
+        int Buffer2;
+        int Buffer3;
+
+        int radianceCacheBuffer;
 
         int colorbuff;
         Stopwatch stopWatch = default!;
@@ -56,6 +117,10 @@ namespace RealTimeFractalRendererLibrary
         private Shader _finalShader = default!;
 
         private Shader _TemporalRestirShader = default!;
+        private Shader _spatPrePass = default!;
+        int _spatPrePassbuff;
+
+
         int temporalbuff;
         private readonly TextureBinding temporalWeigths = new(nameof(temporalWeigths));
         private readonly TextureBinding temporalOutgoingRadiance = new(nameof(temporalOutgoingRadiance));
@@ -107,10 +172,10 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding var1 = new(nameof(var1));
         private readonly TextureBinding var2 = new(nameof(var2));
 
-        private readonly TextureBinding rcpos = new(TextureTarget.Texture3D);
-        private readonly TextureBinding rcnorm = new(TextureTarget.Texture3D);
-        private readonly TextureBinding rcrad = new(TextureTarget.Texture3D);
-        private readonly TextureBinding rcfog = new(TextureTarget.Texture3D);
+        private readonly TextureBinding rcpos = new(nameof(rcpos), TextureTarget.Texture3D);
+        private readonly TextureBinding rcnorm = new(nameof(rcnorm), TextureTarget.Texture3D);
+        private readonly TextureBinding rcrad = new(nameof(rcrad), TextureTarget.Texture3D);
+        private readonly TextureBinding rcfog = new(nameof(rcfog), TextureTarget.Texture3D);
 
       
 
@@ -126,7 +191,13 @@ namespace RealTimeFractalRendererLibrary
 
 
         private Shader _RC = default!;
-        private Shader _FL = default!;
+        //private Shader _FL = default!;
+        //private Shader _FL2 = default!;
+        //private Shader _FL3 = default!;
+       // private Shader _FL4 = default!;
+        private Shader _Calculate = default!;
+        private Shader _Calculate1 = default!;
+        private Shader _Calculate2 = default!;
 
         private readonly TextureBinding worley = new(nameof(worley), TextureTarget.Texture3D);
 
@@ -142,10 +213,10 @@ namespace RealTimeFractalRendererLibrary
 
         private Vector3 prevCamPos = new(0.0f, 0.0f, 0.0f);
 
-        private const bool EnableDebugging = true;
+        private const bool EnableDebugging = false;
         private const bool isEverythingLower = true;
 
-        private const float KeepScale = 1.25f; //the default scale
+        private const float KeepScale = 1.0f; //the default scale
         private static float ScaleEverything = KeepScale;
 
         private const int shadowScale = 2048;
@@ -203,7 +274,7 @@ namespace RealTimeFractalRendererLibrary
         private bool isInitialized = false;
 
         float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-        void setupTex2D(int texture, bool scaleTexture = true, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
+        void setupTex2D(int texture, bool scaleTexture = true, PixelInternalFormat format = PixelInternalFormat.Rgba32f,
             TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
             TextureWrapMode wrapMode = TextureWrapMode.MirroredRepeat, bool customSize = false, int sizeX = 0, int sizeY = 0) {
             GL.ActiveTexture(TextureUnit.Texture0);
@@ -247,8 +318,8 @@ namespace RealTimeFractalRendererLibrary
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)magFilter);
 
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)wrapMode);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapModeZ);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)wrapModeZ);
 
             GL.TexImage3D(TextureTarget.Texture3D, 0,
                 format,
@@ -314,11 +385,14 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(suntex.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder,
                 true, shadowScale, shadowScale);
             setupTex3D(worley.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcpos.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcfog.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcnorm.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcpos.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcfog.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            setupTex3D(rcnorm.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex3D(rcrad.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             setupTex2D(colortex.Handle, false);
+            setupTex2D(sssTex.Handle, false);
+            //sssTexDenoise
+            setupTex2D(sssTexDenoise.Handle, false, PixelInternalFormat.Rgba32f);
             setupTex2D(colortexPosition.Handle, true, PixelInternalFormat.Rgba32f);
             setupTex2D(colortexFogPos.Handle, false);
             setupTex2D(colortexHoldInfo.Handle);
@@ -333,8 +407,8 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(spatialWeigths.Handle, false);
             setupTex2D(spatialOutgoingRadiance.Handle, false);
             setupTex2D(TAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            setupTex2D(upscale.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
-            setupTex2D(upscale2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.NearestMipmapLinear, TextureMagFilter.Nearest);
+            setupTex2D(upscale.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            setupTex2D(upscale2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
             setupTex2D(prevTemporalWeigths.Handle, false);
             setupTex2D(prevTemporalOutgoingRadiance.Handle, false);
             setupTex2D(prevTemporalPosition.Handle, false);
@@ -349,39 +423,56 @@ namespace RealTimeFractalRendererLibrary
             setupTex2D(var2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             setupTex2D(tempAccum.Handle);
 
+            /*   private struct volumeStruct
+           {
+               public Vector3 colour;
+           }*/
+
+            //262144
+            //884736
+            // var arrVolume = new volumeStruct[884736];
+            
+
             //Setup Framebuffer Objects
             skybuff = CreateFramebufferObject(skytex);
             sunbuff = CreateFramebufferObject(suntex);
             colorbuff2 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
-            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, colortexFogPos);
+            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, sssTex, sssTexDenoise);
             temporalbuff = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition);
-            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance);
+            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance, colortexFogPos);
             TAAbuff = CreateFramebufferObject(TAA);
             upscaleBuff = CreateFramebufferObject(upscale);
-            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA, upscale2);
+            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA);
             swapbuff2 = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
-            den1buff = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo);
-            den2buff = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo);
+            den1buff = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo, sssTexDenoise);
+            den2buff = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo, sssTexDenoise);
             tempAccumbuff = CreateFramebufferObject(tempAccum, den1, var1);
-
+            _spatPrePassbuff = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition);
             //Compile shader programs
-            _skyShader = new Shader("Shaders/sky.vert", "Shaders/sky.frag");
-            _sunShader = new Shader("Shaders/sun.vert", "Shaders/sun.frag", true);
-            _testShader = new Shader("Shaders/Test.vert", "Shaders/Test.frag", true);
-            _initShader = new Shader("Shaders/initial.vert", "Shaders/initial.frag", true);
-            _finalShader = new Shader("Shaders/final.vert", "Shaders/final.frag", true);
-            _TemporalRestirShader = new Shader("Shaders/temporal.vert", "Shaders/temporal.frag");
-            _swapShader = new Shader("Shaders/swap.vert", "Shaders/swap.frag");
-            _swapShader2 = new Shader("Shaders/swap2.vert", "Shaders/swap2.frag");
-            _SpatialRestirShader = new Shader("Shaders/spatial.vert", "Shaders/spatial.frag", true);
-            _tempAccumShader = new Shader("Shaders/tempAccum.vert", "Shaders/tempAccum.frag");
-            _denoiseShader = new Shader("Shaders/denoise1.vert", "Shaders/denoise1.frag");
-            _TAAShader = new Shader("Shaders/TAA.vert", "Shaders/TAA.frag");
-            _RC = new Shader("Shaders/RadianceCaching.comp", true);
-            _FL = new Shader("Shaders/FillTexture.comp", true);
-            _upscale = new Shader("Shaders/upscale.vert", "Shaders/upscale.frag");
-            _worl = new Shader("Shaders/worley.comp", false);
+            _skyShader = new Shader("sky.vert", "sky.frag");
+            _sunShader = new Shader("sun.vert", "sun.frag", true);
+            _testShader = new Shader("Test.vert", "Test.frag", true);
+            _initShader = new Shader("initial.vert", "initial.frag", true);
+            _finalShader = new Shader("final.vert", "final.frag", true);
+            _TemporalRestirShader = new Shader("temporal.vert", "temporal.frag");
+            _swapShader = new Shader("swap.vert", "swap.frag");
+            _swapShader2 = new Shader("swap2.vert", "swap2.frag");
+            _SpatialRestirShader = new Shader("spatial.vert", "spatial.frag", true);
+            _tempAccumShader = new Shader("tempAccum.vert", "tempAccum.frag");
+            _denoiseShader = new Shader("denoise1.vert", "denoise1.frag");
+            _TAAShader = new Shader("TAA.vert", "TAA.frag");
+            _RC = new Shader("RadianceCaching.comp", true);
+            //_FL = new Shader("FillTexture.comp", true);
+           // _FL2 = new Shader("FillTexturePrev.comp", true);
+           // _FL3 = new Shader("FillTextureSpatial.comp", true);
+           // _FL4 = new Shader("FillTextureSpatialTemp.comp", true);
+            _Calculate = new Shader("CalculateLowest.comp", true);
+            _Calculate1 = new Shader("CalculateMiddle.comp", true);
+            _Calculate2 = new Shader("CalculateHighest.comp", true);
 
+            _upscale = new Shader("upscale.vert", "upscale.frag");
+            _worl = new Shader("worley.comp", false);
+            _spatPrePass = new Shader("spatPrePass.vert", "spatPrePass.frag");
             quadVBO = GL.GenBuffer();
             quadVAO = GL.GenVertexArray();
             quadEBO = GL.GenBuffer();
@@ -412,6 +503,10 @@ namespace RealTimeFractalRendererLibrary
             _testShader.SetInt("suntex", suntex.Unit);
             _testShader.SetInt("watpos", watpos.Unit);
             _testShader.SetInt("watnorm", watnorm.Unit);
+            _testShader.SetInt("sssprev", sssTex.Unit);
+            //prevN
+            _testShader.SetInt("prevN", prevNormalDepth.Unit);
+            _testShader.SetInt("den1", den2.Unit);
 
             _TemporalRestirShader.Use();
             _TemporalRestirShader.SetInt("color", colortex.Unit);
@@ -422,6 +517,18 @@ namespace RealTimeFractalRendererLibrary
             _TemporalRestirShader.SetInt("prevL", prevTemporalOutgoingRadiance.Unit);
             _TemporalRestirShader.SetInt("prevP", prevTemporalPosition.Unit);
             _TemporalRestirShader.SetInt("prevN", prevNormalDepth.Unit);
+
+
+            //_spatPrePass
+            _spatPrePass.Use();
+            _spatPrePass.SetInt("color", colortex.Unit);
+            _spatPrePass.SetInt("position", colortexPosition.Unit);
+            _spatPrePass.SetInt("normal", colortexNormal.Unit);
+            _spatPrePass.SetInt("secondpos", colortexSecondPosition.Unit);
+            _spatPrePass.SetInt("prevW", temporalWeigths.Unit);
+            _spatPrePass.SetInt("prevL", temporalOutgoingRadiance.Unit);
+            _spatPrePass.SetInt("prevP", temporalPosition.Unit);
+            _spatPrePass.SetInt("prevN", prevNormalDepth.Unit);
             //_TemporalRestirShader.SetInt("reflAlb", colortexSecondAlbedo.Unit);
 
             _SpatialRestirShader.Use();
@@ -436,7 +543,10 @@ namespace RealTimeFractalRendererLibrary
             _SpatialRestirShader.SetInt("tempW", temporalWeigths.Unit);
             _SpatialRestirShader.SetInt("tempL", temporalOutgoingRadiance.Unit);
             _SpatialRestirShader.SetInt("prevN", prevNormalDepth.Unit);
-         
+            _SpatialRestirShader.SetInt("prevSPos", colortexFogPos.Unit);
+            _SpatialRestirShader.SetInt("holdinfo", colortexHoldInfo.Unit);
+
+            //colortexFogPos
             _tempAccumShader.Use();
             //_tempAccumShader.SetInt("color", colortex.Unit);
             _tempAccumShader.SetInt("position", colortexPosition.Unit);
@@ -447,9 +557,10 @@ namespace RealTimeFractalRendererLibrary
             _tempAccumShader.SetInt("prevN", prevNormalDepth.Unit);
             _tempAccumShader.SetInt("prevAcc", prevAcc.Unit);
             _tempAccumShader.SetInt("prevvar", var2.Unit);
+            _tempAccumShader.SetInt("prevden", den2.Unit);
 
             _denoiseShader.Use();
-            _denoiseShader.SetInt("color", colortex.Unit);
+            _denoiseShader.SetInt("color", temporalOutgoingRadiance.Unit);
             //_denoiseShader.SetInt("position", colortexPosition.Unit);
             _denoiseShader.SetInt("normal", colortexNormal.Unit);
             _denoiseShader.SetInt("albedo", colortexAlbedo.Unit);
@@ -460,6 +571,10 @@ namespace RealTimeFractalRendererLibrary
             _denoiseShader.SetInt("holdinfo", colortexHoldInfo.Unit);
             _denoiseShader.SetInt("watpos", watpos.Unit);
             _denoiseShader.SetInt("watnorm", watnorm.Unit);
+            _denoiseShader.SetInt("tempacc", tempAccum.Unit);
+            _denoiseShader.SetInt("sstexden", sssTexDenoise.Unit);
+            _denoiseShader.SetInt("colorTex", colortex.Unit);
+
             //_denoiseShader - some ping-pong textures are set each frame so they're omitted here
 
             _TAAShader.Use();
@@ -479,17 +594,22 @@ namespace RealTimeFractalRendererLibrary
             _TAAShader.SetInt("watpos", watpos.Unit);
             _TAAShader.SetInt("watnorm", watnorm.Unit);
             _TAAShader.SetInt("worl", worley.Unit);
+            _TAAShader.SetInt("sssT", sssTexDenoise.Unit);
+            _TAAShader.SetInt("sssT2", sssTex.Unit);
+            _TAAShader.SetInt("prevN", prevNormalDepth.Unit);
+            _TAAShader.SetInt("holdinfo", colortexHoldInfo.Unit);
+            _TAAShader.SetInt("color", colortex.Unit);
+            _TAAShader.SetInt("var", var1.Unit);
+
 
             _upscale.Use();
             _upscale.SetInt("TAA", TAA.Unit);
-           
 
             _swapShader.Use();
           
             _swapShader.SetInt("normal", colortexNormal.Unit);
             _swapShader.SetInt("Acc", tempAccum.Unit);
             _swapShader.SetInt("TAA", TAA.Unit);
-            _swapShader.SetInt("up", upscale.Unit);
 
             _swapShader2.Use();
             _swapShader2.SetInt("tempWeights", temporalWeigths.Unit);
@@ -500,13 +620,15 @@ namespace RealTimeFractalRendererLibrary
         
 
             _finalShader.Use();
-            //_finalShader.SetInt("color", colortex.Unit);
+            _finalShader.SetInt("color", prevSpatialWeigths.Unit);
             _finalShader.SetInt("normal", colortexNormal.Unit);
             _finalShader.SetInt("albedo", colortexAlbedo.Unit);
    
             _finalShader.SetInt("TAA", upscale.Unit); //TODO: review. "TAA" sampler is bound to "upscale" here.
             _finalShader.SetInt("fogLO", TAA.Unit); //TODO: review. "fogLO" sampler is bound to "TAA" here.
             _finalShader.SetInt("watpos", watpos.Unit);
+            _finalShader.SetInt("position", colortexPosition.Unit);
+            _finalShader.SetInt("var1", var2.Unit);
 
 
 
@@ -540,13 +662,99 @@ namespace RealTimeFractalRendererLibrary
             GL.DispatchCompute(64, 64, 64);
 
             //setup image unit bindings
-            GL.BindImageTexture(0, rcpos.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            GL.BindImageTexture(1, rcnorm.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(0, rcpos.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
+            GL.BindImageTexture(1, rcnorm.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
             GL.BindImageTexture(2, rcrad.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            GL.BindImageTexture(3, rcfog.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(3, rcfog.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
             GL.BindImageTexture(4, suntex.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
             //CursorState = CursorState.Grabbed;
+            /*
+            _FL.Use();
+            GL.BindVertexArray(quadVAO);
+            _FL.SetVector3(_camera.Position, "viewPos");
+            _FL.SetVector3(prevCamPos, "lastViewPos");
+
+            GL.DispatchCompute(32, 32, 32);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+          */
+            //32*32*32*12
+            var firstBuffer = new radianceCache[393216];
+            
+            
+            
+            var secondBuffer = new Level[4096];
+            var thirdBuffer = new Level[1728000];
+
+            //first = 48^3
+
+
+            //volumetricsBuffer
+            /*Buffer1 = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, Buffer1);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, firstBuffer.Length * Marshal.SizeOf<Level>(), firstBuffer, BufferUsageHint.DynamicDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, Buffer1);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
+
+            //volumetricsBufferPrev
+            Buffer2 = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, Buffer2);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, secondBuffer.Length * Marshal.SizeOf<Level>(), secondBuffer, BufferUsageHint.DynamicDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, Buffer2);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
+
+            Buffer3 = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, Buffer3);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, thirdBuffer.Length * Marshal.SizeOf<Level>(), thirdBuffer, BufferUsageHint.DynamicDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 8, Buffer3);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
+
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, Buffer1);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, Buffer2);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 8, Buffer3);
+            */
+
+            radianceCacheBuffer = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, radianceCacheBuffer);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, firstBuffer.Length * Marshal.SizeOf<radianceCache>(), firstBuffer, BufferUsageHint.DynamicDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, radianceCacheBuffer);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
+
+
+
+            _Calculate.Use();
+            GL.BindVertexArray(quadVAO);
+            _Calculate.SetVector3(_camera.Position, "viewPos");          
+            _Calculate.SetFloat(iFrame, "time");
+          
+
+            GL.DispatchCompute(30, 30, 30);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+
+
+           /* _Calculate1.Use();
+            GL.BindVertexArray(quadVAO);
+            _Calculate1.SetVector3(_camera.Position, "viewPos");
+            _Calculate1.SetFloat(iFrame, "time");
+
+
+            GL.DispatchCompute(15, 15, 15);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+
+
+            _Calculate2.Use();
+            GL.BindVertexArray(quadVAO);
+            _Calculate2.SetVector3(_camera.Position, "viewPos");
+            _Calculate2.SetFloat(iFrame, "time");
+
+
+            GL.DispatchCompute(10, 10, 10);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+           */
 
             isInitialized = true;
         }
@@ -591,22 +799,71 @@ namespace RealTimeFractalRendererLibrary
             Matrix4 lightproj2 = Matrix4.CreateOrthographic(400.0f, 400.0f, 0.0f, 800.0f);
 
             //Matrix4 lightproj2 = Matrix4.CreatePerspectiveFieldOfView(3.14159f / 1.2f, 1.0f, 0.01f, 120.0f);
+            Matrix4 view = _camera.GetViewMatrix();
+            Matrix4 projection = _camera.GetProjectionMatrix();
+            //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, modelMatricesBuffer);
 
+            
 
-            _FL.Use();
+          /*  _FL.Use();
             GL.BindVertexArray(quadVAO);
             _FL.SetVector3(_camera.Position, "viewPos");
             _FL.SetVector3(prevCamPos, "lastViewPos");
+            _FL.SetMatrix4(view.Inverted(), "invview");
+            _FL.SetMatrix4(projection.Inverted(), "invproj"); 
+            _FL.SetFloat(iFrame, "time");
+            _FL.SetMatrix4(prevView, "prevview");
+            _FL.SetMatrix4(prevProjection, "prevproj");
+            _FL.SetMatrix4(view, "view");
+            _FL.SetMatrix4(projection, "proj");
 
-            GL.DispatchCompute(64, 64, 64);
+
+
+
+            GL.DispatchCompute(24, 24, 24);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+          */
+
+          /*  _FL4.Use();
+            GL.BindVertexArray(quadVAO);
+            _FL4.SetVector3(_camera.Position, "viewPos");
+            _FL4.SetVector3(prevCamPos, "lastViewPos");
+            _FL4.SetMatrix4(view.Inverted(), "invview");
+            _FL4.SetMatrix4(projection.Inverted(), "invproj");
+            _FL4.SetFloat(iFrame, "time");
+            _FL4.SetMatrix4(prevView, "prevview");
+            _FL4.SetMatrix4(prevProjection, "prevproj");
+            _FL4.SetMatrix4(view, "view");
+            _FL4.SetMatrix4(projection, "proj");
+
+            GL.DispatchCompute(24, 24, 24);
 
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
 
 
+
+            _FL3.Use();
+            GL.BindVertexArray(quadVAO);
+            _FL3.SetVector3(_camera.Position, "viewPos");
+            _FL3.SetVector3(prevCamPos, "lastViewPos");
+            _FL3.SetMatrix4(view.Inverted(), "invview");
+            _FL3.SetMatrix4(projection.Inverted(), "invproj");
+            _FL3.SetFloat(iFrame, "time");
+            _FL3.SetMatrix4(prevView, "prevview");
+            _FL3.SetMatrix4(prevProjection, "prevproj");
+            _FL3.SetMatrix4(view, "view");
+            _FL3.SetMatrix4(projection, "proj");
+
+            GL.DispatchCompute(24, 24, 24);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+          */
+            
+
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
 
-            Matrix4 view = _camera.GetViewMatrix();
-            Matrix4 projection = _camera.GetProjectionMatrix();
+           
             GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
             //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             //GL.Clear(ClearBufferMask.ColorBufferBit);
@@ -634,6 +891,7 @@ namespace RealTimeFractalRendererLibrary
             _skyShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
             _skyShader.SetFloat(iFrame, "time");
             _skyShader.SetVector3(ldir, "ldir");
+            _skyShader.SetFloat(cloudCoverage, "cloudCoverage");
      
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(skytex.Handle);
@@ -647,6 +905,8 @@ namespace RealTimeFractalRendererLibrary
             //GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
             _sunShader.Use();
+            _sunShader.SetFloat(iFrame, "time");
+
             _sunShader.SetVector3(ldir, "ldir");
             _sunShader.SetVector3(lpos, "lpos");
             _sunShader.SetMatrix4(lightproj, "lightproj");
@@ -694,6 +954,9 @@ namespace RealTimeFractalRendererLibrary
             _testShader.SetMatrix4(lightproj, "lightproj");
             _testShader.SetMatrix4(lightview, "lightview");
             //_testShader.SetVector3(lpos, "lpos");
+            _testShader.SetMatrix4(prevView, "prevview");
+            _testShader.SetMatrix4(prevProjection, "prevproj");
+
 
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
@@ -716,6 +979,25 @@ namespace RealTimeFractalRendererLibrary
 
             ///==========================================================
 
+            ///==========================================================
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _spatPrePassbuff);
+
+            GL.Viewport(0, 0, (int)size.X, (int)size.Y);
+            GL.Disable(EnableCap.DepthTest);
+            _spatPrePass.Use();
+
+            _spatPrePass.SetMatrix4(prevView, "prevview");
+            _spatPrePass.SetMatrix4(prevProjection, "prevproj");
+
+            _spatPrePass.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _spatPrePass.SetFloat(iFrame, "time");
+
+            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+
+            ///==========================================================
+
+
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialbuff);
 
             GL.Viewport(0, 0, (int)size.X, (int)size.Y);
@@ -726,7 +1008,8 @@ namespace RealTimeFractalRendererLibrary
             _SpatialRestirShader.SetMatrix4(prevProjection, "prevproj");
             _SpatialRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
             _SpatialRestirShader.SetFloat(iFrame, "time");
-           
+            _SpatialRestirShader.SetVector3(_camera.Position, "viewPos");
+
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
 
             ///==========================================================
@@ -752,6 +1035,7 @@ namespace RealTimeFractalRendererLibrary
             _denoiseShader.Use();
     
             _denoiseShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
+            _denoiseShader.SetFloat(iFrame, "time");
 
             for (int i = 0; i < 7; i++)
             {
@@ -792,7 +1076,8 @@ namespace RealTimeFractalRendererLibrary
             _TAAShader.SetVector3(ldir, "ldir");
             _TAAShader.SetMatrix4(lightproj, "lightproj");
             _TAAShader.SetMatrix4(lightview, "lightview");
-                        
+            _TAAShader.SetMatrix4(view, "view");
+            _TAAShader.SetMatrix4(projection, "proj");
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
             GL.GenerateTextureMipmap(TAA.Handle);
                         
@@ -805,8 +1090,11 @@ namespace RealTimeFractalRendererLibrary
             _upscale.Use();
          
             _upscale.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-         
+            _upscale.SetFloat( KeepScale, "scale");
+
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(upscale.Handle);
+
             //GL.GenerateTextureMipmap(!isEverythingLower ? upscale2 : upscale); //TODO: review, this seems intended but causes a "ghost" sky effect
 
             ///=========================================================
@@ -847,8 +1135,30 @@ namespace RealTimeFractalRendererLibrary
             _finalShader.SetInt("enableBlur", EnableBlur ? 1 : 0);
             _finalShader.SetInt("enableTextureDebugging", DebuggedTexture is not null ? 1 : 0);
             _finalShader.SetInt("debuggedTexture", DebuggedTexture?.Unit ?? 0);
-
+            _finalShader.SetMatrix4(prevView, "prevview");
+            _finalShader.SetMatrix4(prevProjection, "prevproj");
             GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+
+
+
+          /*  
+            _FL2.Use();
+            GL.BindVertexArray(quadVAO);
+            _FL2.SetVector3(_camera.Position, "viewPos");
+            _FL2.SetVector3(prevCamPos, "lastViewPos");
+            _FL2.SetMatrix4(view.Inverted(), "invview");
+            _FL2.SetMatrix4(projection.Inverted(), "invproj");
+            _FL2.SetFloat(iFrame, "time");
+            _FL2.SetMatrix4(prevView, "prevview");
+            _FL2.SetMatrix4(prevProjection, "prevproj");
+            _FL2.SetMatrix4(view, "view");
+            _FL2.SetMatrix4(projection, "proj");
+
+            GL.DispatchCompute(24, 24, 24);
+
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+          */
+
 
             prevView = view;
             prevProjection = projection;

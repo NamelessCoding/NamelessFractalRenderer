@@ -1,0 +1,116 @@
+﻿
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+
+uniform vec3 viewPos;
+
+struct packedvec3{
+  float x,y,z;
+};
+
+struct volumetricsBuffer {
+    packedvec3 colour;
+    packedvec3 weigthsTemp;
+    packedvec3 colourspat;
+    packedvec3 weigthsspat;
+    packedvec3 Loprev;
+    packedvec3 wprev;
+
+};
+
+
+struct Level {
+    uint isEmpty;
+};
+
+
+layout(std430, binding=6) buffer buffHigh {
+    Level nodesHigh[];
+} nodesH;
+
+layout(std430, binding=7) buffer buffMid {
+    Level nodesMid[];
+} nodesM;
+
+layout(std430, binding=8) buffer buffLow {
+    Level nodesLow[];
+} nodesL;
+
+
+uint maxIDLow = 120;
+
+uint to1DLow(uint x, uint y, uint z){
+  return (x + y*maxIDLow + z*maxIDLow*maxIDLow);
+}
+
+uint maxIDMid = 16;
+
+uint to1DMid(uint x, uint y, uint z){
+  return (x + y*maxIDMid + z*maxIDMid*maxIDMid);
+}
+uint maxIDHigh = 5;
+
+uint to1DHigh(uint x, uint y, uint z){
+  return (x + y*maxIDHigh + z*maxIDHigh*maxIDHigh);
+}
+
+
+
+
+float lum(vec3 c) {
+  return sqrt(0.299 * c.x * c.x + 0.587 * c.y * c.y + 0.114 * c.z * c.z);
+}
+
+void main() {
+  // base pixel colour for image
+  // vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // get index in global work group i.e x,y position
+  // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+  uvec3 loc = (gl_GlobalInvocationID.xyz);
+
+  uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) +
+                uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
+           uint(1);
+  //between -10 and 10, so 20
+  vec3 currentPosition = ((pos/120.)*2.-1.)*20.;
+  bool isInside = false;
+  vec3 currSamp = currentPosition;
+  for(int i = 0; i < 27; i++){
+    vec3 offset = vec3(float(i%3), float((i/3)%3), float(i/9))-1.;
+    currSamp = currentPosition + offset*2.;
+    if(map(currSamp, time) < 0.15){
+      isInside = true;
+      break;
+    }
+  }
+
+
+  // if(map(currSamp, time) < 0.1){
+  //     isInside = true;
+  // }
+
+  uint end = 0;
+  if(isInside){
+    end = 1;
+  }
+  Level lev;
+  lev.isEmpty = end;
+
+  vec3 opposite = ((currSamp/20.)*0.5+0.5)*120.;
+  uint id = to1DLow(uint(opposite.x), uint(opposite.y), uint(opposite.z));
+  nodesL.nodesLow[id] = lev;
+
+
+
+  vec3 oppositeMid = ((currSamp/20.)*0.5+0.5)*16.;
+  vec3 oppositeHigh = ((currSamp/20.)*0.5+0.5)*5.;
+
+  uint idMid = to1DMid(uint(oppositeMid.x), uint(oppositeMid.y), uint(oppositeMid.z));
+  nodesM.nodesMid[idMid] = lev;
+
+  uint idHigh = to1DHigh(uint(oppositeHigh.x), uint(oppositeHigh.y), uint(oppositeHigh.z));
+  nodesH.nodesHigh[idHigh] = lev;
+}

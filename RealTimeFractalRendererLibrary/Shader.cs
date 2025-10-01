@@ -1,8 +1,10 @@
 ﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using RealTimeFractalRendererLibrary;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 
 namespace Common
 {
@@ -12,23 +14,30 @@ namespace Common
         public string Name;
         private readonly Dictionary<string, int> _uniformLocations = [];
 
+
+        private readonly string _shadersPath = "RealTimeFractalRendererLibrary.Shaders.";
+
         public Shader(string vertPath, string fragPath, bool incl = false)
         {
-          
-            //includeFile.include
-            Name = fragPath;
-            var include = File.ReadAllText("Shaders/includeFile.frag");
-            include += File.ReadAllText("Shaders/includeGlobals.frag");
 
-            var shaderSource = File.ReadAllText(vertPath);
+            //includeFile.include
+            var assembly = typeof(Shader).GetTypeInfo().Assembly;
+
+           // _vertexShaderHandle = GL.CreateShader(ShaderType.VertexShader);
+           // GL.ShaderSource(_vertexShaderHandle, new StreamReader(assembly.GetManifestResourceStream(_shadersPath + "quad.vert.shader")).ReadToEnd());
+
+            Name = fragPath;
+            var include = new StreamReader(assembly.GetManifestResourceStream(_shadersPath + "includeFile.frag")).ReadToEnd();
+            include += new StreamReader(assembly.GetManifestResourceStream(_shadersPath + "includeGlobals.frag")).ReadToEnd();
+            
 
             var vertexShader = GL.CreateShader(ShaderType.VertexShader);
-
+            var shaderSource = new StreamReader(assembly.GetManifestResourceStream(_shadersPath + vertPath)).ReadToEnd();
             GL.ShaderSource(vertexShader, shaderSource);
 
             CompileShader(vertexShader, Name);
 
-            shaderSource = File.ReadAllText(fragPath);
+            shaderSource = new StreamReader(assembly.GetManifestResourceStream(_shadersPath + fragPath)).ReadToEnd();
             if (incl)
             {
                 shaderSource = include + shaderSource;
@@ -66,12 +75,14 @@ namespace Common
 
         public Shader(string compPath, bool incl = false)
         {
-          
+            var assembly = typeof(Shader).GetTypeInfo().Assembly;
+
             Name = compPath;
 
-            var include = File.ReadAllText("Shaders/includeFile.frag");
-            include += File.ReadAllText("Shaders/includeGlobals.frag");
-            var shaderSource = File.ReadAllText(compPath);
+            var include = new StreamReader(assembly.GetManifestResourceStream(_shadersPath + "includeFile.frag")).ReadToEnd();
+            include += new StreamReader(assembly.GetManifestResourceStream(_shadersPath + "includeGlobals.frag")).ReadToEnd();
+
+            var shaderSource = new StreamReader(assembly.GetManifestResourceStream(_shadersPath + compPath)).ReadToEnd();
             if (incl)
             {
                 shaderSource = include + shaderSource;

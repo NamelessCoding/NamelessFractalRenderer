@@ -1,0 +1,101 @@
+﻿
+
+layout(local_size_x = 3, local_size_y = 3, local_size_z = 3) in;
+
+
+uniform vec3 viewPos;
+
+struct packedvec3{
+  float x,y,z;
+};
+
+struct volumetricsBuffer {
+    packedvec3 colour;
+    packedvec3 weigthsTemp;
+    packedvec3 colourspat;
+    packedvec3 weigthsspat;
+    packedvec3 Loprev;
+    packedvec3 wprev;
+
+};
+
+struct Level {
+    uint isEmpty;
+};
+
+
+layout(std430, binding=6) buffer buffHigh {
+    Level nodesHigh[];
+} nodesH;
+
+layout(std430, binding=7) buffer buffMid {
+    Level nodesMid[];
+} nodesM;
+
+layout(std430, binding=8) buffer buffLow {
+    Level nodesLow[];
+} nodesL;
+
+
+uint maxID = 30;
+
+uint to1D(uint x, uint y, uint z){
+  return (x + y*maxID + z*maxID*maxID);
+}
+
+
+
+float lum(vec3 c) {
+  return sqrt(0.299 * c.x * c.x + 0.587 * c.y * c.y + 0.114 * c.z * c.z);
+}
+
+void main() {
+  // base pixel colour for image
+  // vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+  // get index in global work group i.e x,y position
+  // ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+  uvec3 loc = (gl_GlobalInvocationID.xyz);
+
+  uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) +
+                uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
+           uint(1);
+  //between -10 and 10, so 20
+  vec3 currentPosition = ((pos/2.)*2.-1.)*10.;
+  bool isInside = false;
+  /*for(int i = 0; i < 27; i++){
+    vec3 offset = vec3(float(i%3), float((i/3)%3), float(i/9))-1.;
+    vec3 currSamp = currentPosition + offset*0.1;
+    if(map(currSamp, time) < 0.01){
+      isInside = true;
+      break;
+    }
+  }*/
+  uint id = to1D(loc.x, loc.y, loc.z);
+
+  Level lev1 = nodesM.nodesMid[id*8];
+  Level lev2 = nodesM.nodesMid[id*8+1];
+  Level lev3 = nodesM.nodesMid[id*8+2];
+  Level lev4 = nodesM.nodesMid[id*8+3];
+  Level lev5 = nodesM.nodesMid[id*8+4];
+  Level lev6 = nodesM.nodesMid[id*8+5];
+  Level lev7 = nodesM.nodesMid[id*8+6];
+  Level lev8 = nodesM.nodesMid[id*8+7];
+
+  
+  if(lev1.isEmpty > 0 || lev2.isEmpty > 0 || lev3.isEmpty > 0 || lev4.isEmpty > 0 || lev5.isEmpty > 0 || lev6.isEmpty > 0 ||
+   lev7.isEmpty > 0 || lev8.isEmpty > 0){
+    isInside = true;
+  }
+
+
+  uint end = 0;
+  if(isInside){
+    end = 1;
+  }
+  Level lev;
+  lev.isEmpty = end;
+  nodesH.nodesHigh[id] = lev;
+
+}

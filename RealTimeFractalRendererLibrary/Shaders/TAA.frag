@@ -1,14 +1,62 @@
-﻿#version 420
+﻿#version 430
 
-layout(binding = 0, Rgba16f) uniform image3D rcpos;
+layout(binding = 0, Rgba32f) uniform image3D rcpos;
+layout(binding = 3, Rgba32f) uniform image3D rcfog;
+
 
 layout(location = 0) out vec4 TAA;
 layout(location = 1) out vec4 prevPosition;
 layout(location = 2) out vec4 prevSecondPosition;
-
-// prevSecondPosition
 in vec2 texCoord;
 
+/*
+struct packedvec3{
+  float x,y,z;
+};
+
+
+struct volumetricsBuffer {
+    packedvec3 colour;
+    packedvec3 weigthsTemp;
+    packedvec3 colourspat;
+    packedvec3 weigthsspat;
+    packedvec3 Loprev;
+    packedvec3 wprev;
+
+};
+layout(std430, binding=6) buffer volumebuff {
+    volumetricsBuffer volumenodes[];
+} volumessbo;
+
+uint maxID = 96;
+
+uint to1D(uint x, uint y, uint z){
+  return (x + y*maxID + z*maxID*maxID);
+}*/
+
+float near = 0.01;
+float far = 100.;
+//copied:
+//depth between -1 and 1
+//https://learnopengl.com/Advanced-OpenGL/Depth-testing
+float LinearizeDepth(float depth) 
+{
+    float z = depth * 2.0 - 1.0; // back to NDC 
+    return (2.0 * near * far) / (far + near - z * (far - near));	
+}
+
+//my own
+float lineardepthtonormal(float linear){
+  float l1 = 1./(2.*near*far);
+  float a = ((1./(linear*l1)) - far - near)/(far-near);
+  return 1.-(a*0.5+0.5);
+}
+//
+
+
+// prevSecondPosition
+uniform sampler2D color;
+uniform sampler2D var;
 uniform sampler2D position;
 uniform sampler2D normal;
 uniform sampler2D albedo;
@@ -19,12 +67,17 @@ uniform sampler2D den1;
 uniform sampler2D prevTAA;
 uniform sampler2D reflAlb;
 uniform sampler2D colorfog;
+uniform sampler2D holdinfo;
+uniform sampler2D prevN;
 
 uniform sampler2D suntex;
 uniform sampler2D skyTex;
 uniform sampler2D watpos;
 uniform sampler2D watnorm;
 uniform sampler3D worl;
+
+uniform sampler2D sssT;
+uniform sampler2D sssT2;
 
 uniform mat4 invview;
 uniform mat4 invproj;
@@ -37,6 +90,9 @@ uniform vec3 viewPos;
 uniform vec3 ldir;
 uniform mat4 lightproj;
 uniform mat4 lightview;
+uniform mat4 view;
+uniform mat4 proj;
+
 // NOT MY CODE///////////////
 uint wang_hash(inout uint seed) {
   seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
@@ -359,7 +415,7 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
   float mov = 1.;
 
   if (texture2D(albedo, TC).w > 0.5) {
-    pos = cam + dir * 20.;
+    pos = cam + dir * 70.;
   }
 
   vec3 accum = vec3(0.);
@@ -402,16 +458,16 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
     if (length(shadow) > 0.01) {
       octave += 1.;
 
-      accum += octave * 0.9 * stepCol * volAbs * shadow * pm2 * pr2 * 0.0001 *
-               mix(vec3(0.9, 0.5, 0.2), vec3(0.8, 0.8, 0.7),
+      accum += octave * 2.9 * stepCol * volAbs * shadow * pm2 * pr2  *
+               mix(vec3(0.9, 0.7, 0.4), vec3(0.8, 0.8, 0.7),
                    pow(max(dot(ldir, vec3(0., 1., 0.)), 0.), 1.));
     }
     float accum2 = length(cam - finPos);
     float heigh = exp(-max(reversePos.y - (mov + 1.), 0.) * .4);
-    accum += stepCol * volAbs * .004 * dens * max(shadow, 0.5) * 1.5 *
+    accum += stepCol * volAbs * .002 * dens * max(shadow, 0.) * 1.5 *
              exp(-acci * 5.);
 
-    accum += stepCol * volAbs * .0005 * max(shadow, 0.5) * dens * 1.5 * heigh;
+    accum += stepCol * volAbs * .002 * max(shadow, 0.5) * dens * 1.5 * heigh;
 
     // volAbs *= exp(-length(finPos - cam)*.025);
     volAbs *= exp(-max(dens, 0.05) * heigh * length(finPos - cam) * .01);
@@ -420,7 +476,7 @@ vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
                         length(finPos - cam));
   }
 
-  return vec4(accum * pow(1. - ldir.y, 4.), volAbs);
+  return vec4(accum , volAbs);
 }
 
 vec4 fog2(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
@@ -472,12 +528,17 @@ vec4 fog2(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
                         length(finPos - cam));
   }
 
-  return vec4(accum, volAbs);
+  return vec4(accum*0.1, volAbs);
 }
 
 void main() {
   vec2 iResolution = wh;
   vec2 fragCoord = texCoord * wh;
+ // vec2 fragCoord = texCoord * wh;
+
+  if(int(fragCoord.x) % 2 == int(time)%2 && int(fragCoord.y) % 2 == int(time)%2){
+      //discard;
+   }
 
   uint r = uint(uint(fragCoord.x) * uint(1973) +
                 uint(fragCoord.y) * uint(9277) + uint(time) * uint(26699)) |
@@ -487,6 +548,9 @@ void main() {
             (RESOLUTION * iResolution.xy);
   //  TC += jitter();
   TC = texCoord;
+ uint seedCam = uint(time);
+  vec2 smallOffset =
+      ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
 
   vec4 wp = texture2D(watpos, TC);
   vec4 wn = texture2D(watnorm, TC);
@@ -495,10 +559,7 @@ void main() {
     Albdiff += wn.xz * 0.05;
   }
 
-  uint seedCam = uint(time);
-  vec2 smallOffset =
-      ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
-
+ 
   // TC -= smallOffset*4.;
   // TC += jitter();
   // vec2 TC = texCoord*1.;
@@ -540,35 +601,52 @@ void main() {
   // ProjectedCoordinates  = floor( (ProjectedCoordinates * iResolution.xy) *
   // RESOLUTION ) / (RESOLUTION * iResolution.xy); ProjectedCoordinates +=
   // jitter();
-  vec3 Albedo = pow(texture2D(albedo, Albdiff).xyz, vec3(2.2));
+  vec3 Albedo = pow(texture2D(albedo, Albdiff).xyz, vec3(1.2));
 
   Albedo = rgbtohsv(Albedo);
   Albedo.g *= 1.;
   // Albedo.r *= 1.2;
   Albedo = hsvtorgb(vec3(clamp(Albedo.x, 0., 360.), clamp(Albedo.y, 0., 1.),
                          clamp(Albedo.z, 0., 1.)));
-
+                         //Albedo = vec3(1.);
+ //Albedo = mix(Albedo, vec3(1.),  clamp(texture2D(sssT, TC).w, 0., 1.));
   vec3 nrm = texture2D(normal, TC).xyz;
-  vec3 F2 = fresnelSchlick(vec3(0.5), vec3(1.), max(dot(-dir, nrm), 0.));
+    float rou = texture2D(holdinfo, TC).w;
+  vec3 fresn = mix(Albedo, vec3(1.), 1.-sqrt(rou));
+
+  fresn = mix(Albedo, vec3(1.), (1.-sqrt(rou))*0.5);
+//fresn = Albedo;
+
+  vec3 F2 = fresnelSchlick(vec3(1.-rou)*fresn, vec3(1.), max(dot(-dir, nrm), 0.));
   // Albedo = vec3(1.);
   vec3 col = texture2D(den1, TC).xyz; //*(Albedo/3.14159);
   // vec3 median(vec2 uv, vec2 iResolution, sampler2D tex, float offsetMult){
   // vec3 ind = median(TC, iResolution, 1.);
-  vec3 ind = col;
-  vec3 diff = median4(Albdiff, iResolution, 1.);
-  col = diff * (Albedo / 3.14159);
+  vec3 diff = median4(Albdiff, iResolution, 1.)*(1.-F2);
+  col = diff  * 1. * (Albedo );
+    vec3 ind = diff;
 
+  //vec3 sss = texture2D(sssT, TC).xyz;
+  //float mixsss = clamp(lum(sss), 0., 1.);
+  //col = col*max(1.-mixsss,0.001) + 1.*sss;
+  
+  //col += texture2D(sssT, TC).xyz;
   // if(texture2D(reflnorm, TC).w > 0.5){
   //  col = texture2D(den1, TC).xyz*(Albedo/3.14159);
   //}
 
   // SHADOWS
-  col += clamp(texture2D(reflAlb, TC).xyz, 0., 10.);
+//  col += 
+vec3 shadowsnow = clamp(texture2D(reflAlb, TC).xyz, 0., 1000.);
+//col += mix(shadowsnow, vec3(0.), texture2D(sssT, TC).x);
+col += shadowsnow;
+ind += shadowsnow;
   // vec3 currShad = texture2D(reflAlb, TC).xyz;
   vec3 spec = median3(TC, iResolution, 1.);
-  col += clamp(spec * F2, 0., 1000.);
-
-  col *= vec3(texture2D(colorfog, TC).w);
+  col += clamp(spec , 0., 1000.)*F2;
+//ind = col;
+ind += clamp(spec , 0., 1000.);
+  col *= max(vec3(texture2D(colorfog, TC).w),0.1);
 
   // col = diff;
 
@@ -587,37 +665,57 @@ void main() {
     vec3 F22 = clamp(fresnelSchlick(vec3(0.05), vec3(0.99),
                                     max(dot(normalize(wn.xyz), -wi), 0.)),
                      0., 1.);
-   
+   float beersDepth = 0.75;
     vec3 watCol =
-        mix(vec3(0.05, 0.1, 0.2), vec3(0.2, 0.6, 0.9), exp(-DP * 0.5));
+        mix(vec3(0.05, 0.1, 0.2), vec3(0.2, 0.6, 0.9), exp(-DP * beersDepth));
     col = (diff * (Albedo / 3.14159) * 2. +
            clamp(texture2D(reflAlb, TC).xyz, 0., 10.) * 0.1) *
-              (1. - F22) * exp(-DP * 2.5) * 2. * watCol +
+              (1. - F22) * exp(-DP * beersDepth) * 2. * watCol +
           clamp(spec * F22, 0., 1000.);
 
     if (wn.w > 0.5) {
       col = clamp(spec * F22, 0., 1000.);
     }
+    ind = col;
   }
 
   if (texture2D(albedo, TC).w > 0.5 || texture2D(position, TC).w > 0.5) {
     col = texture2D(albedo, TC).xyz;
+    ind = col*0.2;
   }
-  ind = col;
+  
+//col = texture2D(den1, TC).xyz;
+//ind = col;
+ // col = 2.*texture2D(sssT, TC).xyz;
+//if(TC.x > 0.5){
+//  col = texture2D(sssT2, TC).xyz;
+
+//}
+
+  //col = texture2D(den1, TC).xyz;
+//  col = texture2D(sssT, TC).xyz;
+  //ind = col;
 
   // vec4 fog(vec3 pos, vec3 dir, vec2 TC, inout uint r){
 
-//  vec4 fogs = fog(watPOS, wi, TC, r);
-//  col = col * fogs.w + pow(fogs.xyz * max(ldir.y * ldir.y, 0.5), vec3(1.));
+  //vec4 fogs = fog(watPOS, wi, TC, r);
+  //col = col * fogs.w + pow(fogs.xyz*0.1 , vec3(1.));
   //col = mix(col, vec3(0.9, 0.5, 0.9) , clamp(texture2D(normal, TC).w*0.1,0.,1.));
   /// Keep for possible emissive volumetrics
-  /*
+  
   vec3 PP = texture2D(position, TC).xyz;
   vec3 cam = viewPos;
+//col = Albedo;
+//ind = col;
+ 
+/*
   if(texture2D(albedo, TC).w > 0.5){
-      PP = cam + wi * 100.;
+      PP = cam + wi * 15.;
   }
-
+ float ll = min(length(PP-cam), 15.);
+  PP = cam + wi*ll;
+  //cam = PP;
+  //PP = viewPos;
   vec3 div = (PP-cam)/50.;
 
   vec3 volCol = vec3(0.), volAbs = vec3(1.);
@@ -626,19 +724,50 @@ void main() {
   for(int i = 0; i < 50; i++){
       vec3 OFFS = vec3(rndf(r), rndf(r), rndf(r))*2.-1.;
 
-      cam += div*max(random3d(cam),0.5);
-      vec3 sampPos = ((cam+OFFS*0.5)+90.0 - floor(viewPos));
-      //accum += imageLoad(rcpos, ivec3(sampPos)).xyz;
-      float dens = (imageLoad(rcpos, ivec3(sampPos)).w);
+      cam += div*max(random3d(cam),0.99);
+      vec3 sampPos = cam + OFFS*0.5;
 
-      accum += volAbs*(imageLoad(rcpos, ivec3(sampPos)).xyz)*0.3*exp(
+      vec4 Projected2xxx = vec4(sampPos, 1.); // + vec4(cameraOffset, 0.);
+      Projected2xxx = view * Projected2xxx;
+      Projected2xxx = proj * Projected2xxx;
+      Projected2xxx /= Projected2xxx.w;
+      vec2 ProjectedCoordinates2xx = Projected2xxx.xy * 0.5 + 0.5;
+      float dp = Projected2xxx.z;
+
+      
+      vec3 sssm = vec3(ProjectedCoordinates2xx*96., (LinearizeDepth(Projected2xxx.z*0.5 + 0.5)/15.)*96.);
+
+      if(sssm.x >= 0. && sssm.x < 96. && sssm.y >= 0. && sssm.y < 96. && sssm.z >= 0. && sssm.z < 96. ){
+        uint idds = to1D(uint(sssm.x), uint(sssm.y), uint(sssm.z));
+        volumetricsBuffer vv = volumessbo.volumenodes[idds];
+        packedvec3 colfin = vv.colourspat;
+        //accum += vec3(colfin.x, colfin.y, colfin.z)*vv.weigthsspat.z;
+        vec3 curr = vec3(colfin.x, colfin.y, colfin.z)*vv.weigthsspat.z;
+       // accum = mix(curr, accum, exp(-lum(curr)*0.5));
+       accum += curr;
+      }
+      //vec3 sampPos = ((cam+OFFS*0.5)+90.0 - floor(viewPos));
+      //accum += imageLoad(rcpos, ivec3(sampPos)).xyz;
+      //float dens = (imageLoad(rcfog, ivec3(sampPos)).w);
+/*
+      accum += volAbs*(imageLoad(rcfog, ivec3(sampPos)).xyz)*0.3*exp(
   -4.73*max(1.-dens/40.,0.001)) + length(cam - viewPos)*0.0000001; volAbs *=
   exp(-length(cam - viewPos)*0.1*max(dens,0.1)*length(cam - viewPos)*.001);
+
+
+
+
+
       //rcpos
   }
-  col = col*volAbs.x + accum*0.2;
+  //col = col*volAbs.x + accum*0.2;
+ // col += accum/90.;
+  col = mix(col, accum/90., exp(-ll*.05));
   */
-
+   // col = diff;
+//col = texture2D(color, TC).xyz;
+//var
+//col = texture2D(var, TC).xxx;
   float depth = texture2D(normal, TC).w;
 
   vec3 prevCol = clamp(texture2D(prevTAA, ProjectedCoordinates).xyz, 0., 10.);
@@ -667,13 +796,20 @@ void main() {
   blendFactor *= exp(-length(velocity) * 0.9) * 0.6 + 0.3;
 
   // if(texture2D(color, TC).w > 0.5){
-  if (texture2D(albedo, TC).w < 0.5 && texture2D(position, TC).w < 0.5) {
+
+    vec4 normDiff = texture2D(normal, TC);
+    vec4 normDiffprev = texture2D(prevN, ProjectedCoordinates);
+    float normWeight = pow(max(dot(normDiff.xyz, normDiffprev.xyz),0.), 1.);
+    float depthWeight = pow(exp(-abs(normDiff.w - normDiffprev.w)*0.1), 1.);
+
+  if (texture2D(albedo, TC).w < 0.5 && texture2D(position, TC).w < 0.5 && wp.w < 0.5) {
     col = mix(col, prevCol, clamp(blendFactor, 0.0, 1.));
+  }else{
+    col = mix(col, prevCol, clamp(blendFactor*0.2, 0.0, 1.));
   }
   //}
 
   //}
-
   TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.05 +
                             texture2D(prevTAA, ProjectedCoordinates).w * 0.95,
                         0., 0.99));

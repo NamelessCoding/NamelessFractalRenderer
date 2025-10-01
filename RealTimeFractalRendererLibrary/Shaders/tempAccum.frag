@@ -14,6 +14,7 @@ uniform sampler2D outgoingrS;
 uniform sampler2D prevN;
 uniform sampler2D prevAcc;
 uniform sampler2D prevvar;
+uniform sampler2D prevden;
 
 uniform mat4 prevview;
 uniform mat4 prevproj;
@@ -43,8 +44,21 @@ float lum(vec3 c) {
   return sqrt(0.299 * c.x * c.x + 0.587 * c.y * c.y + 0.114 * c.z * c.z);
 }
 
+vec3 retCol(vec2 texCoord){
+  float RW = texture2D(weightS, texCoord).z;
+  vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
+  return col;
+}
+
 void main() {
   vec2 iResolution = wh;
+
+vec2 fragCoord = texCoord * wh;
+
+  if(int(fragCoord.x) % 2 == int(time)%2 && int(fragCoord.y) % 2 == int(time)%2){
+      //discard;
+   }
+
   if (texture2D(albedo, texCoord).w > 0.5) {
     return;
   }
@@ -63,9 +77,8 @@ void main() {
   // smallOffset2 = vec2(0.);
 
   ProjectedCoordinates -= smallOffset2 * 1.;
-
-  float RW = texture2D(weightS, texCoord).z;
-  vec3 col = texture2D(outgoingrS, texCoord).xyz * clamp(RW, 0., 200.);
+  vec3 col = retCol(texCoord);
+  
   // float roughness = texture2D(color, texCoord).w;
   bool isthesky = false;
 
@@ -81,40 +94,43 @@ void main() {
   vec4 n = texture2D(normal, texCoord);
 
   vec4 nDij = texture2D(prevN, ProjectedCoordinates);
-  bool outScreen =
-      (ProjectedCoordinates.x > 1.0 || ProjectedCoordinates.x < 0. ||
-       ProjectedCoordinates.y > 1.0 || ProjectedCoordinates.y < 0.0);
+  bool outScreen = outsc;
 
-  float depthWeight = pow(exp(-abs((nDij.w) - (n.w)) * 0.01), 12.);
+  float depthWeight = pow(exp(-abs((nDij.w) - (n.w)) * 0.001), 12.);
 
   float normalWeight = pow(max(dot(nDij.xyz, n.xyz), 0.), 5.);
   float totalWeight = (1.0 - float(outScreen)) * normalWeight * depthWeight;
 
-  float accumulation = texture2D(prevAcc, ProjectedCoordinates).w;
+  float accumulation = texture(prevAcc, ProjectedCoordinates).w;
 
   accumulation = clamp(accumulation + 1.0, 0.0, 42.);
   accumulation *= totalWeight;
 
   float frameWeight = (1.0 / max(1.0, accumulation));
+ // frameWeight *= clamp(1.-texture2D(prevvar, ProjectedCoordinates).x,0., 1.);
 
   //
 
-  vec3 prevFrame = texture2D(prevAcc, ProjectedCoordinates).xyz;
+  vec3 prevFrame = texture(prevAcc, ProjectedCoordinates).xyz;
   // vec3 prevFrame = texture2D(prevden, ProjectedCoordinates).xyz;
 
   // if( isSpec < 0.5){
-  col = col * (frameWeight) + (1.0 - frameWeight) * prevFrame;
-  //}
-
-  den1 = vec4(col, 7.);
-  vec2 nm = clamp(vec2(lum(col), pow(lum(col), 2.)), 0., 100.);
+    vec2 nm = clamp(vec2(lum(col), pow(lum(col), 2.)), 0., 100.);
   vec2 prevnm = clamp(texture2D(prevvar, ProjectedCoordinates).yz, 0., 100.);
   nm = prevnm * (1.0 - frameWeight) + nm * frameWeight;
 
-  float variance = abs(nm.g - nm.r * nm.r);
+  col = col * (frameWeight) + (1.0 - frameWeight) * prevFrame;
+
+  //}
+
+  den1 = vec4(col, 7.);
+  
+  float variance = abs(nm.r - nm.g * nm.g);
+    variance = variance * frameWeight + clamp(texture2D(prevvar, ProjectedCoordinates).w, 0., 100.) * (1. - frameWeight);
+  float isout = 1.;
+  
   tempAccum = vec4(vec3(col), accumulation);
-  variance = variance * frameWeight + (1. - frameWeight);
-  var1 = vec4(variance, nm, 1.);
+  var1 = vec4(variance, nm, variance);
 
   vec2 TC = texCoord;
 }
