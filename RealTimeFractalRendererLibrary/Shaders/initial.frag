@@ -432,14 +432,14 @@ void main() {
              vec4(normals, 1.));
 
 
-    for(int i = 0; i < 12; i++){
-      vec3 index = ((currPos/20.)*0.5 + 0.5)*5.;
+    // for(int i = 0; i < 12; i++){
+    //   vec3 index = ((currPos/20.)*0.5 + 0.5)*5.;
 
-      if(index.x >= 0. && index.x < 5. && index.y >= 0. && index.y < 5. && index.z >= 0. && index.z < 5.){
-        uint id = to1DRad(uint(index.x), uint(index.y), uint(index.z));
-        radianceCache lev1 = nodesH.nodesHigh[id];
-      }
-    }
+    //   if(index.x >= 0. && index.x < 5. && index.y >= 0. && index.y < 5. && index.z >= 0. && index.z < 5.){
+    //     uint id = to1DRad(uint(index.x), uint(index.y), uint(index.z));
+    //     radianceCache lev1 = nodesH.nodesHigh[id];
+    //   }
+    // }
 
 //bool traceNewTestBasic(inout vec3 p, vec3 d, float times) {
 //  pos =

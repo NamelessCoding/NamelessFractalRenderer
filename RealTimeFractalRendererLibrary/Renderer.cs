@@ -1,332 +1,212 @@
-﻿using Common;
+﻿
+using Common;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Security.AccessControl;
+using System.Runtime.Intrinsics.X86;
 
 namespace RealTimeFractalRendererLibrary
 {
     public class Renderer
     {
-        int quadVBO;
-        int quadVAO;
-        int quadEBO;
+        #region Fields
 
-        readonly float[] quad =
-        [
-            //Position          Texture coordinates
-            1.0f,  1.0f, 0.0f, 1.0f, 1.0f, // top right
-            1.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom left
-            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f  // top left
-        ];
+        // Buffers and handles
+        private int fullscreenQuadVbo, fullscreenQuadVao, fullscreenQuadEbo;
+        private int gBufferFramebuffer, mainFramebuffer, radianceCacheSsbo;
+        private int temporalFramebuffer, spatialFramebuffer, previousFrameFramebuffer, previousTemporalFramebuffer, tempAccumulationFramebuffer, denoiseFramebufferA, denoiseFramebufferB, spatialPrepassFramebuffer;
+        private int skyFramebuffer, sunFramebuffer, upscaleFramebuffer, taaFramebuffer;
 
-        readonly uint[] quadindices = [  // note that we start from 0!
-            0, 1, 3,   // first triangle
-            1, 2, 3    // second triangle
-        ];
+        // Shaders
+        private Shader initializationShader = default!;
+        private Shader geometryPassShader = default!;
+        private Shader finalCompositeShader = default!;
+        private Shader temporalResamplingShader = default!;
+        private Shader spatialPrepassShader = default!;
+        private Shader spatialResamplingShader = default!;
+        private Shader previousFrameCopyShader = default!;
+        private Shader previousTemporalCopyShader = default!;
+        private Shader tempAccumulationShader = default!;
+        private Shader upscaleShader = default!;
+        private Shader taaShader = default!;
+        private Shader denoiseShader = default!;
+        private Shader skyShader = default!;
+        private Shader sunShader = default!;
+        private Shader radianceCacheShader = default!;
+
+        private Shader worleyNoiseShader = default!;
+
+        // Texture bindings
+        private readonly TextureBinding colorTexture = new(nameof(colorTexture));
+        private readonly TextureBinding holdInfoTexture = new(nameof(holdInfoTexture));
+        private readonly TextureBinding reflectionTexture = new(nameof(reflectionTexture));
+        private readonly TextureBinding positionTexture = new(nameof(positionTexture));
+        private readonly TextureBinding normalTexture = new(nameof(normalTexture));
+        private readonly TextureBinding albedoTexture = new(nameof(albedoTexture));
+        private readonly TextureBinding fogPositionTexture = new(nameof(fogPositionTexture));
+        private readonly TextureBinding secondaryPositionTexture = new(nameof(secondaryPositionTexture));
+        private readonly TextureBinding secondaryAlbedoTexture = new(nameof(secondaryAlbedoTexture));
+        private readonly TextureBinding sssTexture = new(nameof(sssTexture));
+        private readonly TextureBinding sssDenoiseTexture = new(nameof(sssDenoiseTexture));
+        private readonly TextureBinding waterPositionTexture = new(nameof(waterPositionTexture));
+        private readonly TextureBinding waterNormalTexture = new(nameof(waterNormalTexture));
+        private readonly TextureBinding fogColorTexture = new(nameof(fogColorTexture));
+        private readonly TextureBinding fogColorTextureB = new(nameof(fogColorTextureB));
+        private readonly TextureBinding temporalWeightsTexture = new(nameof(temporalWeightsTexture));
+        private readonly TextureBinding temporalRadianceTexture = new(nameof(temporalRadianceTexture));
+        private readonly TextureBinding temporalPositionTexture = new(nameof(temporalPositionTexture));
+        private readonly TextureBinding spatialWeightsTexture = new(nameof(spatialWeightsTexture));
+        private readonly TextureBinding spatialRadianceTexture = new(nameof(spatialRadianceTexture));
+        private readonly TextureBinding prevTemporalWeightsTexture = new(nameof(prevTemporalWeightsTexture));
+        private readonly TextureBinding prevTemporalRadianceTexture = new(nameof(prevTemporalRadianceTexture));
+        private readonly TextureBinding prevTemporalPositionTexture = new(nameof(prevTemporalPositionTexture));
+        private readonly TextureBinding prevSpatialWeightsTexture = new(nameof(prevSpatialWeightsTexture));
+        private readonly TextureBinding prevSpatialRadianceTexture = new(nameof(prevSpatialRadianceTexture));
+        private readonly TextureBinding prevNormalDepthTexture = new(nameof(prevNormalDepthTexture));
+        private readonly TextureBinding prevAccumulationTexture = new(nameof(prevAccumulationTexture));
+        private readonly TextureBinding prevTaaTexture = new(nameof(prevTaaTexture));
+        private readonly TextureBinding tempAccumulationTexture = new(nameof(tempAccumulationTexture));
+        private readonly TextureBinding upscaleTexture = new(nameof(upscaleTexture));
+        private readonly TextureBinding upscaleTextureB = new(nameof(upscaleTextureB));
+        private readonly TextureBinding taaTexture = new(nameof(taaTexture));
+        private readonly TextureBinding denoiseTextureA = new(nameof(denoiseTextureA));
+        private readonly TextureBinding denoiseTextureB = new(nameof(denoiseTextureB));
+        private readonly TextureBinding varianceTextureA = new(nameof(varianceTextureA));
+        private readonly TextureBinding varianceTextureB = new(nameof(varianceTextureB));
+        private readonly TextureBinding radianceCachePositionTexture = new(nameof(radianceCachePositionTexture), TextureTarget.Texture3D);
+        private readonly TextureBinding radianceCacheNormalTexture = new(nameof(radianceCacheNormalTexture), TextureTarget.Texture3D);
+        private readonly TextureBinding radianceCacheRadianceTexture = new(nameof(radianceCacheRadianceTexture), TextureTarget.Texture3D);
+        private readonly TextureBinding radianceCacheFogTexture = new(nameof(radianceCacheFogTexture), TextureTarget.Texture3D);
+        private readonly TextureBinding skyTexture = new(nameof(skyTexture));
+        private readonly TextureBinding sunTexture = new(nameof(sunTexture));
+        private readonly TextureBinding worleyNoiseTexture = new(nameof(worleyNoiseTexture), TextureTarget.Texture3D);
 
 
-        /*private struct volumeStruct
+        // Quad data
+        private readonly float[] fullscreenQuadVertices = [
+           1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+            1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f
+       ];
+        private readonly uint[] fullscreenQuadIndices = [0, 1, 3, 1, 2, 3];
+
+
+        // Camera and rendering state
+        private Camera camera = default!;
+        public Camera Camera => camera;
+        public int OutputFramebuffer { get; set; } = 0;
+        private Vector3 previousCameraPosition = new(0.0f, 0.0f, 0.0f);
+        private Vector2 renderResolution = new(1920.0f, 1080.0f);
+        private Matrix4 previousViewMatrix, previousProjectionMatrix;
+        private Stopwatch frameTimer = default!;
+        private float frameIndex = 0.0f;
+        public Vector3 LightDirection = new(0.0f, 0.1f, -0.9f);
+        public float SceneBrightness { get; set; } = 1.0f;
+        public bool EnableFinalBlur { get; set; } = false;
+        public TextureBinding? DebugTextureOverride { get; set; } = null;
+        public float CloudCoverage { get; set; } = 1.0f;
+
+
+        // Constants
+        private const bool UseNativeResolution = true;
+        private const float DefaultScale = 1.0f;
+        private static float renderScale = DefaultScale;
+        private const int ShadowMapResolution = 2048;
+        private float[] textureBorderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+        private bool isRendererInitialized = false;
+
+
+
+        #endregion
+
+        #region Public API
+        public bool EnableOpenGLDebugging = false;
+
+        public void SetCloudCoverage(float value) => CloudCoverage = value;
+        public void SetLightDirection(float x, float y, float z) => LightDirection = new Vector3(x, y, z);
+
+
+        private void Configure2DTexture(
+    int textureHandle,
+    bool scaleToRenderResolution = true,
+    PixelInternalFormat internalFormat = PixelInternalFormat.Rgba32f,
+    TextureMinFilter minFilter = TextureMinFilter.Nearest,
+    TextureMagFilter magFilter = TextureMagFilter.Nearest,
+    TextureWrapMode wrapMode = TextureWrapMode.MirroredRepeat,
+    bool useCustomSize = false,
+    int customWidth = 0,
+    int customHeight = 0)
         {
-            public float colour_x, colour_y, colour_z;
-            public float wx, wy, wz;
-            public float colour_xs, colour_ys, colour_zs;
-            public float wxs, wys, wzs;
-
-        }*/
-
-        private struct volumeStruct
-        {
-            public Vector3 col, weigths, colspat, weightsspat, prevLO, prevw;
-
-        }
-
-        private struct Level
-        {
-            //public Vector3 col, weigths, colspat, weightsspat, prevLO, prevw;
-            public uint isEmpty;
-
-        }
-        private struct radianceCache
-        {
-            //public Vector3 col, weigths, colspat, weightsspat, prevLO, prevw;
-            public Vector3 col;
-            public Vector3 pos;
-            public Vector3 normal;
-
-        }
-
-        /* [StructLayout(LayoutKind.Explicit, Size = 64)]
-         public struct volumeStruct
-         {
-             [FieldOffset(0)]
-             public Vector3 col;
-
-             [FieldOffset(16)]
-             public Vector3 weigths;
-
-             [FieldOffset(32)]
-             public Vector3 colspat;
-
-             [FieldOffset(48)]
-             public Vector3 weightsspat;
-         }*/
-
-        private readonly TextureBinding colortex = new(nameof(colortex));
-        private readonly TextureBinding colortexHoldInfo = new(nameof(colortexHoldInfo));
-
-        private readonly TextureBinding colortexReflection = new(nameof(colortexReflection));
-        private readonly TextureBinding colortexPosition = new(nameof(colortexPosition));
-        private readonly TextureBinding colortexNormal = new(nameof(colortexNormal));
-        private readonly TextureBinding colortexAlbedo = new(nameof(colortexAlbedo));
-        private readonly TextureBinding colortexFogPos = new(nameof(colortexFogPos));
-
-        private readonly TextureBinding colortexSecondPosition = new(nameof(colortexSecondPosition));
-        private readonly TextureBinding colortexSecondAlbedo = new(nameof(colortexSecondAlbedo));
-
-
-        private readonly TextureBinding sssTex = new(nameof(sssTex));
-        private readonly TextureBinding sssTexDenoise = new(nameof(sssTexDenoise));
-
-
-        private readonly TextureBinding watpos = new(nameof(watpos));
-        private readonly TextureBinding watnorm = new(nameof(watnorm));
-
-        int colorbuff2;
-        private Shader _initShader = default!;
-        private readonly TextureBinding colorfog = new(nameof(colorfog));
-        private readonly TextureBinding colorfog2 = new(nameof(colorfog2));
-
-
-
-        int Buffer1;
-        int Buffer2;
-        int Buffer3;
-
-        int radianceCacheBuffer;
-
-        int colorbuff;
-        Stopwatch stopWatch = default!;
-
-        float iFrame = 0.0f;
-
-        private Shader _testShader = default!;
-        private Shader _finalShader = default!;
-
-        private Shader _TemporalRestirShader = default!;
-        private Shader _spatPrePass = default!;
-        int _spatPrePassbuff;
-
-
-        int temporalbuff;
-        private readonly TextureBinding temporalWeigths = new(nameof(temporalWeigths));
-        private readonly TextureBinding temporalOutgoingRadiance = new(nameof(temporalOutgoingRadiance));
-
-        private readonly TextureBinding temporalPosition = new(nameof(temporalPosition));
-
-        private Shader _SpatialRestirShader = default!;
-        int spatialbuff;
-        private readonly TextureBinding spatialWeigths = new(nameof(spatialWeigths));
-        private readonly TextureBinding spatialOutgoingRadiance = new(nameof(spatialOutgoingRadiance));
-
-        private Shader _swapShader = default!;
-        int swapbuff;
-
-        private Shader _swapShader2 = default!;
-        int swapbuff2;
-
-        private readonly TextureBinding prevTemporalWeigths = new(nameof(prevTemporalWeigths));
-        private readonly TextureBinding prevTemporalOutgoingRadiance = new(nameof(prevTemporalOutgoingRadiance));
-        private readonly TextureBinding prevTemporalPosition = new(nameof(prevTemporalPosition));
-        private readonly TextureBinding prevSpatialWeigths = new(nameof(prevSpatialWeigths));
-        private readonly TextureBinding prevSpatialOutgoingRadiance = new(nameof(prevSpatialOutgoingRadiance));
-        private readonly TextureBinding prevNormalDepth = new(nameof(prevNormalDepth));
-
-        private readonly TextureBinding prevAcc = new(nameof(prevAcc));
-        private readonly TextureBinding prevTAA = new(nameof(prevTAA));
-
-        private Shader _tempAccumShader = default!;
-        int tempAccumbuff;
-        private readonly TextureBinding tempAccum = new(nameof(tempAccum));
-
-        private Shader _upscale = default!;
-        private readonly TextureBinding upscale = new(nameof(upscale));
-        private readonly TextureBinding upscale2 = new(nameof(upscale2));
-
-        int upscaleBuff;
-
-
-        private Shader _TAAShader = default!;
-        int TAAbuff;
-        private readonly TextureBinding TAA = new(nameof(TAA));
-
-        private Shader _denoiseShader = default!;
-        //private Shader _denoiseShader2 = default!;
-        private readonly TextureBinding den1 = new(nameof(den1));
-        private readonly TextureBinding den2 = new(nameof(den2));
-        int den1buff;
-        int den2buff;
-        private readonly TextureBinding var1 = new(nameof(var1));
-        private readonly TextureBinding var2 = new(nameof(var2));
-
-        private readonly TextureBinding rcpos = new(nameof(rcpos), TextureTarget.Texture3D);
-        private readonly TextureBinding rcnorm = new(nameof(rcnorm), TextureTarget.Texture3D);
-        private readonly TextureBinding rcrad = new(nameof(rcrad), TextureTarget.Texture3D);
-        private readonly TextureBinding rcfog = new(nameof(rcfog), TextureTarget.Texture3D);
-
-      
-
-        private Shader _skyShader = default!;
-
-        int skybuff;
-        private readonly TextureBinding skytex = new(nameof(skytex));
-
-        private Shader _sunShader = default!;
-
-        int sunbuff;
-        private readonly TextureBinding suntex = new(nameof(suntex));
-
-
-        private Shader _RC = default!;
-        //private Shader _FL = default!;
-        //private Shader _FL2 = default!;
-        //private Shader _FL3 = default!;
-       // private Shader _FL4 = default!;
-        private Shader _Calculate = default!;
-        private Shader _Calculate1 = default!;
-        private Shader _Calculate2 = default!;
-
-        private readonly TextureBinding worley = new(nameof(worley), TextureTarget.Texture3D);
-
-        private Shader _worl = default!;
-
-        private Camera _camera = default!;
-        public Camera Camera => _camera;
-
-        /// <summary>
-        /// The framebuffer where the final image is rendered to.
-        /// </summary>
-        public int TargetFramebuffer { get; set; } = 0;
-
-        private Vector3 prevCamPos = new(0.0f, 0.0f, 0.0f);
-
-        private const bool EnableDebugging = false;
-        private const bool isEverythingLower = true;
-
-        private const float KeepScale = 1.0f; //the default scale
-        private static float ScaleEverything = KeepScale;
-
-        private const int shadowScale = 2048;
-
-        private Vector2 size = new(1920.0f / ScaleEverything, 1080.0f / ScaleEverything);
-
-        private Matrix4 prevView;
-        private Matrix4 prevProjection;
-
-        public Vector3 ldir = new(0.0f, 0.1f, -0.9f);
-
-        public float Brightness { get; set; } = 1.0f;
-        public bool EnableBlur { get; set; } = false;
-        /// <summary>
-        /// The Texture that is currently displayed for debugging.
-        /// When null, the final image is not overridden.
-        /// </summary>
-        public TextureBinding? DebuggedTexture { get; set; } = null;
-
-
-        public float cloudCoverage = 1.0f;
-
-        public void SetCloudCoverage(float value)
-        {
-            //TODO: demo, use actual uniforms
-            cloudCoverage = value;
-        }
-        public void SetLdir(float X, float Y, float Z) {
-            ldir.X = X; ldir.Y = Y; ldir.Z = Z;
-        }
-
-
-        //https://gist.github.com/Vassalware/d47ff5e60580caf2cbbf0f31aa20af5d
-        private static void DebugCallback(DebugSource source,
-            DebugType type,
-            int id,
-            DebugSeverity severity,
-            int length,
-            IntPtr message,
-            IntPtr userParam)
-        {
-            string messageString = Marshal.PtrToStringAnsi(message, length);
-
-            Console.WriteLine($"{severity} {type} | {messageString}");
-
-            if (type == DebugType.DebugTypeError)
-            {
-                throw new Exception(messageString);
-            }
-        }
-
-        private static readonly DebugProc _debugProcCallback = DebugCallback;
-        private static GCHandle _debugProcCallbackHandle;
-
-        private bool isInitialized = false;
-
-        float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-        void setupTex2D(int texture, bool scaleTexture = true, PixelInternalFormat format = PixelInternalFormat.Rgba32f,
-            TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
-            TextureWrapMode wrapMode = TextureWrapMode.MirroredRepeat, bool customSize = false, int sizeX = 0, int sizeY = 0) {
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, texture);
+            GL.BindTexture(TextureTarget.Texture2D, textureHandle);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
-
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)wrapMode);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)wrapMode);
-            if (scaleTexture && !customSize)
+
+            if (scaleToRenderResolution && !useCustomSize)
             {
-                GL.TexImage2D(TextureTarget.Texture2D, 0,
-                format,
-                (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            }
-            else if (!customSize)
-            {
-                GL.TexImage2D(TextureTarget.Texture2D, 0,
-                format,
-                (int)(size.X), (int)(size.Y), 0, PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            }
-            else {
-                GL.TexImage2D(TextureTarget.Texture2D, 0,
-                    format,
-                    (int)(sizeX), (int)(sizeY), 0, PixelFormat.Rgba,
+                GL.TexImage2D(
+                    TextureTarget.Texture2D, 0,
+                    internalFormat,
+                    (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale), 0,
+                    PixelFormat.Rgba,
                     PixelType.UnsignedByte, IntPtr.Zero);
             }
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
+            else if (!useCustomSize)
+            {
+                GL.TexImage2D(
+                    TextureTarget.Texture2D, 0,
+                    internalFormat,
+                    (int)(renderResolution.X), (int)(renderResolution.Y), 0,
+                    PixelFormat.Rgba,
+                    PixelType.UnsignedByte, IntPtr.Zero);
+            }
+            else
+            {
+                GL.TexImage2D(
+                    TextureTarget.Texture2D, 0,
+                    internalFormat,
+                    customWidth, customHeight, 0,
+                    PixelFormat.Rgba,
+                    PixelType.UnsignedByte, IntPtr.Zero);
+            }
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, textureBorderColor);
         }
 
-        void setupTex3D(int texture, int sizeX, int sizeY, int sizeZ, PixelInternalFormat format = PixelInternalFormat.Rgba16f,
-            TextureMinFilter minFilter = TextureMinFilter.Nearest, TextureMagFilter magFilter = TextureMagFilter.Nearest,
-            TextureWrapMode wrapMode = TextureWrapMode.Repeat, TextureWrapMode wrapModeZ = TextureWrapMode.Repeat) {
+        private void Configure3DTexture(
+    int textureHandle,
+    int width,
+    int height,
+    int depth,
+    PixelInternalFormat internalFormat = PixelInternalFormat.Rgba16f,
+    TextureMinFilter minFilter = TextureMinFilter.Nearest,
+    TextureMagFilter magFilter = TextureMagFilter.Nearest,
+    TextureWrapMode wrapModeXY = TextureWrapMode.Repeat,
+    TextureWrapMode wrapModeZ = TextureWrapMode.Repeat)
+        {
             GL.ActiveTexture(TextureUnit.Texture0);
-
-            GL.BindTexture(TextureTarget.Texture3D, texture);
+            GL.BindTexture(TextureTarget.Texture3D, textureHandle);
 
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)magFilter);
 
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)wrapMode);
-            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapMode);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapS, (int)wrapModeXY);
+            GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapT, (int)wrapModeXY);
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureWrapR, (int)wrapModeZ);
 
-            GL.TexImage3D(TextureTarget.Texture3D, 0,
-                format,
-                sizeX, sizeY, sizeZ, 0, PixelFormat.Rgba,
+            GL.TexImage3D(
+                TextureTarget.Texture3D, 0,
+                internalFormat,
+                width, height, depth, 0,
+                PixelFormat.Rgba,
                 PixelType.UnsignedByte, IntPtr.Zero);
         }
-
         /// <summary>
         /// Used to match sampler indices to color attachment indices.
         /// </summary>
@@ -357,822 +237,571 @@ namespace RealTimeFractalRendererLibrary
             return fboHandle;
         }
 
+
         public void Load(Vector2i resolution)
         {
-            // glEnable(GL_TEXTURE_3D);
-
-            if (EnableDebugging)
-            {
-                _debugProcCallbackHandle = GCHandle.Alloc(_debugProcCallback);
-                GL.DebugMessageCallback(_debugProcCallback, IntPtr.Zero);
-                GL.Enable(EnableCap.DebugOutput);
-                GL.Enable(EnableCap.DebugOutputSynchronous);
-            }
-
-           // GL.Enable(EnableCap.Texture3DExt);
+            
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-            if (isEverythingLower) {
-                ScaleEverything = 1.0f;
+            if (UseNativeResolution)
+            {
+                renderScale = 1.0f;
             }
 
-            //Setup textures
-            setupTex2D(colorfog2.Handle);          
-            setupTex2D(colorfog.Handle);
-            setupTex2D(watnorm.Handle);
-            setupTex2D(watpos.Handle);
-            setupTex2D(skytex.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            setupTex2D(suntex.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder,
-                true, shadowScale, shadowScale);
-            setupTex3D(worley.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcpos.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcfog.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcnorm.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex3D(rcrad.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            setupTex2D(colortex.Handle, false);
-            setupTex2D(sssTex.Handle, false);
-            //sssTexDenoise
-            setupTex2D(sssTexDenoise.Handle, false, PixelInternalFormat.Rgba32f);
-            setupTex2D(colortexPosition.Handle, true, PixelInternalFormat.Rgba32f);
-            setupTex2D(colortexFogPos.Handle, false);
-            setupTex2D(colortexHoldInfo.Handle);
-            setupTex2D(colortexNormal.Handle, true, PixelInternalFormat.Rgba32f);
-            setupTex2D(colortexAlbedo.Handle);
-            setupTex2D(colortexSecondPosition.Handle, true, PixelInternalFormat.Rgba32f);
-            setupTex2D(colortexReflection.Handle, false);
-            setupTex2D(colortexSecondAlbedo.Handle, false);
-            setupTex2D(temporalWeigths.Handle, false);
-            setupTex2D(temporalOutgoingRadiance.Handle, false);
-            setupTex2D(temporalPosition.Handle, false, PixelInternalFormat.Rgba32f);
-            setupTex2D(spatialWeigths.Handle, false);
-            setupTex2D(spatialOutgoingRadiance.Handle, false);
-            setupTex2D(TAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            setupTex2D(upscale.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            setupTex2D(upscale2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            setupTex2D(prevTemporalWeigths.Handle, false);
-            setupTex2D(prevTemporalOutgoingRadiance.Handle, false);
-            setupTex2D(prevTemporalPosition.Handle, false);
-            setupTex2D(prevSpatialWeigths.Handle, false);
-            setupTex2D(prevSpatialOutgoingRadiance.Handle, false);
-            setupTex2D(prevNormalDepth.Handle, true, PixelInternalFormat.Rgba32f);
-            setupTex2D(prevAcc.Handle, true);
-            setupTex2D(prevTAA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            setupTex2D(den1.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            setupTex2D(den2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            setupTex2D(var1.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            setupTex2D(var2.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            setupTex2D(tempAccum.Handle);
+            // Setup 2D textures
+            Configure2DTexture(fogColorTextureB.Handle);
+            Configure2DTexture(fogColorTexture.Handle);
+            Configure2DTexture(waterNormalTexture.Handle);
+            Configure2DTexture(waterPositionTexture.Handle);
+            Configure2DTexture(skyTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(sunTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder, true, ShadowMapResolution, ShadowMapResolution);
+            Configure3DTexture(worleyNoiseTexture.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCachePositionTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCacheFogTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCacheNormalTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCacheRadianceTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure2DTexture(colorTexture.Handle, false);
+            Configure2DTexture(sssTexture.Handle, false);
+            Configure2DTexture(sssDenoiseTexture.Handle, false, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(positionTexture.Handle, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(fogPositionTexture.Handle, false);
+            Configure2DTexture(holdInfoTexture.Handle);
+            Configure2DTexture(normalTexture.Handle, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(albedoTexture.Handle);
+            Configure2DTexture(secondaryPositionTexture.Handle, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(reflectionTexture.Handle, false);
+            Configure2DTexture(secondaryAlbedoTexture.Handle, false);
+            Configure2DTexture(temporalWeightsTexture.Handle, false);
+            Configure2DTexture(temporalRadianceTexture.Handle, false);
+            Configure2DTexture(temporalPositionTexture.Handle, false, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(spatialWeightsTexture.Handle, false);
+            Configure2DTexture(spatialRadianceTexture.Handle, false);
+            Configure2DTexture(taaTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(upscaleTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(upscaleTextureB.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(prevTemporalWeightsTexture.Handle, false);
+            Configure2DTexture(prevTemporalRadianceTexture.Handle, false);
+            Configure2DTexture(prevTemporalPositionTexture.Handle, false);
+            Configure2DTexture(prevSpatialWeightsTexture.Handle, false);
+            Configure2DTexture(prevSpatialRadianceTexture.Handle, false);
+            Configure2DTexture(prevNormalDepthTexture.Handle, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(prevAccumulationTexture.Handle, true);
+            Configure2DTexture(prevTaaTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(denoiseTextureA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(denoiseTextureB.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(varianceTextureA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(varianceTextureB.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(tempAccumulationTexture.Handle);
 
-            /*   private struct volumeStruct
-           {
-               public Vector3 colour;
-           }*/
+            // Setup framebuffers
+            skyFramebuffer = CreateFramebufferObject(skyTexture);
+            sunFramebuffer = CreateFramebufferObject(sunTexture);
+            gBufferFramebuffer = CreateFramebufferObject(positionTexture, normalTexture, albedoTexture, holdInfoTexture, fogColorTexture, waterPositionTexture, waterNormalTexture);
+            mainFramebuffer = CreateFramebufferObject(colorTexture, secondaryPositionTexture, reflectionTexture, secondaryAlbedoTexture, fogColorTexture, sssTexture, sssDenoiseTexture);
+            temporalFramebuffer = CreateFramebufferObject(temporalWeightsTexture, temporalRadianceTexture, temporalPositionTexture);
+            spatialFramebuffer = CreateFramebufferObject(spatialWeightsTexture, spatialRadianceTexture, fogPositionTexture);
+            taaFramebuffer = CreateFramebufferObject(taaTexture);
+            upscaleFramebuffer = CreateFramebufferObject(upscaleTexture);
+            previousFrameFramebuffer = CreateFramebufferObject(prevNormalDepthTexture, prevAccumulationTexture, prevTaaTexture);
+            previousTemporalFramebuffer = CreateFramebufferObject(prevTemporalWeightsTexture, prevTemporalRadianceTexture, prevTemporalPositionTexture, prevSpatialWeightsTexture, prevSpatialRadianceTexture);
+            denoiseFramebufferA = CreateFramebufferObject(denoiseTextureB, varianceTextureB, fogColorTextureB, secondaryAlbedoTexture, sssDenoiseTexture);
+            denoiseFramebufferB = CreateFramebufferObject(denoiseTextureA, varianceTextureA, fogColorTexture, secondaryAlbedoTexture, sssDenoiseTexture);
+            tempAccumulationFramebuffer = CreateFramebufferObject(tempAccumulationTexture, denoiseTextureA, varianceTextureA);
+            spatialPrepassFramebuffer = CreateFramebufferObject(prevTemporalWeightsTexture, prevTemporalRadianceTexture, prevTemporalPositionTexture);
 
-            //262144
-            //884736
-            // var arrVolume = new volumeStruct[884736];
-            
+            // Compile shaders
+            skyShader = new Shader("sky.vert", "sky.frag");
+            sunShader = new Shader("sun.vert", "sun.frag", true);
+            geometryPassShader = new Shader("Test.vert", "Test.frag", true);
+            initializationShader = new Shader("initial.vert", "initial.frag", true);
+            finalCompositeShader = new Shader("final.vert", "final.frag", true);
+            temporalResamplingShader = new Shader("temporal.vert", "temporal.frag");
+            previousFrameCopyShader = new Shader("swap.vert", "swap.frag");
+            previousTemporalCopyShader = new Shader("swap2.vert", "swap2.frag");
+            spatialResamplingShader = new Shader("spatial.vert", "spatial.frag", true);
+            tempAccumulationShader = new Shader("tempAccum.vert", "tempAccum.frag");
+            denoiseShader = new Shader("denoise1.vert", "denoise1.frag");
+            taaShader = new Shader("TAA.vert", "TAA.frag");
+            radianceCacheShader = new Shader("RadianceCaching.comp", true);
+  
+            upscaleShader = new Shader("upscale.vert", "upscale.frag");
+            worleyNoiseShader = new Shader("worley.comp", false);
+            spatialPrepassShader = new Shader("spatPrePass.vert", "spatPrePass.frag");
 
-            //Setup Framebuffer Objects
-            skybuff = CreateFramebufferObject(skytex);
-            sunbuff = CreateFramebufferObject(suntex);
-            colorbuff2 = CreateFramebufferObject(colortexPosition, colortexNormal, colortexAlbedo, colortexHoldInfo, colorfog, watpos, watnorm);
-            colorbuff = CreateFramebufferObject(colortex, colortexSecondPosition, colortexReflection, colortexSecondAlbedo, colorfog, sssTex, sssTexDenoise);
-            temporalbuff = CreateFramebufferObject(temporalWeigths, temporalOutgoingRadiance, temporalPosition);
-            spatialbuff = CreateFramebufferObject(spatialWeigths, spatialOutgoingRadiance, colortexFogPos);
-            TAAbuff = CreateFramebufferObject(TAA);
-            upscaleBuff = CreateFramebufferObject(upscale);
-            swapbuff = CreateFramebufferObject(prevNormalDepth, prevAcc, prevTAA);
-            swapbuff2 = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition, prevSpatialWeigths, prevSpatialOutgoingRadiance);
-            den1buff = CreateFramebufferObject(den2, var2, colorfog2, colortexSecondAlbedo, sssTexDenoise);
-            den2buff = CreateFramebufferObject(den1, var1, colorfog, colortexSecondAlbedo, sssTexDenoise);
-            tempAccumbuff = CreateFramebufferObject(tempAccum, den1, var1);
-            _spatPrePassbuff = CreateFramebufferObject(prevTemporalWeigths, prevTemporalOutgoingRadiance, prevTemporalPosition);
-            //Compile shader programs
-            _skyShader = new Shader("sky.vert", "sky.frag");
-            _sunShader = new Shader("sun.vert", "sun.frag", true);
-            _testShader = new Shader("Test.vert", "Test.frag", true);
-            _initShader = new Shader("initial.vert", "initial.frag", true);
-            _finalShader = new Shader("final.vert", "final.frag", true);
-            _TemporalRestirShader = new Shader("temporal.vert", "temporal.frag");
-            _swapShader = new Shader("swap.vert", "swap.frag");
-            _swapShader2 = new Shader("swap2.vert", "swap2.frag");
-            _SpatialRestirShader = new Shader("spatial.vert", "spatial.frag", true);
-            _tempAccumShader = new Shader("tempAccum.vert", "tempAccum.frag");
-            _denoiseShader = new Shader("denoise1.vert", "denoise1.frag");
-            _TAAShader = new Shader("TAA.vert", "TAA.frag");
-            _RC = new Shader("RadianceCaching.comp", true);
-            //_FL = new Shader("FillTexture.comp", true);
-           // _FL2 = new Shader("FillTexturePrev.comp", true);
-           // _FL3 = new Shader("FillTextureSpatial.comp", true);
-           // _FL4 = new Shader("FillTextureSpatialTemp.comp", true);
-            _Calculate = new Shader("CalculateLowest.comp", true);
-            _Calculate1 = new Shader("CalculateMiddle.comp", true);
-            _Calculate2 = new Shader("CalculateHighest.comp", true);
-
-            _upscale = new Shader("upscale.vert", "upscale.frag");
-            _worl = new Shader("worley.comp", false);
-            _spatPrePass = new Shader("spatPrePass.vert", "spatPrePass.frag");
-            quadVBO = GL.GenBuffer();
-            quadVAO = GL.GenVertexArray();
-            quadEBO = GL.GenBuffer();
-
-            _initShader.Use();
-            _initShader.SetInt("skytex", skytex.Unit);
-
-            _skyShader.Use();
-            _skyShader.SetInt("skyprev", skytex.Unit);
-            _skyShader.SetInt("worl", worley.Unit);
-            //_skyShader.SetInt("suns", suntex.Unit);
-
-            _sunShader.Use();
-            //_sunShader.SetInt("sunprev", suntex.Unit);
-            //_sunShader.SetInt("worl", worley.Unit);
-
-            _RC.Use();
-            _RC.SetInt("skytex", skytex.Unit);
-            _RC.SetInt("suntex", suntex.Unit);
-
-            _testShader.Use();
-            _testShader.SetInt("position", colortexPosition.Unit);
-            _testShader.SetInt("normal", colortexNormal.Unit);
-            _testShader.SetInt("albedo", colortexAlbedo.Unit);
-            _testShader.SetInt("holdinfo", colortexHoldInfo.Unit);
-            //_testShader.SetInt("colorfog", colorfog.Unit);
-            _testShader.SetInt("skytex", skytex.Unit);
-            _testShader.SetInt("suntex", suntex.Unit);
-            _testShader.SetInt("watpos", watpos.Unit);
-            _testShader.SetInt("watnorm", watnorm.Unit);
-            _testShader.SetInt("sssprev", sssTex.Unit);
-            //prevN
-            _testShader.SetInt("prevN", prevNormalDepth.Unit);
-            _testShader.SetInt("den1", den2.Unit);
-
-            _TemporalRestirShader.Use();
-            _TemporalRestirShader.SetInt("color", colortex.Unit);
-            _TemporalRestirShader.SetInt("position", colortexPosition.Unit);
-            _TemporalRestirShader.SetInt("normal", colortexNormal.Unit);
-            _TemporalRestirShader.SetInt("secondpos", colortexSecondPosition.Unit);
-            _TemporalRestirShader.SetInt("prevW", prevTemporalWeigths.Unit);
-            _TemporalRestirShader.SetInt("prevL", prevTemporalOutgoingRadiance.Unit);
-            _TemporalRestirShader.SetInt("prevP", prevTemporalPosition.Unit);
-            _TemporalRestirShader.SetInt("prevN", prevNormalDepth.Unit);
+            // Setup fullscreen quad
+            fullscreenQuadVbo = GL.GenBuffer();
+            fullscreenQuadVao = GL.GenVertexArray();
+            fullscreenQuadEbo = GL.GenBuffer();
 
 
-            //_spatPrePass
-            _spatPrePass.Use();
-            _spatPrePass.SetInt("color", colortex.Unit);
-            _spatPrePass.SetInt("position", colortexPosition.Unit);
-            _spatPrePass.SetInt("normal", colortexNormal.Unit);
-            _spatPrePass.SetInt("secondpos", colortexSecondPosition.Unit);
-            _spatPrePass.SetInt("prevW", temporalWeigths.Unit);
-            _spatPrePass.SetInt("prevL", temporalOutgoingRadiance.Unit);
-            _spatPrePass.SetInt("prevP", temporalPosition.Unit);
-            _spatPrePass.SetInt("prevN", prevNormalDepth.Unit);
-            //_TemporalRestirShader.SetInt("reflAlb", colortexSecondAlbedo.Unit);
+            initializationShader.Use();
+            initializationShader.SetInt("skytex", skyTexture.Unit);
 
-            _SpatialRestirShader.Use();
-            //_SpatialRestirShader.SetInt("color", colortex.Unit);
-            _SpatialRestirShader.SetInt("position", colortexPosition.Unit);
-            _SpatialRestirShader.SetInt("normal", colortexNormal.Unit);
-            _SpatialRestirShader.SetInt("albedo", colortexAlbedo.Unit);
-            //_SpatialRestirShader.SetInt("secondpos", colortexSecondPosition.Unit);
-            _SpatialRestirShader.SetInt("temppos", temporalPosition.Unit);
-            _SpatialRestirShader.SetInt("prevW", prevSpatialWeigths.Unit);
-            _SpatialRestirShader.SetInt("prevL", prevSpatialOutgoingRadiance.Unit);
-            _SpatialRestirShader.SetInt("tempW", temporalWeigths.Unit);
-            _SpatialRestirShader.SetInt("tempL", temporalOutgoingRadiance.Unit);
-            _SpatialRestirShader.SetInt("prevN", prevNormalDepth.Unit);
-            _SpatialRestirShader.SetInt("prevSPos", colortexFogPos.Unit);
-            _SpatialRestirShader.SetInt("holdinfo", colortexHoldInfo.Unit);
+            skyShader.Use();
+            skyShader.SetInt("skyprev", skyTexture.Unit);
+            skyShader.SetInt("worl", worleyNoiseTexture.Unit);
+            //skyShader.SetInt("suns", sunTexture.Unit);
 
-            //colortexFogPos
-            _tempAccumShader.Use();
-            //_tempAccumShader.SetInt("color", colortex.Unit);
-            _tempAccumShader.SetInt("position", colortexPosition.Unit);
-            _tempAccumShader.SetInt("normal", colortexNormal.Unit);
-            _tempAccumShader.SetInt("albedo", colortexAlbedo.Unit);
-            _tempAccumShader.SetInt("weightS", spatialWeigths.Unit);
-            _tempAccumShader.SetInt("outgoingrS", spatialOutgoingRadiance.Unit);
-            _tempAccumShader.SetInt("prevN", prevNormalDepth.Unit);
-            _tempAccumShader.SetInt("prevAcc", prevAcc.Unit);
-            _tempAccumShader.SetInt("prevvar", var2.Unit);
-            _tempAccumShader.SetInt("prevden", den2.Unit);
+            sunShader.Use();
+            //sunShader.SetInt("sunprev", sunTexture.Unit);
+            //sunShader.SetInt("worl", worleyNoiseTexture.Unit);
 
-            _denoiseShader.Use();
-            _denoiseShader.SetInt("color", temporalOutgoingRadiance.Unit);
-            //_denoiseShader.SetInt("position", colortexPosition.Unit);
-            _denoiseShader.SetInt("normal", colortexNormal.Unit);
-            _denoiseShader.SetInt("albedo", colortexAlbedo.Unit);
-            _denoiseShader.SetInt("secondpos", colortexSecondPosition.Unit);
-           
-            _denoiseShader.SetInt("reflN", colortexReflection.Unit);
-            _denoiseShader.SetInt("reflectionAlb", colortexSecondAlbedo.Unit);
-            _denoiseShader.SetInt("holdinfo", colortexHoldInfo.Unit);
-            _denoiseShader.SetInt("watpos", watpos.Unit);
-            _denoiseShader.SetInt("watnorm", watnorm.Unit);
-            _denoiseShader.SetInt("tempacc", tempAccum.Unit);
-            _denoiseShader.SetInt("sstexden", sssTexDenoise.Unit);
-            _denoiseShader.SetInt("colorTex", colortex.Unit);
+            radianceCacheShader.Use();
+            radianceCacheShader.SetInt("skytex", skyTexture.Unit);
+            radianceCacheShader.SetInt("suntex", sunTexture.Unit);
 
-            //_denoiseShader - some ping-pong textures are set each frame so they're omitted here
+            geometryPassShader.Use();
+            geometryPassShader.SetInt("position", positionTexture.Unit);
+            geometryPassShader.SetInt("normal", normalTexture.Unit);
+            geometryPassShader.SetInt("albedo", albedoTexture.Unit);
+            geometryPassShader.SetInt("holdinfo", holdInfoTexture.Unit);
+            //geometryPassShader.SetInt("colorfog", fogColorTexture.Unit);
+            geometryPassShader.SetInt("skytex", skyTexture.Unit);
+            geometryPassShader.SetInt("suntex", sunTexture.Unit);
+            geometryPassShader.SetInt("watpos", waterPositionTexture.Unit);
+            geometryPassShader.SetInt("watnorm", waterNormalTexture.Unit);
+            geometryPassShader.SetInt("sssprev", sssTexture.Unit);
+            geometryPassShader.SetInt("prevN", prevNormalDepthTexture.Unit);
+            geometryPassShader.SetInt("den1", denoiseTextureB.Unit);
 
-            _TAAShader.Use();
-            //_TAAShader.SetInt("color", colortex.Unit); //TODO: review. This was commented out.
-            _TAAShader.SetInt("position", colortexPosition.Unit);
-            _TAAShader.SetInt("normal", colortexNormal.Unit);
-            _TAAShader.SetInt("albedo", colortexAlbedo.Unit);
-            _TAAShader.SetInt("secondpos", colortexSecondPosition.Unit);
-            //_TAAShader.SetInt("Acc", tempAccum.Unit);
-            _TAAShader.SetInt("den1", den2.Unit);//den2 bound here
-            _TAAShader.SetInt("prevTAA", prevTAA.Unit);
-            _TAAShader.SetInt("reflAlb", colortexSecondAlbedo.Unit);
-            _TAAShader.SetInt("colorfog", colorfog.Unit);
-            //_TAAShader.SetInt("holdinfo", colortexHoldInfo.Unit);
-            _TAAShader.SetInt("suntex", suntex.Unit);
-            _TAAShader.SetInt("skyTex", skytex.Unit);
-            _TAAShader.SetInt("watpos", watpos.Unit);
-            _TAAShader.SetInt("watnorm", watnorm.Unit);
-            _TAAShader.SetInt("worl", worley.Unit);
-            _TAAShader.SetInt("sssT", sssTexDenoise.Unit);
-            _TAAShader.SetInt("sssT2", sssTex.Unit);
-            _TAAShader.SetInt("prevN", prevNormalDepth.Unit);
-            _TAAShader.SetInt("holdinfo", colortexHoldInfo.Unit);
-            _TAAShader.SetInt("color", colortex.Unit);
-            _TAAShader.SetInt("var", var1.Unit);
+            temporalResamplingShader.Use();
+            temporalResamplingShader.SetInt("color", colorTexture.Unit);
+            temporalResamplingShader.SetInt("position", positionTexture.Unit);
+            temporalResamplingShader.SetInt("normal", normalTexture.Unit);
+            temporalResamplingShader.SetInt("secondpos", secondaryPositionTexture.Unit);
+            temporalResamplingShader.SetInt("prevW", prevTemporalWeightsTexture.Unit);
+            temporalResamplingShader.SetInt("prevL", prevTemporalRadianceTexture.Unit);
+            temporalResamplingShader.SetInt("prevP", prevTemporalPositionTexture.Unit);
+            temporalResamplingShader.SetInt("prevN", prevNormalDepthTexture.Unit);
 
+            spatialPrepassShader.Use();
+            spatialPrepassShader.SetInt("color", colorTexture.Unit);
+            spatialPrepassShader.SetInt("position", positionTexture.Unit);
+            spatialPrepassShader.SetInt("normal", normalTexture.Unit);
+            spatialPrepassShader.SetInt("secondpos", secondaryPositionTexture.Unit);
+            spatialPrepassShader.SetInt("prevW", temporalWeightsTexture.Unit);
+            spatialPrepassShader.SetInt("prevL", temporalRadianceTexture.Unit);
+            spatialPrepassShader.SetInt("prevP", temporalPositionTexture.Unit);
+            spatialPrepassShader.SetInt("prevN", prevNormalDepthTexture.Unit);
+            //spatialPrepassShader.SetInt("reflAlb", secondaryAlbedoTexture.Unit);
 
-            _upscale.Use();
-            _upscale.SetInt("TAA", TAA.Unit);
+            spatialResamplingShader.Use();
+            //spatialResamplingShader.SetInt("color", colorTexture.Unit);
+            spatialResamplingShader.SetInt("position", positionTexture.Unit);
+            spatialResamplingShader.SetInt("normal", normalTexture.Unit);
+            spatialResamplingShader.SetInt("albedo", albedoTexture.Unit);
+            //spatialResamplingShader.SetInt("secondpos", secondaryPositionTexture.Unit);
+            spatialResamplingShader.SetInt("temppos", temporalPositionTexture.Unit);
+            spatialResamplingShader.SetInt("prevW", prevSpatialWeightsTexture.Unit);
+            spatialResamplingShader.SetInt("prevL", prevSpatialRadianceTexture.Unit);
+            spatialResamplingShader.SetInt("tempW", temporalWeightsTexture.Unit);
+            spatialResamplingShader.SetInt("tempL", temporalRadianceTexture.Unit);
+            spatialResamplingShader.SetInt("prevN", prevNormalDepthTexture.Unit);
+            spatialResamplingShader.SetInt("prevSPos", fogPositionTexture.Unit);
+            spatialResamplingShader.SetInt("holdinfo", holdInfoTexture.Unit);
 
-            _swapShader.Use();
-          
-            _swapShader.SetInt("normal", colortexNormal.Unit);
-            _swapShader.SetInt("Acc", tempAccum.Unit);
-            _swapShader.SetInt("TAA", TAA.Unit);
+            tempAccumulationShader.Use();
+            //tempAccumulationShader.SetInt("color", colorTexture.Unit);
+            tempAccumulationShader.SetInt("position", positionTexture.Unit);
+            tempAccumulationShader.SetInt("normal", normalTexture.Unit);
+            tempAccumulationShader.SetInt("albedo", albedoTexture.Unit);
+            tempAccumulationShader.SetInt("weightS", spatialWeightsTexture.Unit);
+            tempAccumulationShader.SetInt("outgoingrS", spatialRadianceTexture.Unit);
+            tempAccumulationShader.SetInt("prevN", prevNormalDepthTexture.Unit);
+            tempAccumulationShader.SetInt("prevAcc", prevAccumulationTexture.Unit);
+            tempAccumulationShader.SetInt("prevvar", varianceTextureB.Unit);
+            tempAccumulationShader.SetInt("prevden", denoiseTextureB.Unit);
 
-            _swapShader2.Use();
-            _swapShader2.SetInt("tempWeights", temporalWeigths.Unit);
-            _swapShader2.SetInt("tempOutL", temporalOutgoingRadiance.Unit);
-            _swapShader2.SetInt("tempPos", temporalPosition.Unit);
-            _swapShader2.SetInt("spatWe", spatialWeigths.Unit);
-            _swapShader2.SetInt("spatLO", spatialOutgoingRadiance.Unit);
-        
+            denoiseShader.Use();
+            denoiseShader.SetInt("color", temporalRadianceTexture.Unit);
+            //denoiseShader.SetInt("position", positionTexture.Unit);
+            denoiseShader.SetInt("normal", normalTexture.Unit);
+            denoiseShader.SetInt("albedo", albedoTexture.Unit);
+            denoiseShader.SetInt("secondpos", secondaryPositionTexture.Unit);
+            denoiseShader.SetInt("reflN", reflectionTexture.Unit);
+            denoiseShader.SetInt("reflectionAlb", secondaryAlbedoTexture.Unit);
+            denoiseShader.SetInt("holdinfo", holdInfoTexture.Unit);
+            denoiseShader.SetInt("watpos", waterPositionTexture.Unit);
+            denoiseShader.SetInt("watnorm", waterNormalTexture.Unit);
+            denoiseShader.SetInt("tempacc", tempAccumulationTexture.Unit);
+            denoiseShader.SetInt("sstexden", sssDenoiseTexture.Unit);
+            denoiseShader.SetInt("colorTex", colorTexture.Unit);
+            // Ping-pong textures are set each frame, omitted here
 
-            _finalShader.Use();
-            _finalShader.SetInt("color", prevSpatialWeigths.Unit);
-            _finalShader.SetInt("normal", colortexNormal.Unit);
-            _finalShader.SetInt("albedo", colortexAlbedo.Unit);
-   
-            _finalShader.SetInt("TAA", upscale.Unit); //TODO: review. "TAA" sampler is bound to "upscale" here.
-            _finalShader.SetInt("fogLO", TAA.Unit); //TODO: review. "fogLO" sampler is bound to "TAA" here.
-            _finalShader.SetInt("watpos", watpos.Unit);
-            _finalShader.SetInt("position", colortexPosition.Unit);
-            _finalShader.SetInt("var1", var2.Unit);
+            taaShader.Use();
+            //taaShader.SetInt("color", colorTexture.Unit); //TODO: review. This was commented out.
+            taaShader.SetInt("position", positionTexture.Unit);
+            taaShader.SetInt("normal", normalTexture.Unit);
+            taaShader.SetInt("albedo", albedoTexture.Unit);
+            taaShader.SetInt("secondpos", secondaryPositionTexture.Unit);
+            //taaShader.SetInt("Acc", tempAccumulationTexture.Unit);
+            taaShader.SetInt("den1", denoiseTextureB.Unit); //den2 bound here
+            taaShader.SetInt("prevTAA", prevTaaTexture.Unit);
+            taaShader.SetInt("reflAlb", secondaryAlbedoTexture.Unit);
+            taaShader.SetInt("colorfog", fogColorTexture.Unit);
+            //taaShader.SetInt("holdinfo", holdInfoTexture.Unit);
+            taaShader.SetInt("suntex", sunTexture.Unit);
+            taaShader.SetInt("skyTex", skyTexture.Unit);
+            taaShader.SetInt("watpos", waterPositionTexture.Unit);
+            taaShader.SetInt("watnorm", waterNormalTexture.Unit);
+            taaShader.SetInt("worl", worleyNoiseTexture.Unit);
+            taaShader.SetInt("sssT", sssDenoiseTexture.Unit);
+            taaShader.SetInt("sssT2", sssTexture.Unit);
+            taaShader.SetInt("prevN", prevNormalDepthTexture.Unit);
+            taaShader.SetInt("holdinfo", holdInfoTexture.Unit);
+            taaShader.SetInt("color", colorTexture.Unit);
+            taaShader.SetInt("var", varianceTextureA.Unit);
+
+            upscaleShader.Use();
+            upscaleShader.SetInt("TAA", taaTexture.Unit);
+
+            previousFrameCopyShader.Use();
+            previousFrameCopyShader.SetInt("normal", normalTexture.Unit);
+            previousFrameCopyShader.SetInt("Acc", tempAccumulationTexture.Unit);
+            previousFrameCopyShader.SetInt("TAA", taaTexture.Unit);
+
+            previousTemporalCopyShader.Use();
+            previousTemporalCopyShader.SetInt("tempWeights", temporalWeightsTexture.Unit);
+            previousTemporalCopyShader.SetInt("tempOutL", temporalRadianceTexture.Unit);
+            previousTemporalCopyShader.SetInt("tempPos", temporalPositionTexture.Unit);
+            previousTemporalCopyShader.SetInt("spatWe", spatialWeightsTexture.Unit);
+            previousTemporalCopyShader.SetInt("spatLO", spatialRadianceTexture.Unit);
+
+            finalCompositeShader.Use();
+            finalCompositeShader.SetInt("color", prevSpatialWeightsTexture.Unit);
+            finalCompositeShader.SetInt("normal", normalTexture.Unit);
+            finalCompositeShader.SetInt("albedo", albedoTexture.Unit);
+            finalCompositeShader.SetInt("TAA", upscaleTexture.Unit); //TODO: review. "TAA" sampler is bound to "upscale" here.
+            finalCompositeShader.SetInt("fogLO", taaTexture.Unit); //TODO: review. "fogLO" sampler is bound to "TAA" here.
+            finalCompositeShader.SetInt("watpos", waterPositionTexture.Unit);
+            finalCompositeShader.SetInt("position", positionTexture.Unit);
+            finalCompositeShader.SetInt("var1", varianceTextureB.Unit);
 
 
 
+            GL.BindVertexArray(fullscreenQuadVao);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, fullscreenQuadVbo);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, fullscreenQuadEbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, fullscreenQuadVertices.Length * sizeof(float), fullscreenQuadVertices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, fullscreenQuadIndices.Length * sizeof(uint), fullscreenQuadIndices, BufferUsageHint.StaticDraw);
 
-            //We use the same fullscreen quad VAO during the whole frame
-            GL.BindVertexArray(quadVAO);
-            //Select the VertexBufferObject
-            GL.BindBuffer(BufferTarget.ArrayBuffer, quadVBO);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, quadEBO);
+            int vertexPositionLocation = GL.GetAttribLocation(geometryPassShader.Handle, "aPosition");
+            GL.EnableVertexAttribArray(vertexPositionLocation);
+            GL.VertexAttribPointer(vertexPositionLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
 
-            //Using the selected vertex buffer object, write to it the vertices data using static draw(meaning that data won't change)
-            GL.BufferData(BufferTarget.ArrayBuffer, quad.Length * sizeof(float), quad, BufferUsageHint.StaticDraw);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, quadindices.Length * sizeof(uint), quadindices, BufferUsageHint.StaticDraw);
+            int texCoordLocation = GL.GetAttribLocation(geometryPassShader.Handle, "aTexCoord");
+            GL.EnableVertexAttribArray(texCoordLocation);
+            GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-            int vertexPosition = GL.GetAttribLocation(_testShader.Handle, "aPosition");
-            GL.EnableVertexAttribArray(vertexPosition);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
-            GL.EnableVertexAttribArray(0);
-            int texCoordLocation2 = GL.GetAttribLocation(_testShader.Handle, "aTexCoord");
-            GL.VertexAttribPointer(texCoordLocation2, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
-            GL.EnableVertexAttribArray(texCoordLocation2);
+            camera = new Camera(Vector3.UnitZ * 3, resolution.X / (float)resolution.Y);
+            frameTimer = new Stopwatch();
+            frameTimer.Start();
 
-
-            _camera = new Camera(Vector3.UnitZ * 3, resolution.X / (float)resolution.Y);
-            stopWatch = new Stopwatch();
-            stopWatch.Start();
-
-            GL.BindImageTexture(0, worley.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            _worl.Use();
+            // Setup compute textures and dispatch compute shaders as needed
+            GL.BindImageTexture(0, worleyNoiseTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            worleyNoiseShader.Use();
             GL.DispatchCompute(64, 64, 64);
 
-            //setup image unit bindings
-            GL.BindImageTexture(0, rcpos.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
-            GL.BindImageTexture(1, rcnorm.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
-            GL.BindImageTexture(2, rcrad.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
-            GL.BindImageTexture(3, rcfog.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
-            GL.BindImageTexture(4, suntex.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(0, radianceCachePositionTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
+            GL.BindImageTexture(1, radianceCacheNormalTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
+            GL.BindImageTexture(2, radianceCacheRadianceTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(3, radianceCacheFogTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
+            GL.BindImageTexture(4, sunTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
-            //CursorState = CursorState.Grabbed;
-            /*
-            _FL.Use();
-            GL.BindVertexArray(quadVAO);
-            _FL.SetVector3(_camera.Position, "viewPos");
-            _FL.SetVector3(prevCamPos, "lastViewPos");
-
-            GL.DispatchCompute(32, 32, 32);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-          */
-            //32*32*32*12
-            var firstBuffer = new radianceCache[393216];
             
-            
-            
-            var secondBuffer = new Level[4096];
-            var thirdBuffer = new Level[1728000];
-
-            //first = 48^3
-
-
-            //volumetricsBuffer
-            /*Buffer1 = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, Buffer1);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, firstBuffer.Length * Marshal.SizeOf<Level>(), firstBuffer, BufferUsageHint.DynamicDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, Buffer1);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
-
-            //volumetricsBufferPrev
-            Buffer2 = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, Buffer2);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, secondBuffer.Length * Marshal.SizeOf<Level>(), secondBuffer, BufferUsageHint.DynamicDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, Buffer2);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
-
-            Buffer3 = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, Buffer3);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, thirdBuffer.Length * Marshal.SizeOf<Level>(), thirdBuffer, BufferUsageHint.DynamicDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 8, Buffer3);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
-
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, Buffer1);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, Buffer2);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 8, Buffer3);
-            */
-
-            radianceCacheBuffer = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, radianceCacheBuffer);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, firstBuffer.Length * Marshal.SizeOf<radianceCache>(), firstBuffer, BufferUsageHint.DynamicDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, radianceCacheBuffer);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
-
-
-
-            _Calculate.Use();
-            GL.BindVertexArray(quadVAO);
-            _Calculate.SetVector3(_camera.Position, "viewPos");          
-            _Calculate.SetFloat(iFrame, "time");
-          
-
-            GL.DispatchCompute(30, 30, 30);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-
-
-           /* _Calculate1.Use();
-            GL.BindVertexArray(quadVAO);
-            _Calculate1.SetVector3(_camera.Position, "viewPos");
-            _Calculate1.SetFloat(iFrame, "time");
-
-
-            GL.DispatchCompute(15, 15, 15);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-
-
-            _Calculate2.Use();
-            GL.BindVertexArray(quadVAO);
-            _Calculate2.SetVector3(_camera.Position, "viewPos");
-            _Calculate2.SetFloat(iFrame, "time");
-
-
-            GL.DispatchCompute(10, 10, 10);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-           */
-
-            isInitialized = true;
+            isRendererInitialized = true;
         }
-
 
         public void RenderFrame()
         {
-            if (!isInitialized) throw new InvalidOperationException("Unable to render frame before successful initialization.");
+            if (!isRendererInitialized)
+                throw new InvalidOperationException("Renderer must be initialized before rendering.");
 
-            //GL.Clear(ClearBufferMask.ColorBufferBit);
+            LightDirection = Vector3.Normalize(LightDirection);
+            var (lightViewMatrix, lightProjectionMatrix, lightPosition) = CalculateLightMatrices();
 
-            ldir = Vector3.Normalize(ldir);
+            var viewMatrix = camera.GetViewMatrix();
+            var projectionMatrix = camera.GetProjectionMatrix();
 
-            Vector3 lpos = new( _camera.Position.X + ldir.X * 270.0f, ldir.Y * 270.0f, _camera.Position.Z + ldir.Z * 270.0f );
+            RenderInitializationPass(viewMatrix, projectionMatrix);
+            RenderSkyPass();
+            RenderSunPass(lightViewMatrix, lightProjectionMatrix, LightDirection, lightPosition);
+            RenderRadianceCachePass(lightViewMatrix, lightProjectionMatrix, LightDirection);
+            RenderGeometryPass(viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix, LightDirection);
+            RenderTemporalResamplingPass();
+            RenderSpatPrePass();
+            RenderSpatialResamplingPass();
+            RenderTempAccumulationPass();
+            RenderDenoisePass();
+            RenderTaaPass(viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix, LightDirection);
+            RenderUpscalePass();
+            RenderPreviousFrameCopyPass();
+            RenderPreviousTemporalCopyPass();
+            RenderFinalCompositePass(viewMatrix, projectionMatrix);
 
-            Matrix4 lightview = Matrix4.LookAt(
-                lpos,
-                new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z),
-                new Vector3(0.0f, 1.0f, 0.0f)
-                );
-
-            //Matrix4 lightview = Matrix4.
-
-            //Matrix4 lightproj = Matrix4.CreateOrthographicOffCenter(
-            //    -60.0f, 60.0f, -60.0f, 60.0f, 1.0f, 100.0f
-            //    );
-            Matrix4 lightproj = Matrix4.CreateOrthographic(400.0f, 400.0f, 0.0f, 127.5f);
-
-            //Vector3 nm = Vector3.Normalize(lpos - new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z));
-
-             Vector3 lpos2 = new(_camera.Position.X + ldir.X * 360.0f, ldir.Y * 360.0f, _camera.Position.Z + ldir.Z * 360.0f);
-            //lpos2 = lpos;
-            //Vector3 lpos2 = ldir * 8200.0f;
-           // Vector3 lpos2 = new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z) + nm * 8200.0f;
-            //lpos2.Y = 8200.0f;
-           // Vector3 lpos2 = new Vector3(0.0f, 7200.0f, 0.0f);
-            Matrix4 lightview2 = Matrix4.LookAt(
-                lpos2,
-                new Vector3(_camera.Position.X, 0.0f, _camera.Position.Z),
-                new Vector3(0.0f, 1.0f, 0.0f)
-                );
-            Matrix4 lightproj2 = Matrix4.CreateOrthographic(400.0f, 400.0f, 0.0f, 800.0f);
-
-            //Matrix4 lightproj2 = Matrix4.CreatePerspectiveFieldOfView(3.14159f / 1.2f, 1.0f, 0.01f, 120.0f);
-            Matrix4 view = _camera.GetViewMatrix();
-            Matrix4 projection = _camera.GetProjectionMatrix();
-            //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, modelMatricesBuffer);
-
-            
-
-          /*  _FL.Use();
-            GL.BindVertexArray(quadVAO);
-            _FL.SetVector3(_camera.Position, "viewPos");
-            _FL.SetVector3(prevCamPos, "lastViewPos");
-            _FL.SetMatrix4(view.Inverted(), "invview");
-            _FL.SetMatrix4(projection.Inverted(), "invproj"); 
-            _FL.SetFloat(iFrame, "time");
-            _FL.SetMatrix4(prevView, "prevview");
-            _FL.SetMatrix4(prevProjection, "prevproj");
-            _FL.SetMatrix4(view, "view");
-            _FL.SetMatrix4(projection, "proj");
+            UpdatePreviousFrameData(viewMatrix, projectionMatrix);
+            frameIndex += 1.0f;
+        }
 
 
+        public void UpdateResolution(Vector2i resolution)
+        {
+            camera.AspectRatio = resolution.X / (float)resolution.Y;
+            GL.Viewport(0, 0, resolution.X, resolution.Y);
+        }
 
+        #endregion
 
-            GL.DispatchCompute(24, 24, 24);
+        #region Private Methods
 
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-          */
+        private (Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightPosition) CalculateLightMatrices()
+        {
+            Vector3 lightPosition = camera.Position + LightDirection * 270.0f;
+            Matrix4 lightViewMatrix = Matrix4.LookAt(lightPosition, new Vector3(camera.Position.X, 0.0f, camera.Position.Z), Vector3.UnitY);
+            Matrix4 lightProjectionMatrix = Matrix4.CreateOrthographic(400.0f, 400.0f, 0.0f, 127.5f);
+            return (lightViewMatrix, lightProjectionMatrix, lightPosition);
+        }
 
-          /*  _FL4.Use();
-            GL.BindVertexArray(quadVAO);
-            _FL4.SetVector3(_camera.Position, "viewPos");
-            _FL4.SetVector3(prevCamPos, "lastViewPos");
-            _FL4.SetMatrix4(view.Inverted(), "invview");
-            _FL4.SetMatrix4(projection.Inverted(), "invproj");
-            _FL4.SetFloat(iFrame, "time");
-            _FL4.SetMatrix4(prevView, "prevview");
-            _FL4.SetMatrix4(prevProjection, "prevproj");
-            _FL4.SetMatrix4(view, "view");
-            _FL4.SetMatrix4(projection, "proj");
-
-            GL.DispatchCompute(24, 24, 24);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-
-
-
-            _FL3.Use();
-            GL.BindVertexArray(quadVAO);
-            _FL3.SetVector3(_camera.Position, "viewPos");
-            _FL3.SetVector3(prevCamPos, "lastViewPos");
-            _FL3.SetMatrix4(view.Inverted(), "invview");
-            _FL3.SetMatrix4(projection.Inverted(), "invproj");
-            _FL3.SetFloat(iFrame, "time");
-            _FL3.SetMatrix4(prevView, "prevview");
-            _FL3.SetMatrix4(prevProjection, "prevproj");
-            _FL3.SetMatrix4(view, "view");
-            _FL3.SetMatrix4(projection, "proj");
-
-            GL.DispatchCompute(24, 24, 24);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-          */
-            
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff2);
-
-           
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
-            //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-            //GL.Clear(ClearBufferMask.ColorBufferBit);
+        private void RenderInitializationPass(Matrix4 viewMatrix, Matrix4 projectionMatrix)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, gBufferFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
             GL.Disable(EnableCap.DepthTest);
-            _initShader.Use();
-            _initShader.SetMatrix4(view.Inverted(), "invview");
-            _initShader.SetMatrix4(projection.Inverted(), "invproj");
-            _initShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _initShader.SetFloat(iFrame, "time");
-            _initShader.SetVector3(_camera.Position, "viewPos");
-
-
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+            initializationShader.Use();
+            initializationShader.SetMatrix4(viewMatrix.Inverted(), "invview");
+            initializationShader.SetMatrix4(projectionMatrix.Inverted(), "invproj");
+            initializationShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            initializationShader.SetFloat(frameIndex, "time");
+            initializationShader.SetVector3(camera.Position, "viewPos");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+        }
 
-            //==============================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, skybuff);
-
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
-            //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-            //GL.Clear(ClearBufferMask.ColorBufferBit);
+        private void RenderSkyPass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, skyFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
             GL.Disable(EnableCap.DepthTest);
-            _skyShader.Use();
-            _skyShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _skyShader.SetFloat(iFrame, "time");
-            _skyShader.SetVector3(ldir, "ldir");
-            _skyShader.SetFloat(cloudCoverage, "cloudCoverage");
-     
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(skytex.Handle);
+            skyShader.Use();
+            skyShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            skyShader.SetFloat(frameIndex, "time");
+            skyShader.SetVector3(LightDirection, "ldir");
+            skyShader.SetFloat(CloudCoverage, "cloudCoverage");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(skyTexture.Handle);
+        }
 
-            //=================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, sunbuff);
-
-            GL.Viewport(0, 0, (int)shadowScale, (int)shadowScale);
-            //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-            //GL.Clear(ClearBufferMask.ColorBufferBit);
+        private void RenderSunPass(Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightDirection, Vector3 lightPosition)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, sunFramebuffer);
+            GL.Viewport(0, 0, ShadowMapResolution, ShadowMapResolution);
             GL.Disable(EnableCap.DepthTest);
-            _sunShader.Use();
-            _sunShader.SetFloat(iFrame, "time");
+            sunShader.Use();
+            sunShader.SetFloat(frameIndex, "time");
+            sunShader.SetVector3(lightDirection, "ldir");
+            sunShader.SetVector3(lightPosition, "lpos");
+            sunShader.SetMatrix4(lightProjectionMatrix, "lightproj");
+            sunShader.SetMatrix4(lightViewMatrix, "lightview");
+            sunShader.SetFloat(ShadowMapResolution, "scale");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
 
-            _sunShader.SetVector3(ldir, "ldir");
-            _sunShader.SetVector3(lpos, "lpos");
-            _sunShader.SetMatrix4(lightproj, "lightproj");
-            _sunShader.SetMatrix4(lightview, "lightview");
-            _sunShader.SetFloat((float)shadowScale, "scale");
-          
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            //===================================================
-
-            
-            _RC.Use();
-           
-            _RC.SetFloat(iFrame, "time");
-            //_RC.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
-            _RC.SetVector3(_camera.Position, "viewPos");
-            _RC.SetVector3(prevCamPos, "lastViewPos");
-            _RC.SetVector3(ldir, "ldir");
-            _RC.SetMatrix4(lightproj, "lightproj");
-            _RC.SetMatrix4(lightview, "lightview");
-            //_RC.SetVector3(lpos, "lpos");
-
+        private void RenderRadianceCachePass(Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightDirection)
+        {
+            radianceCacheShader.Use();
+            radianceCacheShader.SetFloat(frameIndex, "time");
+            radianceCacheShader.SetVector3(camera.Position, "viewPos");
+            radianceCacheShader.SetVector3(previousCameraPosition, "lastViewPos");
+            radianceCacheShader.SetVector3(lightDirection, "ldir");
+            radianceCacheShader.SetMatrix4(lightProjectionMatrix, "lightproj");
+            radianceCacheShader.SetMatrix4(lightViewMatrix, "lightview");
             GL.DispatchCompute(45, 45, 45);
-
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+        }
 
-            //===================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, colorbuff);
-
-
-            GL.Viewport(0, 0, (int)size.X, (int)size.Y);
-            //GL.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-            //GL.Clear(ClearBufferMask.ColorBufferBit);
+        private void RenderGeometryPass(Matrix4 viewMatrix, Matrix4 projectionMatrix, Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightDirection)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, mainFramebuffer);
+            GL.Viewport(0, 0, (int)renderResolution.X, (int)renderResolution.Y);
             GL.Disable(EnableCap.DepthTest);
-            _testShader.Use();
-         
-            _testShader.SetMatrix4(view.Inverted(), "invview");
-            _testShader.SetMatrix4(projection.Inverted(), "invproj");
-            _testShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _testShader.SetFloat(iFrame, "time");
-            //_testShader.SetFloat(stopWatch.ElapsedMilliseconds, "time2");
-            _testShader.SetVector3(_camera.Position, "viewPos");
-            _testShader.SetVector3(ldir, "ldir");
-            _testShader.SetMatrix4(lightproj, "lightproj");
-            _testShader.SetMatrix4(lightview, "lightview");
-            //_testShader.SetVector3(lpos, "lpos");
-            _testShader.SetMatrix4(prevView, "prevview");
-            _testShader.SetMatrix4(prevProjection, "prevproj");
+            geometryPassShader.Use();
+            geometryPassShader.SetMatrix4(viewMatrix.Inverted(), "invview");
+            geometryPassShader.SetMatrix4(projectionMatrix.Inverted(), "invproj");
+            geometryPassShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            geometryPassShader.SetFloat(frameIndex, "time");
+            geometryPassShader.SetVector3(camera.Position, "viewPos");
+            geometryPassShader.SetVector3(lightDirection, "ldir");
+            geometryPassShader.SetMatrix4(lightProjectionMatrix, "lightproj");
+            geometryPassShader.SetMatrix4(lightViewMatrix, "lightview");
+            geometryPassShader.SetMatrix4(previousViewMatrix, "prevview");
+            geometryPassShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
 
 
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-
-            ///==========================================================
-            
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, temporalbuff);
-
-            GL.Viewport(0, 0, (int)size.X, (int)size.Y);
+        private void RenderTemporalResamplingPass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, temporalFramebuffer);
+            GL.Viewport(0, 0, (int)renderResolution.X, (int)renderResolution.Y);
             GL.Disable(EnableCap.DepthTest);
-            _TemporalRestirShader.Use();
-      
-            _TemporalRestirShader.SetMatrix4(prevView, "prevview");
-            _TemporalRestirShader.SetMatrix4(prevProjection, "prevproj");
+            temporalResamplingShader.Use();
+            temporalResamplingShader.SetMatrix4(previousViewMatrix, "prevview");
+            temporalResamplingShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            temporalResamplingShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            temporalResamplingShader.SetFloat(frameIndex, "time");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
 
-            _TemporalRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _TemporalRestirShader.SetFloat(iFrame, "time");
-          
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            ///==========================================================
-
-            ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _spatPrePassbuff);
-
-            GL.Viewport(0, 0, (int)size.X, (int)size.Y);
+        private void RenderSpatPrePass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialPrepassFramebuffer);
+            GL.Viewport(0, 0, (int)renderResolution.X, (int)renderResolution.Y);
             GL.Disable(EnableCap.DepthTest);
-            _spatPrePass.Use();
+            spatialPrepassShader.Use();
+            spatialPrepassShader.SetMatrix4(previousViewMatrix, "prevview");
+            spatialPrepassShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            spatialPrepassShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            spatialPrepassShader.SetFloat(frameIndex, "time");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
 
-            _spatPrePass.SetMatrix4(prevView, "prevview");
-            _spatPrePass.SetMatrix4(prevProjection, "prevproj");
-
-            _spatPrePass.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _spatPrePass.SetFloat(iFrame, "time");
-
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            ///==========================================================
-
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialbuff);
-
-            GL.Viewport(0, 0, (int)size.X, (int)size.Y);
+        private void RenderSpatialResamplingPass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, spatialFramebuffer);
+            GL.Viewport(0, 0, (int)renderResolution.X, (int)renderResolution.Y);
             GL.Disable(EnableCap.DepthTest);
-            _SpatialRestirShader.Use();
-        
-            _SpatialRestirShader.SetMatrix4(prevView, "prevview");
-            _SpatialRestirShader.SetMatrix4(prevProjection, "prevproj");
-            _SpatialRestirShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _SpatialRestirShader.SetFloat(iFrame, "time");
-            _SpatialRestirShader.SetVector3(_camera.Position, "viewPos");
+            spatialResamplingShader.Use();
+            spatialResamplingShader.SetMatrix4(previousViewMatrix, "prevview");
+            spatialResamplingShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            spatialResamplingShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            spatialResamplingShader.SetFloat(frameIndex, "time");
+            spatialResamplingShader.SetVector3(camera.Position, "viewPos");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
 
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, tempAccumbuff);
-
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
+        private void RenderTempAccumulationPass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, tempAccumulationFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
             GL.Disable(EnableCap.DepthTest);
-            _tempAccumShader.Use();
-      
-            _tempAccumShader.SetMatrix4(prevView, "prevview");
-            _tempAccumShader.SetMatrix4(prevProjection, "prevproj");
-            _tempAccumShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _tempAccumShader.SetFloat(iFrame, "time");
-
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+            tempAccumulationShader.Use();
+            tempAccumulationShader.SetMatrix4(previousViewMatrix, "prevview");
+            tempAccumulationShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            tempAccumulationShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            tempAccumulationShader.SetFloat(frameIndex, "time");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+        }
 
-            ///==========================================================
-
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
+        private void RenderDenoisePass()
+        {
+            GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
             GL.Disable(EnableCap.DepthTest);
-            _denoiseShader.Use();
-    
-            _denoiseShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _denoiseShader.SetFloat(iFrame, "time");
+            denoiseShader.Use();
+            denoiseShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            denoiseShader.SetFloat(frameIndex, "time");
 
             for (int i = 0; i < 7; i++)
             {
                 if (i % 2 == 0)
                 {
-                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, den1buff);
-                    _denoiseShader.SetInt("den1", den1.Unit);
-                    _denoiseShader.SetInt("var1", var1.Unit);
-                    _denoiseShader.SetInt("colorfog", colorfog.Unit);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, denoiseFramebufferA);
+                    denoiseShader.SetInt("den1", denoiseTextureA.Unit);
+                    denoiseShader.SetInt("var1", varianceTextureA.Unit);
+                    denoiseShader.SetInt("colorfog", fogColorTexture.Unit);
                 }
                 else
                 {
-                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, den2buff);
-                    _denoiseShader.SetInt("den1", den2.Unit);
-                    _denoiseShader.SetInt("var1", var2.Unit);
-                    _denoiseShader.SetInt("colorfog", colorfog2.Unit);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, denoiseFramebufferB);
+                    denoiseShader.SetInt("den1", denoiseTextureB.Unit);
+                    denoiseShader.SetInt("var1", varianceTextureB.Unit);
+                    denoiseShader.SetInt("colorfog", fogColorTextureB.Unit);
                 }
-
-
-                GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
+                GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
                 GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
             }
-
-            ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, TAAbuff);
-
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
-            GL.Disable(EnableCap.DepthTest);
-            _TAAShader.Use();
-            _TAAShader.SetMatrix4(view.Inverted(), "invview");
-            _TAAShader.SetMatrix4(projection.Inverted(), "invproj");
-            _TAAShader.SetMatrix4(prevView, "prevview");
-            _TAAShader.SetMatrix4(prevProjection, "prevproj");
-            _TAAShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _TAAShader.SetFloat(iFrame, "time");
-            _TAAShader.SetVector3(_camera.Position, "viewPos");
-            _TAAShader.SetVector3(ldir, "ldir");
-            _TAAShader.SetMatrix4(lightproj, "lightproj");
-            _TAAShader.SetMatrix4(lightview, "lightview");
-            _TAAShader.SetMatrix4(view, "view");
-            _TAAShader.SetMatrix4(projection, "proj");
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(TAA.Handle);
-                        
-            ///========
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleBuff);
-
-            GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
-            GL.Disable(EnableCap.DepthTest);
-            _upscale.Use();
-         
-            _upscale.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _upscale.SetFloat( KeepScale, "scale");
-
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(upscale.Handle);
-
-            //GL.GenerateTextureMipmap(!isEverythingLower ? upscale2 : upscale); //TODO: review, this seems intended but causes a "ghost" sky effect
-
-            ///=========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff);
-
-            GL.Viewport(0, 0, (int)(size.X * ScaleEverything), (int)(size.Y * ScaleEverything));
-            GL.Disable(EnableCap.DepthTest);
-            _swapShader.Use();
-
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(prevTAA.Handle);
-            GL.GenerateTextureMipmap(upscale2.Handle);
-
-            ///==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, swapbuff2);
-
-            GL.Viewport(0, 0, (int)(size.X), (int)(size.Y));
-            GL.Disable(EnableCap.DepthTest);
-            _swapShader2.Use();
-
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-            //==========================================================
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, TargetFramebuffer);
-
-            GL.Viewport(0, 0, (int)(size.X * KeepScale), (int)(size.Y * KeepScale));
-            GL.Disable(EnableCap.DepthTest);
-            _finalShader.Use();
-
-            _finalShader.SetMatrix4(projection, "projection");
-            _finalShader.SetVector3(_camera.Position, "viewPos");
-            _finalShader.SetVector2(new Vector2((float)size.X * KeepScale, (float)size.Y * KeepScale), "wh");
-            _finalShader.SetFloat(iFrame, "time");
-            _finalShader.SetFloat(Brightness, "brightness");
-            _finalShader.SetInt("enableBlur", EnableBlur ? 1 : 0);
-            _finalShader.SetInt("enableTextureDebugging", DebuggedTexture is not null ? 1 : 0);
-            _finalShader.SetInt("debuggedTexture", DebuggedTexture?.Unit ?? 0);
-            _finalShader.SetMatrix4(prevView, "prevview");
-            _finalShader.SetMatrix4(prevProjection, "prevproj");
-            GL.DrawElements(PrimitiveType.Triangles, quadindices.Length, DrawElementsType.UnsignedInt, 0);
-
-
-
-          /*  
-            _FL2.Use();
-            GL.BindVertexArray(quadVAO);
-            _FL2.SetVector3(_camera.Position, "viewPos");
-            _FL2.SetVector3(prevCamPos, "lastViewPos");
-            _FL2.SetMatrix4(view.Inverted(), "invview");
-            _FL2.SetMatrix4(projection.Inverted(), "invproj");
-            _FL2.SetFloat(iFrame, "time");
-            _FL2.SetMatrix4(prevView, "prevview");
-            _FL2.SetMatrix4(prevProjection, "prevproj");
-            _FL2.SetMatrix4(view, "view");
-            _FL2.SetMatrix4(projection, "proj");
-
-            GL.DispatchCompute(24, 24, 24);
-
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-          */
-
-
-            prevView = view;
-            prevProjection = projection;
-            prevCamPos = _camera.Position;
-            iFrame += 1.0f;
-
-            //SwapBuffers(); //buffer swapping is handled by gui
         }
 
-        public void UpdateResolution(Vector2i resolution)
+        private void RenderTaaPass(Matrix4 viewMatrix, Matrix4 projectionMatrix, Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightDirection)
         {
-            _camera.AspectRatio = resolution.X / (float)resolution.Y;
-            GL.Viewport(0, 0, resolution.X, resolution.Y);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, taaFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
+            GL.Disable(EnableCap.DepthTest);
+            taaShader.Use();
+            taaShader.SetMatrix4(viewMatrix.Inverted(), "invview");
+            taaShader.SetMatrix4(projectionMatrix.Inverted(), "invproj");
+            taaShader.SetMatrix4(previousViewMatrix, "prevview");
+            taaShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            taaShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            taaShader.SetFloat(frameIndex, "time");
+            taaShader.SetVector3(camera.Position, "viewPos");
+            taaShader.SetVector3(lightDirection, "ldir");
+            taaShader.SetMatrix4(lightProjectionMatrix, "lightproj");
+            taaShader.SetMatrix4(lightViewMatrix, "lightview");
+            taaShader.SetMatrix4(viewMatrix, "view");
+            taaShader.SetMatrix4(projectionMatrix, "proj");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(taaTexture.Handle);
         }
 
+        private void RenderUpscalePass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * DefaultScale), (int)(renderResolution.Y * DefaultScale));
+            GL.Disable(EnableCap.DepthTest);
+            upscaleShader.Use();
+            upscaleShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            upscaleShader.SetFloat(DefaultScale, "scale");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(upscaleTexture.Handle);
+        }
+
+        private void RenderPreviousFrameCopyPass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, previousFrameFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
+            GL.Disable(EnableCap.DepthTest);
+            previousFrameCopyShader.Use();
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.GenerateTextureMipmap(prevTaaTexture.Handle);
+            GL.GenerateTextureMipmap(upscaleTextureB.Handle);
+        }
+
+        private void RenderPreviousTemporalCopyPass()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, previousTemporalFramebuffer);
+            GL.Viewport(0, 0, (int)renderResolution.X, (int)renderResolution.Y);
+            GL.Disable(EnableCap.DepthTest);
+            previousTemporalCopyShader.Use();
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
+
+        private void RenderFinalCompositePass(Matrix4 viewMatrix, Matrix4 projectionMatrix)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, OutputFramebuffer);
+            GL.Viewport(0, 0, (int)(renderResolution.X * DefaultScale), (int)(renderResolution.Y * DefaultScale));
+            GL.Disable(EnableCap.DepthTest);
+            finalCompositeShader.Use();
+            finalCompositeShader.SetMatrix4(projectionMatrix, "projection");
+            finalCompositeShader.SetVector3(camera.Position, "viewPos");
+            finalCompositeShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            finalCompositeShader.SetFloat(frameIndex, "time");
+            finalCompositeShader.SetFloat(SceneBrightness, "brightness");
+            finalCompositeShader.SetInt("enableBlur", EnableFinalBlur ? 1 : 0);
+            finalCompositeShader.SetInt("enableTextureDebugging", DebugTextureOverride is not null ? 1 : 0);
+            finalCompositeShader.SetInt("debuggedTexture", DebugTextureOverride?.Unit ?? 0);
+            finalCompositeShader.SetMatrix4(previousViewMatrix, "prevview");
+            finalCompositeShader.SetMatrix4(previousProjectionMatrix, "prevproj");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+        }
+
+        private void UpdatePreviousFrameData(Matrix4 viewMatrix, Matrix4 projectionMatrix)
+        {
+            previousViewMatrix = viewMatrix;
+            previousProjectionMatrix = projectionMatrix;
+            previousCameraPosition = camera.Position;
+        }
+
+        #endregion
     }
 }

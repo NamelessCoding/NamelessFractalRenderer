@@ -1060,7 +1060,7 @@ float deTT( vec3 p ) {
     return Precision*(l)*pow(Scale, -float(i));
 }
 //tuk
-float map(vec3 p, float iTime) {
+float map435456467(vec3 p, float iTime) {
   float ls = 0.;
    p = p.xzy;
   isWat = 0.;
@@ -1123,7 +1123,7 @@ issubsurface = true;
   }
 
   return fins;*/
- // float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
+  float aa = fractal_de46((vec3(-5.0, 25.0, 13.0) - p) / 10.) * 10.;
 float sphere = mb(p / 15.).x * 15.;
  //float sphere = length(p) - 13.5;
 float sphere2 = length(vec3(0., 25., 0.) - p) - 3.5;
@@ -1135,7 +1135,7 @@ float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
 
   /////////////////////
   
-         vec3 pos = p.xzy;
+        /* vec3 pos = p.xzy;
           const float dLeaves = deTree2( (pos + vec3( 0.0f, 7.0f, 0.0f ))/6.)*6.; 
      float sceneDist = dLeaves; 
      if ( sceneDist == dLeaves  ) {
@@ -1154,7 +1154,7 @@ float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
               rough = 0.1;
 
               //hitPointSurfaceType = WOOD;
-          }
+          }*/
 
   // return sceneDist;
   ///////////////////////
@@ -1162,8 +1162,8 @@ float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
   // float sphere = mandelbox(p/2.)*2.;
 
   // float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-  float final = min(min(aa3, aa3),
-                    min(aa3, min(sphere2, min(sphere3, min(sceneDist, sphere)))));
+  float final = min(min(aa, aa3),
+                    min(aa3, min(sphere2, min(sphere3, min(sphere, sphere)))));
 
  // float final = min(aa, min(aa3, sphere3));
 
@@ -1179,10 +1179,10 @@ float sphere3 = length(vec3(0., 10., 10.) - p) - 3.5;
 
 //}
 
-//  if (final == aa) {
- //   rough = 1.;
- //   cccc = pal(escape * 0.5, vec3(0.8, 0.4, 0.4));
- // }
+  if (final == aa) {
+    rough = 1.;
+    cccc = pal(escape * 0.5, vec3(0.8, 0.4, 0.4));
+  }
   if (final == aa3) {
     rough = .1;
     cccc = pal(escape333, vec3(0.4, 0.4, 0.8));
@@ -1950,7 +1950,7 @@ float de234(vec3 p){
     }
     return length(p)/s;
   }
-float mapdfhfghrty(vec3 p, float iTime){
+float map(vec3 p, float iTime){
   p.y -= 22.;
   p = p.xzy;
   p.z *= -1.;

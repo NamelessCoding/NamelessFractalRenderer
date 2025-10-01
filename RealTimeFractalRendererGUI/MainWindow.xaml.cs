@@ -115,7 +115,7 @@ namespace RealTimeFractalRendererGUI
         {
             if(isRendererInitialized)
             {
-                renderer.TargetFramebuffer = display.Framebuffer;
+                renderer.OutputFramebuffer = display.Framebuffer;
 
                 if (resolutionChanged)
                 {
@@ -175,7 +175,7 @@ namespace RealTimeFractalRendererGUI
             }
 
             //update uniforms
-            renderer.SetLdir(XL, YL, ZL);
+            renderer.SetLightDirection(XL, YL, ZL);
             renderer.SetCloudCoverage(CloudCoverage);
 
             //TODO: add uniforms to update from gui
@@ -238,7 +238,7 @@ namespace RealTimeFractalRendererGUI
 
         private void ClearDebugTexButton_Click(object sender, RoutedEventArgs e)
         {
-            Renderer.DebuggedTexture = null;
+            Renderer.DebugTextureOverride = null;
             OnPropertyChanged(nameof(Renderer));
         }
     }

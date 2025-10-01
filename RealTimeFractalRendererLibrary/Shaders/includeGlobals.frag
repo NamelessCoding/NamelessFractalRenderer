@@ -14,7 +14,7 @@ vec3 sunColor = vec3(0.9, 0.8, 0.5);
 float sunStrength = 2.25;
 float skyStrength = 2.25;
 
-float epsilon = 0.01;
+float epsilon = 0.0021;
 float sssStepSize = 0.5;
 
 

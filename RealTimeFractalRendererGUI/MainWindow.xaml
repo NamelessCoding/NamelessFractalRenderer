@@ -39,7 +39,7 @@
                     </TextBlock>
                 </Grid>
                 <Label>Brightness</Label>
-                <uitk:SingleUpDown Value="{Binding Renderer.Brightness}" FormatString="N6"
+                <uitk:SingleUpDown Value="{Binding Renderer.SceneBrightness}" FormatString="N6"
                                Minimum="0" Maximum="1000" Increment="0.1" />
                 <Label>Camera Yaw</Label>
                 <uitk:SingleUpDown Value="{Binding CameraYaw}" FormatString="N3"
@@ -57,7 +57,7 @@
                     <Label>Z</Label>
                     <Slider Height="22" Width="116" Value="{Binding ZL}" Minimum="-1" Maximum="1"/>
                 </StackPanel>
-                <CheckBox IsChecked="{Binding Renderer.EnableBlur}">Enable blur</CheckBox>
+                <CheckBox IsChecked="{Binding Renderer.EnableFinalBlur}">Enable blur</CheckBox>
                 <Label>Cloud Coverage</Label>
                 <uitk:SingleUpDown Value="{Binding CloudCoverage}" FormatString="N3"
                 Minimum="0" Maximum="1.0" Increment="0.01" />
@@ -69,7 +69,7 @@
                     <Button Click="ClearDebugTexButton_Click" HorizontalAlignment="Right">Clear</Button>
                 </Grid>
                 <ComboBox ItemsSource="{Binding Textures}"
-                      SelectedValue="{Binding Renderer.DebuggedTexture, Mode=TwoWay}" 
+                      SelectedValue="{Binding Renderer.DebugTextureOverride, Mode=TwoWay}" 
                       DisplayMemberPath="Name" />
             </StackPanel>
         </Grid>
