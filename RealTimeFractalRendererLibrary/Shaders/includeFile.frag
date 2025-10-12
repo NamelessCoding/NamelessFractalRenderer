@@ -1060,7 +1060,7 @@ float deTT( vec3 p ) {
     return Precision*(l)*pow(Scale, -float(i));
 }
 //tuk
-float map435456467(vec3 p, float iTime) {
+float map(vec3 p, float iTime) {
   float ls = 0.;
    p = p.xzy;
   isWat = 0.;
@@ -1072,24 +1072,29 @@ float map435456467(vec3 p, float iTime) {
   rough = 1.;
   cccc = vec3(0.5);
 issubsurface = false;
+cccc=vec3(1.,0.,0.);
+l=12.;
+return length(p)-20.;
  
   //return mm;
 //p.y *= -1.;
 //p.y *= 0.5;
-/*p.y -= 55.;
+/*
+p.y -= 55.;
 float city = D(p/0.5)*0.5;
 //cccc = clamp(orbitSSSS, 0., 1.);
 //l = max((1.-clamp((fbmss(p.xz*2. + p.y))*1.5, 0. ,1.))-0.7,0.);
 rough = (clamp(fbm(p*0.5)-0.34,0.0, 1.) > 0.0001)?1.:0.01;
-rough = 1.;
+rough = 0.1;
 cccc = mix(vec3(0.7), cccc, rough);
-//cccc = pal(escape, vec3(0.9, 0.6, 0.2));
+cccc = pal(escape, vec3(0.9, 0.6, 0.2));
 vec3 ssss = clamp(orbitSSSS, 0., 1.);
 if(ssss.x > 0.9 && ssss.y < 0.5){
- // l = .1;
+  l = 12.1;
+cccc = ssss;
 }
 
-//return city;
+return city;
 return max(city, box(p, vec3(80., 100., 80.)));
 */
 
@@ -1950,13 +1955,15 @@ float de234(vec3 p){
     }
     return length(p)/s;
   }
-float map(vec3 p, float iTime){
+float map3453546747(vec3 p, float iTime){
   p.y -= 22.;
   p = p.xzy;
   p.z *= -1.;
   cccc = vec3(0.9,0.8,0.6);
   rough = 1.0;
   l = 0.;
+    //return length(p)-22.;
+
   FOSpec = vec3(0.04);
   //float a = box(vec3(0.,4.,-5.)-p, vec3(10.,10.,0.2));
   //float b = box(vec3(0.,4.,5.)-p, vec3(10.,10.,0.2));
@@ -1975,7 +1982,7 @@ float map(vec3 p, float iTime){
  //    aa2 = max(aa2, box(vec3(0., 0., 12.)-p, vec3(12.)));
 
   //float final = min(min(min(min(min(min(b2, a),b),c1),c2),c3),aa);
-  float final = min(min(bbb, aa),min(bbb, bbb));
+  float final = min(min(bbb, aa),min(bbb, b2));
   if(final == b2){l = .5;cccc = vec3(0.2,0.8,0.9);}
      if(final == b3){l = .5;cccc = vec3(0.9);}
 

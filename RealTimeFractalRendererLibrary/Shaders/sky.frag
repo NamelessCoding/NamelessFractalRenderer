@@ -7,6 +7,7 @@ in vec2 texCoord;
 
 uniform sampler2D skyprev;
 uniform sampler3D worl;
+uniform sampler2D cubemap;
 // uniform sampler2D suns;//TODO: use or remove
 
 uniform vec2 wh;
@@ -157,7 +158,7 @@ vec3 sky(vec3 p, vec3 d, vec3 lig) {
         vec3 v1 = rayl*accum + pms*accum2;
         vec3 v2 = rayl*accum11+pms*accum22;
         
-        accumulateLight += 0.00001
+        accumulateLight += 0.000001
       *dist*((exp(-(v1)*.00009)) * ((exp(-((v2))*.000191))))*
       (rayl*240. + PMMM*pms*520.);
 //accumulateLight += 1.-exp(-((accum2)*dist2)*0.001);
@@ -1430,6 +1431,69 @@ vec4 clouds2sdf(vec3 p, vec3 d, vec3 lig, inout float dist) {
   return vec4(accumulateLight * 1.3, transmission);
 }
 
+vec3 F(float costheta, float y, vec3 A, vec3 B, vec3 C, vec3 D, vec3 E){
+return (1.+A*exp(B/costheta))*(1.0+C*exp(D*y) + E*cos(y)*cos(y));
+}
+//Preetham sky model implemented by me, using the research paoer
+vec3 skyp2(vec3 d, vec3 lig){//my code to begin with
+vec3 zenith = vec3(0.,0.,1.);
+float costheta = max(dot(d,zenith),0.);
+float costhetas = max(dot(lig,zenith),0.);
+float cosy = max(dot(lig,d),0.);
+float y = acos(cosy);
+//return vec3(0.1);
+//if(costheta<0.01)return vec3(0.);
+//simple cie sky
+float T = 3.;
+float X = (4./9. - T/120.)*(3.14159-2.*acos(costhetas));
+float Yz = (4.0453*T - 4.9710)*tan(X)-0.2155*T+2.4192;
+
+//vec3 template = vec3(*T+,*T+,*T+);
+vec3 AYxy = vec3(0.1787*T-1.4630, -0.0193*T-0.2592,-0.0167*T-0.2608);
+vec3 BYxy = vec3(-0.3554*T+0.4275,-0.0665*T+0.0008,-0.0950*T+0.0092);
+vec3 CYxy = vec3(-0.0227*T+5.3251,-0.0004*T+0.2125,-0.0079*T+0.2102);
+vec3 DYxy = vec3(0.1206*T-2.5771,-0.0641*T-0.8989,-0.0441*T-1.6537);
+vec3 EYxy = vec3(-0.0670*T+0.3703,-0.0033*T+0.0452,-0.0109*T+0.0529);
+
+float ts = acos(costhetas);
+float ts2 = ts*ts;
+float ts3 = ts*ts*ts;
+vec3 xz0 = vec3(0.00166*ts3 -0.00375*ts2 + 0.00209*ts,
+-0.02903*ts3 + 0.06377*ts2 - 0.03202*ts + 0.00394,
+0.11693*ts3 - 0.21196*ts2 + 0.06052*ts + 0.25886
+);
+
+vec3 yz0 = vec3(0.00275*ts3 -0.00610*ts2 + 0.00317*ts,
+-0.04214*ts3 + 0.08970*ts2 - 0.04153*ts + 0.00516,
+0.15346*ts3 - 0.26756*ts2 + 0.06670*ts + 0.26688
+);
+
+float xz = xz0.x*T*T + xz0.y*T + xz0.z;
+float yz = yz0.x*T*T + yz0.y*T + yz0.z;
+
+vec3 Yxyz = vec3(Yz,xz,yz);
+//test
+//vec3 test1 = F(costheta, y, AYxy, BYxy, CYxy, DYxy, EYxy);
+vec3 Ftop = F(costheta, y, AYxy, BYxy, CYxy, DYxy, EYxy);
+vec3 Fbottom = F(1., ts, AYxy, BYxy, CYxy, DYxy, EYxy);
+
+vec3 finalYxy = Yxyz*(Ftop/Fbottom);
+
+vec3 XYZ = vec3(
+(finalYxy.y*finalYxy.x)/finalYxy.z,
+finalYxy.x,
+((1.-finalYxy.y - finalYxy.z)*finalYxy.x)/finalYxy.z
+);
+
+vec3 rgb = vec3(
+3.2404542*XYZ.x -1.5371385*XYZ.y -0.4985314*XYZ.z,
+-0.9692660*XYZ.x + 1.8760108*XYZ.y + 0.0415560*XYZ.z,
+0.0556434*XYZ.x - 0.2040259*XYZ.y + 1.0572252*XYZ.z
+);
+
+//return test1*0.1;
+return rgb*0.034 + exp(-y*20.)*vec3(0.9,0.6,0.2);
+}
 
 #define BAYER_LIMIT 16
 #define BAYER_LIMIT_H 4
@@ -1467,6 +1531,9 @@ void main() {
     vec3 lig = ldir2.xzy;
     vec3 sky2 =
         sky(vec3(0.), d, lig); // + exp(-acos(max(dot(d, lig),0.))*100.)*1.;
+
+  //sky2 =  texture2D(cubemap, texCoord).rgb;
+
 
     if (dot(d, vec3(0., 0., 1.)) < 0.) {
       // sky2 = vec3(0.);
@@ -1518,5 +1585,6 @@ void main() {
     col += texture2D(skyprev, texCoord).rgb;
     prevIndex = 20;
   }
-  skyfin = vec4(col, float(prevIndex + 1));
+  //pow(texture2D(cubemap, vec2(texCoord.x, 1.-texCoord.y)).rgb*1.,vec3(2.2))
+  skyfin = vec4( col, float(prevIndex + 1));
 }

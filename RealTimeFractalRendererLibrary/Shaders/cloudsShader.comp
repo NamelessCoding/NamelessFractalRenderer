@@ -1,0 +1,358 @@
+﻿
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(binding = 5, Rgba16f) uniform image3D col;
+layout(binding = 6, Rgba16f) uniform image3D colprev;
+
+layout(binding = 7, r16f) uniform image3D worleyS;
+uniform vec3 ldir;
+uniform float cloudCoverage;
+uniform sampler2D skytex;
+uniform sampler2D suntex;
+
+uniform mat4 lightproj;
+uniform mat4 lightview;
+uniform vec3 viewPos;
+
+vec3 shadowS(vec3 pos) {
+  vec4 sspace = lightproj * lightview * vec4(pos, 1.);
+  sspace.xyz /= sspace.w;
+
+  vec3 coords = sspace.xyz * 0.5 + 0.5;
+
+  // float currDepth = texelFetch(suntex, ivec2(2048.*coords), 0).r;
+  float currDepth = texture2D(suntex, coords.xy).r;
+  // vec3 currPos = texture2D(suntex, coords.xy).xyz;
+  vec3 col = vec3(1.);
+  if (coords.z > currDepth + 0.0025 && coords.x >= 0. && coords.x <= 1. &&
+      coords.y >= 0. && coords.y <= 1.) {
+    col = vec3(0.);
+  }
+
+
+
+  return col;
+}
+
+float voronoi3d(vec3 uv) {
+
+  // mouse *= 10.;
+  vec3 f = floor(uv);
+  float dist = 99999.;
+  float ret;
+  for (int i = 0; i < 27; i++) {
+    vec3 coords =
+        vec3(float(i % 3) - 1., float((i / 3) % 3) - 1., float(i / 9) - 1.);
+    vec3 curr = (f + coords) + (vec3(noise(f + coords), noise(f + coords + 10.),
+                                     noise(f + coords + 20.)) -
+                                0.5) *
+                                   0.3;
+    // curr.xy += mouse*0.1*0.5;
+    // if(i == 13)curr.xy = (f.xy+coords.xy) + mouse*0.5*0.5;
+    float h = noise(f + coords);
+    if (h > 0.3) {
+      curr *= 200.;
+    }
+    // if(dist > length(curr-uv)){
+    // ret = h;
+    //}
+    dist = min(dist, length(curr - uv));
+  }
+
+  return clamp((1.0 - dist), 0., 1.);
+}
+float fbmss(vec3 p, float scaleS, int steps) {
+  float scale = 0.1;
+  float threshold = 0.5;
+  float sum = 0.;
+  p += vec3(5., 0., 0.);
+  for (int i = 1; i <= steps; i++) {
+    sum += voronoi3d((p)*scale * pow(2., float(i))) / pow(1.7, float(i));
+  }
+  return max(sum - threshold, 0.);
+}
+
+// Simplex 2D noise
+//
+
+#define UI0 1597334673U
+#define UI1 3812015801U
+#define UI2 uvec2(UI0, UI1)
+#define UI3 uvec3(UI0, UI1, 2798796415U)
+#define UIF (1.0 / float(0xffffffffU))
+
+vec3 hash33(vec3 p) {
+  uvec3 q = uvec3(ivec3(p)) * UI3;
+  q = (q.x ^ q.y ^ q.z) * UI3;
+  return -1. + 2. * vec3(q) * UIF;
+}
+
+float remap(float x, float a, float b, float c, float d) {
+  return (((x - a) / (b - a)) * (d - c)) + c;
+}
+
+// Gradient noise by iq (modified to be tileable)
+float gradientNoise(vec3 x, float freq) {
+  // grid
+  vec3 p = floor(x);
+  vec3 w = fract(x);
+
+  // quintic interpolant
+  vec3 u = w * w * w * (w * (w * 6. - 15.) + 10.);
+
+  // gradients
+  vec3 ga = hash33(mod(p + vec3(0., 0., 0.), freq));
+  vec3 gb = hash33(mod(p + vec3(1., 0., 0.), freq));
+  vec3 gc = hash33(mod(p + vec3(0., 1., 0.), freq));
+  vec3 gd = hash33(mod(p + vec3(1., 1., 0.), freq));
+  vec3 ge = hash33(mod(p + vec3(0., 0., 1.), freq));
+  vec3 gf = hash33(mod(p + vec3(1., 0., 1.), freq));
+  vec3 gg = hash33(mod(p + vec3(0., 1., 1.), freq));
+  vec3 gh = hash33(mod(p + vec3(1., 1., 1.), freq));
+
+  // projections
+  float va = dot(ga, w - vec3(0., 0., 0.));
+  float vb = dot(gb, w - vec3(1., 0., 0.));
+  float vc = dot(gc, w - vec3(0., 1., 0.));
+  float vd = dot(gd, w - vec3(1., 1., 0.));
+  float ve = dot(ge, w - vec3(0., 0., 1.));
+  float vf = dot(gf, w - vec3(1., 0., 1.));
+  float vg = dot(gg, w - vec3(0., 1., 1.));
+  float vh = dot(gh, w - vec3(1., 1., 1.));
+
+  // interpolation
+  return va + u.x * (vb - va) + u.y * (vc - va) + u.z * (ve - va) +
+         u.x * u.y * (va - vb - vc + vd) + u.y * u.z * (va - vc - ve + vg) +
+         u.z * u.x * (va - vb - ve + vf) +
+         u.x * u.y * u.z * (-va + vb + vc - vd + ve - vf - vg + vh);
+}
+
+// Tileable 3D worley noise
+float worleyNoise(vec3 uv, float freq) {
+  vec3 id = floor(uv);
+  vec3 p = fract(uv);
+
+  float minDist = 10000.;
+  for (float x = -1.; x <= 1.; ++x) {
+    for (float y = -1.; y <= 1.; ++y) {
+      for (float z = -1.; z <= 1.; ++z) {
+        vec3 offset = vec3(x, y, z);
+        vec3 h = hash33(mod(id + offset, vec3(freq))) * .5 + .5;
+        h += offset;
+        vec3 d = p - h;
+        minDist = min(minDist, dot(d, d));
+      }
+    }
+  }
+
+  // inverted worley noise
+  return 1. - minDist;
+}
+
+// Fbm for Perlin noise based on iq's blog
+float perlinfbm(vec3 p, float freq, int octaves) {
+  float G = exp2(-.85);
+  float amp = 1.;
+  float noise = 0.;
+  for (int i = 0; i < octaves; ++i) {
+    noise += amp * gradientNoise(p * freq, freq);
+    freq *= 2.;
+    amp *= G;
+  }
+
+  return noise;
+}
+
+// Tileable Worley fbm inspired by Andrew Schneider's Real-Time Volumetric
+// Cloudscapes chapter in GPU Pro 7.
+float worleyFbm(vec3 p, float freq) {
+  return worleyNoise(p * freq, freq) * .625 +
+         worleyNoise(p * freq * 2., freq * 2.) * .25 +
+         worleyNoise(p * freq * 4., freq * 4.) * .125;
+}
+
+
+
+vec3 modul(vec3 pp){
+
+return vec3(mod(pp.xy*1., 1024), mod(pp.z*0.5, 512));
+}
+float remap3(float x, float a, float b, float c, float d)
+{
+    return (((x - a) / (b - a)) * (d - c)) + c;
+}
+float dens(vec3 p){
+
+
+p *= 2.;
+
+float f2 =  imageLoad(worleyS,ivec3(modul(p))).x;
+
+
+    
+    float cloud = f2;
+
+  float densityL= max(max(cloud - (cloudCoverage)  , 0.) - max(modul(p).z - 30.,0.)/40., 0.);
+    float Srb = clamp(
+      remap3(clamp(p.z / 1125., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+//densityL *= Srb;
+  densityL = clamp(densityL, 0., 1.);
+	    densityL = 1.0 - pow(1.0 - densityL, 4.);
+      
+      return densityL;
+
+}
+bool rayAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out vec2 result) {
+    vec3 rayInvDir = 1.0 / rayDir;
+    vec3 tbot = rayInvDir * (boxMin - rayOrigin);
+    vec3 ttop = rayInvDir * (boxMax - rayOrigin);
+    vec3 tmin = min(ttop, tbot);
+    vec3 tmax = max(ttop, tbot);
+    vec2 t = max(tmin.xx, tmin.yz);
+    float t0 = max(t.x, t.y);
+    t = min(tmax.xx, tmax.yz);
+    float t1 = min(t.x, t.y);
+    result = vec2(t0, t1);
+    return t1 > max(t0, 0.0);
+}
+float PM(float cost, float g){
+float a = 3./(8.*3.14159);
+float b = (1.0-g*g)*(1.0+cost*cost);
+float c = (2.0+g*g)*pow(1.0+g*g-2.*g*cost, 3./2.);
+return a*(b/c);
+}
+
+float PR(float cost){
+return (3./(16.*3.14159))*(1.0+cost*cost);
+}
+void main() {
+
+  vec3 pos = vec3(gl_GlobalInvocationID.xyz);
+
+  float maxXY = 300.;
+  float maxZ = 100.;
+
+  vec3 worldPos = vec3((pos.xy/256. - 0.5)*maxXY, (pos.z/128.)*maxZ);
+
+
+  vec4 cc = vec4(1.);
+ uint r = uint(uint(pos.x) * uint(1973) + uint(pos.y) * uint(9277) +
+                uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
+           uint(1);
+
+  float density = dens(worldPos);
+
+
+
+   	float phi = 2. * 3.14159 * rndf(r);
+	    float theta =rndf(r) * 3.14159 ;
+	    vec3 dir = vec3(
+	        cos(phi) * sin(theta),
+	        
+	        sin(phi) * sin(theta),
+          cos(theta));
+vec3 kpp = worldPos;
+  vec3 cam2 = worldPos;
+  vec3 lig = ldir.xzy;
+
+  vec2 bbb = vec2(0.);
+  vec4 colClouds = vec4(0.,0.,0.,1.);
+  float accum2 = 0.;
+float ttt = 1.;
+  vec4 accum = vec4(0.);
+if(density > 0.){
+ // if(rayAABB(cam2, lig, vec3(-maxXY.xx/2., 0.), vec3(maxXY.xx/2., maxZ), bbb)){
+     bool iswat = false;
+  vec3 watP = vec3(0.);
+  vec3 watN = vec3(0.);
+  float iskwater = 0.;
+  float issubb = 0.;
+  // inout vec3 glassP, inout vec3 glassN, inout bool hasHitGlass
+  vec3 glassP = vec3(0.);
+  vec3 glassN = vec3(0.);
+  bool hasHitGlass = false;
+  //  if (traceInit(pos, dir, watP, watN, removeWater, iswat, iskwater, float(time)*0.04, glassP, glassN, hasHitGlass, viewPos, false ) ) {
+   vec3 startPos = cam2;
+    vec3 newPPP = cam2;
+ 
+ vec3 endPos = cam2 + lig*bbb.y;
+    int iter = 50;
+    float stepS = length(endPos - startPos)/float(iter);
+if(renderSkyAndSun){
+    for(int i = 0; i < iter; i++){
+      float densityL = dens(startPos);
+      
+	
+	        	// accum2 += ph(cam2.z, 1300.)*30.;
+	    accum2 += densityL  *9.;
+      startPos += lig*stepS*0.5;
+    }
+}
+  //}
+
+
+        float octave = 0.;
+        vec3 rayDirection = dir;
+                            rayDirection.y *= -1.;
+
+        rayDirection = normalize(rayDirection);
+        vec2 a = normalize(rayDirection.xy);
+        float x = (a.y < 0.)?2.*3.14159 - acos(a.x):acos(a.x);
+        x /= 2.*3.14159;
+        float y = acos(rayDirection.z)/3.14159;
+        vec2 TX = vec2(x,y); 
+        vec3 sky3 =  texture2D(skytex, TX).rgb * 22.;
+
+
+      
+  vec3 sky2 = mix(vec3(0.9, 0.7, 0.2), vec3(1.), lig.z);
+ if (trace(newPPP.xzy, lig.xzy, watP, watN, removeWater, iswat, iskwater, float(time)*0.04, viewPos, false ) ) {
+    sky2 = vec3(0.);
+  }
+  vec3 skyP = worldPos;
+  if (trace(skyP.xzy, dir.xzy, watP, watN, removeWater, iswat, iskwater, float(time)*0.04, viewPos, false ) ) {
+    if(l > 0.){
+      sky3 =  l * cccc*2.;
+    }else{
+
+      sky3 = vec3(0.);
+    }
+  }else if(!renderSkyAndSun){
+    sky3 = vec3(0.);
+  }
+    float accumX = 0.;
+    //rayAABB(worldPos, dir, vec3(-maxXY.xx/2., 0.), vec3(maxXY.xx/2., maxZ), bbb);
+    for(int i = 0; i < 15; i++){
+       // accum.xyz = exp(-accum2*2)*(1.-exp(-accum2*4))*vec3(0.9, 0.6, 0.2)*density;
+        float densityL = dens(worldPos);
+        accumX += densityL*10.;
+
+	      vec3 pm2 = vec3((PM(max(dot(dir, lig), 0.), pow(0.76, octave))).xxx) * 3.  +                   
+			                   vec3((PM(max(dot(dir, lig), 0.), -pow(0.5, octave))).xxx) * 1.;
+        vec3 idPos = vec3((worldPos.xy/(maxXY)+0.5)*256., ((worldPos.z)/maxZ)*128.); 
+      idPos = vec3(clamp(idPos.xy, 0., 256.), clamp(idPos.z, 0., 128.));
+       float accum3 = imageLoad(col, ivec3(idPos)).w;
+  
+
+if(renderSkyAndSun){
+        accum.xyz += (1.-exp(-densityL*12.))*19*densityL*sky2*(exp(-accumX*.8*pow(0.78, octave))*(1.-exp(-accumX*.27)))*pow(0.9, octave)*exp(-accum3*.75*pow(0.8, octave))*(1.-exp(-accum3*.75*pow(0.8, octave)*2.))*pm2;
+
+}
+			  accum.xyz += (1.-exp(-densityL*1.))*26*(exp(-accumX*.01*pow(0.78, octave))*(1.-exp(-accumX*.827)))*densityL*1*pow(0.76, octave)*sky3;
+      
+		   // accum.xyz += 14*(exp(-accumX*.1*pow(0.78, octave))*(1.-exp(-accumX*0.27)))*densityL*1*(1.-exp(-max(imageLoad(col, ivec3(idPos)).xyz*1,0.)*0.1))*pow(0.76, octave);
+
+	      //accum.xyz *= exp(-densityL*0.1);
+        ttt *= 1.-densityL;
+        worldPos += dir * 0.015;
+                octave += 1.;
+
+    }
+      accum.w = accum2.x;
+
+}
+
+  accum.xyz = accum.xyz * 0.05 + imageLoad(col, ivec3(gl_GlobalInvocationID.xyz)).xyz*0.95;
+  // worl = vec4(worley(pos/1528., 2.));
+  imageStore(col, ivec3(gl_GlobalInvocationID.xyz), vec4(accum));
+}

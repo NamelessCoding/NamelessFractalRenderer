@@ -11,6 +11,7 @@
     <None Remove="Shaders\CalculateHighest.comp" />
     <None Remove="Shaders\CalculateLowest.comp" />
     <None Remove="Shaders\CalculateMiddle.comp" />
+    <None Remove="Shaders\cloudsShader.comp" />
     <None Remove="Shaders\denoise1.frag" />
     <None Remove="Shaders\denoise1.vert" />
     <None Remove="Shaders\FillTexture.comp" />
@@ -47,12 +48,17 @@
     <None Remove="Shaders\upscale.frag" />
     <None Remove="Shaders\upscale.vert" />
     <None Remove="Shaders\worley.comp" />
+    <None Remove="Textures\cubemap.jpg" />
+    <None Remove="Textures\cubemap.png" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Shaders\CalculateHighest.comp" />
     <EmbeddedResource Include="Shaders\CalculateLowest.comp" />
     <EmbeddedResource Include="Shaders\CalculateMiddle.comp" />
+    <EmbeddedResource Include="Shaders\cloudsShader.comp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="Shaders\denoise1.frag">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
@@ -151,10 +157,17 @@
     <EmbeddedResource Include="Shaders\worley.comp">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Textures\cubemap.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Textures\cubemap.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="OpenTK.GLWpfControl" Version="4.2.3" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
 
 </Project>

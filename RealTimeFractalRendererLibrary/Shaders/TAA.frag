@@ -79,6 +79,8 @@ uniform sampler3D worl;
 uniform sampler2D sssT;
 uniform sampler2D sssT2;
 
+uniform sampler2D CLOOOOUDS;
+
 uniform mat4 invview;
 uniform mat4 invproj;
 uniform mat4 prevview;
@@ -768,6 +770,10 @@ ind += clamp(spec , 0., 1000.);
 //col = texture2D(color, TC).xyz;
 //var
 //col = texture2D(var, TC).xxx;
+
+col = col*max(texture2D(CLOOOOUDS, TC).w,0.) + max(texture2D(CLOOOOUDS, TC).xyz,0.)*0.2;
+
+
   float depth = texture2D(normal, TC).w;
 
   vec3 prevCol = clamp(texture2D(prevTAA, ProjectedCoordinates).xyz, 0., 10.);

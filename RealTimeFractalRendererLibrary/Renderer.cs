@@ -2,9 +2,11 @@
 using Common;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using StbImageSharp;
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 
@@ -38,8 +40,11 @@ namespace RealTimeFractalRendererLibrary
         private Shader radianceCacheShader = default!;
 
         private Shader worleyNoiseShader = default!;
+        private Shader cloudShader = default!;
 
         // Texture bindings
+        private readonly TextureBinding cubemap = new(nameof(cubemap));
+
         private readonly TextureBinding colorTexture = new(nameof(colorTexture));
         private readonly TextureBinding holdInfoTexture = new(nameof(holdInfoTexture));
         private readonly TextureBinding reflectionTexture = new(nameof(reflectionTexture));
@@ -81,8 +86,12 @@ namespace RealTimeFractalRendererLibrary
         private readonly TextureBinding radianceCacheRadianceTexture = new(nameof(radianceCacheRadianceTexture), TextureTarget.Texture3D);
         private readonly TextureBinding radianceCacheFogTexture = new(nameof(radianceCacheFogTexture), TextureTarget.Texture3D);
         private readonly TextureBinding skyTexture = new(nameof(skyTexture));
+        private readonly TextureBinding cloudTextureX = new(nameof(cloudTextureX));
         private readonly TextureBinding sunTexture = new(nameof(sunTexture));
         private readonly TextureBinding worleyNoiseTexture = new(nameof(worleyNoiseTexture), TextureTarget.Texture3D);
+        private readonly TextureBinding Cloud3DTex = new(nameof(Cloud3DTex), TextureTarget.Texture3D);
+        private readonly TextureBinding Cloud3DTexPrev = new(nameof(Cloud3DTexPrev), TextureTarget.Texture3D);
+
 
 
         // Quad data
@@ -132,7 +141,7 @@ namespace RealTimeFractalRendererLibrary
 
 
         private void Configure2DTexture(
-    int textureHandle,
+    TextureBinding textureS,
     bool scaleToRenderResolution = true,
     PixelInternalFormat internalFormat = PixelInternalFormat.Rgba32f,
     TextureMinFilter minFilter = TextureMinFilter.Nearest,
@@ -142,8 +151,8 @@ namespace RealTimeFractalRendererLibrary
     int customWidth = 0,
     int customHeight = 0)
         {
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, textureHandle);
+            GL.ActiveTexture(TextureUnit.Texture0 + textureS.Unit);
+            GL.BindTexture(TextureTarget.Texture2D, textureS.Handle);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)wrapMode);
@@ -180,7 +189,7 @@ namespace RealTimeFractalRendererLibrary
         }
 
         private void Configure3DTexture(
-    int textureHandle,
+    TextureBinding textureS,
     int width,
     int height,
     int depth,
@@ -190,8 +199,8 @@ namespace RealTimeFractalRendererLibrary
     TextureWrapMode wrapModeXY = TextureWrapMode.Repeat,
     TextureWrapMode wrapModeZ = TextureWrapMode.Repeat)
         {
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture3D, textureHandle);
+            GL.ActiveTexture(TextureUnit.Texture0+textureS.Unit);
+            GL.BindTexture(TextureTarget.Texture3D, textureS.Handle);
 
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture3D, TextureParameterName.TextureMagFilter, (int)magFilter);
@@ -248,55 +257,78 @@ namespace RealTimeFractalRendererLibrary
                 renderScale = 1.0f;
             }
 
+
+
+          
+
+
             // Setup 2D textures
-            Configure2DTexture(fogColorTextureB.Handle);
-            Configure2DTexture(fogColorTexture.Handle);
-            Configure2DTexture(waterNormalTexture.Handle);
-            Configure2DTexture(waterPositionTexture.Handle);
-            Configure2DTexture(skyTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            Configure2DTexture(sunTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder, true, ShadowMapResolution, ShadowMapResolution);
-            Configure3DTexture(worleyNoiseTexture.Handle, 512, 512, 512, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
-            Configure3DTexture(radianceCachePositionTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            Configure3DTexture(radianceCacheFogTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            Configure3DTexture(radianceCacheNormalTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            Configure3DTexture(radianceCacheRadianceTexture.Handle, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
-            Configure2DTexture(colorTexture.Handle, false);
-            Configure2DTexture(sssTexture.Handle, false);
-            Configure2DTexture(sssDenoiseTexture.Handle, false, PixelInternalFormat.Rgba32f);
-            Configure2DTexture(positionTexture.Handle, true, PixelInternalFormat.Rgba32f);
-            Configure2DTexture(fogPositionTexture.Handle, false);
-            Configure2DTexture(holdInfoTexture.Handle);
-            Configure2DTexture(normalTexture.Handle, true, PixelInternalFormat.Rgba32f);
-            Configure2DTexture(albedoTexture.Handle);
-            Configure2DTexture(secondaryPositionTexture.Handle, true, PixelInternalFormat.Rgba32f);
-            Configure2DTexture(reflectionTexture.Handle, false);
-            Configure2DTexture(secondaryAlbedoTexture.Handle, false);
-            Configure2DTexture(temporalWeightsTexture.Handle, false);
-            Configure2DTexture(temporalRadianceTexture.Handle, false);
-            Configure2DTexture(temporalPositionTexture.Handle, false, PixelInternalFormat.Rgba32f);
-            Configure2DTexture(spatialWeightsTexture.Handle, false);
-            Configure2DTexture(spatialRadianceTexture.Handle, false);
-            Configure2DTexture(taaTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            Configure2DTexture(upscaleTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            Configure2DTexture(upscaleTextureB.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            Configure2DTexture(prevTemporalWeightsTexture.Handle, false);
-            Configure2DTexture(prevTemporalRadianceTexture.Handle, false);
-            Configure2DTexture(prevTemporalPositionTexture.Handle, false);
-            Configure2DTexture(prevSpatialWeightsTexture.Handle, false);
-            Configure2DTexture(prevSpatialRadianceTexture.Handle, false);
-            Configure2DTexture(prevNormalDepthTexture.Handle, true, PixelInternalFormat.Rgba32f);
-            Configure2DTexture(prevAccumulationTexture.Handle, true);
-            Configure2DTexture(prevTaaTexture.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            Configure2DTexture(denoiseTextureA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            Configure2DTexture(denoiseTextureB.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            Configure2DTexture(varianceTextureA.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            Configure2DTexture(varianceTextureB.Handle, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
-            Configure2DTexture(tempAccumulationTexture.Handle);
+            Configure2DTexture(fogColorTextureB);
+            Configure2DTexture(fogColorTexture);
+            Configure2DTexture(waterNormalTexture);
+            Configure2DTexture(waterPositionTexture);
+            Configure2DTexture(skyTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(sunTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder, true, ShadowMapResolution, ShadowMapResolution);
+            Configure3DTexture(worleyNoiseTexture, 1024, 1024, 512, PixelInternalFormat.R16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(Cloud3DTex, 256, 256, 128, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(Cloud3DTexPrev, 512, 512, 256, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.Repeat, TextureWrapMode.MirroredRepeat);
+
+            Configure3DTexture(radianceCachePositionTexture, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCacheFogTexture, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCacheNormalTexture, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure3DTexture(radianceCacheRadianceTexture, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
+            Configure2DTexture(colorTexture, false);
+           
+            Configure2DTexture(cloudTextureX, false);
+
+            Configure2DTexture(sssTexture, false);
+            Configure2DTexture(sssDenoiseTexture, false, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(positionTexture, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(fogPositionTexture, false);
+            Configure2DTexture(holdInfoTexture);
+            Configure2DTexture(normalTexture, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(albedoTexture);
+            Configure2DTexture(secondaryPositionTexture, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(reflectionTexture, false);
+            Configure2DTexture(secondaryAlbedoTexture, false);
+            Configure2DTexture(temporalWeightsTexture, false);
+            Configure2DTexture(temporalRadianceTexture, false);
+            Configure2DTexture(temporalPositionTexture, false, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(spatialWeightsTexture, false);
+            Configure2DTexture(spatialRadianceTexture, false);
+            Configure2DTexture(taaTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(upscaleTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(upscaleTextureB, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(prevTemporalWeightsTexture, false);
+            Configure2DTexture(prevTemporalRadianceTexture, false);
+            Configure2DTexture(prevTemporalPositionTexture, false);
+            Configure2DTexture(prevSpatialWeightsTexture, false);
+            Configure2DTexture(prevSpatialRadianceTexture, false);
+            Configure2DTexture(prevNormalDepthTexture, true, PixelInternalFormat.Rgba32f);
+            Configure2DTexture(prevAccumulationTexture, true);
+            Configure2DTexture(prevTaaTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(denoiseTextureA, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(denoiseTextureB, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(varianceTextureA, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(varianceTextureB, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
+            Configure2DTexture(tempAccumulationTexture);
+            // stb_image loads from the top-left pixel, whereas OpenGL loads from the bottom-left, causing the texture to be flipped vertically.
+            // This will correct that, making the texture display properly.
+            StbImage.stbi_set_flip_vertically_on_load(1);
+
+            // Load the image.
+            ImageResult image = ImageResult.FromStream(File.OpenRead("Textures/cubemap.png"), ColorComponents.RedGreenBlueAlpha);
+            GL.ActiveTexture(TextureUnit.Texture0 + cubemap.Unit);
+            GL.BindTexture(TextureTarget.Texture2D, cubemap.Handle);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba32f, image.Width, image.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, image.Data);
 
             // Setup framebuffers
             skyFramebuffer = CreateFramebufferObject(skyTexture);
             sunFramebuffer = CreateFramebufferObject(sunTexture);
-            gBufferFramebuffer = CreateFramebufferObject(positionTexture, normalTexture, albedoTexture, holdInfoTexture, fogColorTexture, waterPositionTexture, waterNormalTexture);
+            gBufferFramebuffer = CreateFramebufferObject(positionTexture, normalTexture, albedoTexture, holdInfoTexture, fogColorTexture, waterPositionTexture, waterNormalTexture, cloudTextureX);
             mainFramebuffer = CreateFramebufferObject(colorTexture, secondaryPositionTexture, reflectionTexture, secondaryAlbedoTexture, fogColorTexture, sssTexture, sssDenoiseTexture);
             temporalFramebuffer = CreateFramebufferObject(temporalWeightsTexture, temporalRadianceTexture, temporalPositionTexture);
             spatialFramebuffer = CreateFramebufferObject(spatialWeightsTexture, spatialRadianceTexture, fogPositionTexture);
@@ -326,6 +358,8 @@ namespace RealTimeFractalRendererLibrary
   
             upscaleShader = new Shader("upscale.vert", "upscale.frag");
             worleyNoiseShader = new Shader("worley.comp", false);
+            cloudShader = new Shader("cloudsShader.comp", true);
+
             spatialPrepassShader = new Shader("spatPrePass.vert", "spatPrePass.frag");
 
             // Setup fullscreen quad
@@ -335,148 +369,151 @@ namespace RealTimeFractalRendererLibrary
 
 
             initializationShader.Use();
-            initializationShader.SetInt("skytex", skyTexture.Unit);
+            initializationShader.SetInt("skytex", skyTexture.Handle);
+            initializationShader.SetInt("suntex", sunTexture.Handle);
 
             skyShader.Use();
-            skyShader.SetInt("skyprev", skyTexture.Unit);
-            skyShader.SetInt("worl", worleyNoiseTexture.Unit);
-            //skyShader.SetInt("suns", sunTexture.Unit);
+            skyShader.SetInt("skyprev", skyTexture.Handle);
+            skyShader.SetInt("worl", worleyNoiseTexture.Handle);
+            skyShader.SetInt("cubemap", cubemap.Handle);
+            //skyShader.SetInt("suns", sunTexture.Handle);
 
             sunShader.Use();
-            //sunShader.SetInt("sunprev", sunTexture.Unit);
-            //sunShader.SetInt("worl", worleyNoiseTexture.Unit);
+            //sunShader.SetInt("sunprev", sunTexture.Handle);
+            //sunShader.SetInt("worl", worleyNoiseTexture.Handle);
 
             radianceCacheShader.Use();
-            radianceCacheShader.SetInt("skytex", skyTexture.Unit);
-            radianceCacheShader.SetInt("suntex", sunTexture.Unit);
+            radianceCacheShader.SetInt("skytex", skyTexture.Handle);
+            radianceCacheShader.SetInt("suntex", sunTexture.Handle);
 
             geometryPassShader.Use();
-            geometryPassShader.SetInt("position", positionTexture.Unit);
-            geometryPassShader.SetInt("normal", normalTexture.Unit);
-            geometryPassShader.SetInt("albedo", albedoTexture.Unit);
-            geometryPassShader.SetInt("holdinfo", holdInfoTexture.Unit);
-            //geometryPassShader.SetInt("colorfog", fogColorTexture.Unit);
-            geometryPassShader.SetInt("skytex", skyTexture.Unit);
-            geometryPassShader.SetInt("suntex", sunTexture.Unit);
-            geometryPassShader.SetInt("watpos", waterPositionTexture.Unit);
-            geometryPassShader.SetInt("watnorm", waterNormalTexture.Unit);
-            geometryPassShader.SetInt("sssprev", sssTexture.Unit);
-            geometryPassShader.SetInt("prevN", prevNormalDepthTexture.Unit);
-            geometryPassShader.SetInt("den1", denoiseTextureB.Unit);
+            geometryPassShader.SetInt("position", positionTexture.Handle);
+            geometryPassShader.SetInt("normal", normalTexture.Handle);
+            geometryPassShader.SetInt("albedo", albedoTexture.Handle);
+            geometryPassShader.SetInt("holdinfo", holdInfoTexture.Handle);
+            //geometryPassShader.SetInt("colorfog", fogColorTexture.Handle);
+            geometryPassShader.SetInt("skytex", skyTexture.Handle);
+            geometryPassShader.SetInt("suntex", sunTexture.Handle);
+            geometryPassShader.SetInt("watpos", waterPositionTexture.Handle);
+            geometryPassShader.SetInt("watnorm", waterNormalTexture.Handle);
+            geometryPassShader.SetInt("sssprev", sssTexture.Handle);
+            geometryPassShader.SetInt("prevN", prevNormalDepthTexture.Handle);
+            geometryPassShader.SetInt("den1", denoiseTextureB.Handle);
 
             temporalResamplingShader.Use();
-            temporalResamplingShader.SetInt("color", colorTexture.Unit);
-            temporalResamplingShader.SetInt("position", positionTexture.Unit);
-            temporalResamplingShader.SetInt("normal", normalTexture.Unit);
-            temporalResamplingShader.SetInt("secondpos", secondaryPositionTexture.Unit);
-            temporalResamplingShader.SetInt("prevW", prevTemporalWeightsTexture.Unit);
-            temporalResamplingShader.SetInt("prevL", prevTemporalRadianceTexture.Unit);
-            temporalResamplingShader.SetInt("prevP", prevTemporalPositionTexture.Unit);
-            temporalResamplingShader.SetInt("prevN", prevNormalDepthTexture.Unit);
+            temporalResamplingShader.SetInt("color", colorTexture.Handle);
+            temporalResamplingShader.SetInt("position", positionTexture.Handle);
+            temporalResamplingShader.SetInt("normal", normalTexture.Handle);
+            temporalResamplingShader.SetInt("secondpos", secondaryPositionTexture.Handle);
+            temporalResamplingShader.SetInt("prevW", prevTemporalWeightsTexture.Handle);
+            temporalResamplingShader.SetInt("prevL", prevTemporalRadianceTexture.Handle);
+            temporalResamplingShader.SetInt("prevP", prevTemporalPositionTexture.Handle);
+            temporalResamplingShader.SetInt("prevN", prevNormalDepthTexture.Handle);
 
             spatialPrepassShader.Use();
-            spatialPrepassShader.SetInt("color", colorTexture.Unit);
-            spatialPrepassShader.SetInt("position", positionTexture.Unit);
-            spatialPrepassShader.SetInt("normal", normalTexture.Unit);
-            spatialPrepassShader.SetInt("secondpos", secondaryPositionTexture.Unit);
-            spatialPrepassShader.SetInt("prevW", temporalWeightsTexture.Unit);
-            spatialPrepassShader.SetInt("prevL", temporalRadianceTexture.Unit);
-            spatialPrepassShader.SetInt("prevP", temporalPositionTexture.Unit);
-            spatialPrepassShader.SetInt("prevN", prevNormalDepthTexture.Unit);
-            //spatialPrepassShader.SetInt("reflAlb", secondaryAlbedoTexture.Unit);
+            spatialPrepassShader.SetInt("color", colorTexture.Handle);
+            spatialPrepassShader.SetInt("position", positionTexture.Handle);
+            spatialPrepassShader.SetInt("normal", normalTexture.Handle);
+            spatialPrepassShader.SetInt("secondpos", secondaryPositionTexture.Handle);
+            spatialPrepassShader.SetInt("prevW", temporalWeightsTexture.Handle);
+            spatialPrepassShader.SetInt("prevL", temporalRadianceTexture.Handle);
+            spatialPrepassShader.SetInt("prevP", temporalPositionTexture.Handle);
+            spatialPrepassShader.SetInt("prevN", prevNormalDepthTexture.Handle);
+            //spatialPrepassShader.SetInt("reflAlb", secondaryAlbedoTexture.Handle);
 
             spatialResamplingShader.Use();
-            //spatialResamplingShader.SetInt("color", colorTexture.Unit);
-            spatialResamplingShader.SetInt("position", positionTexture.Unit);
-            spatialResamplingShader.SetInt("normal", normalTexture.Unit);
-            spatialResamplingShader.SetInt("albedo", albedoTexture.Unit);
-            //spatialResamplingShader.SetInt("secondpos", secondaryPositionTexture.Unit);
-            spatialResamplingShader.SetInt("temppos", temporalPositionTexture.Unit);
-            spatialResamplingShader.SetInt("prevW", prevSpatialWeightsTexture.Unit);
-            spatialResamplingShader.SetInt("prevL", prevSpatialRadianceTexture.Unit);
-            spatialResamplingShader.SetInt("tempW", temporalWeightsTexture.Unit);
-            spatialResamplingShader.SetInt("tempL", temporalRadianceTexture.Unit);
-            spatialResamplingShader.SetInt("prevN", prevNormalDepthTexture.Unit);
-            spatialResamplingShader.SetInt("prevSPos", fogPositionTexture.Unit);
-            spatialResamplingShader.SetInt("holdinfo", holdInfoTexture.Unit);
+            //spatialResamplingShader.SetInt("color", colorTexture.Handle);
+            spatialResamplingShader.SetInt("position", positionTexture.Handle);
+            spatialResamplingShader.SetInt("normal", normalTexture.Handle);
+            spatialResamplingShader.SetInt("albedo", albedoTexture.Handle);
+            //spatialResamplingShader.SetInt("secondpos", secondaryPositionTexture.Handle);
+            spatialResamplingShader.SetInt("temppos", temporalPositionTexture.Handle);
+            spatialResamplingShader.SetInt("prevW", prevSpatialWeightsTexture.Handle);
+            spatialResamplingShader.SetInt("prevL", prevSpatialRadianceTexture.Handle);
+            spatialResamplingShader.SetInt("tempW", temporalWeightsTexture.Handle);
+            spatialResamplingShader.SetInt("tempL", temporalRadianceTexture.Handle);
+            spatialResamplingShader.SetInt("prevN", prevNormalDepthTexture.Handle);
+            spatialResamplingShader.SetInt("prevSPos", fogPositionTexture.Handle);
+            spatialResamplingShader.SetInt("holdinfo", holdInfoTexture.Handle);
 
             tempAccumulationShader.Use();
-            //tempAccumulationShader.SetInt("color", colorTexture.Unit);
-            tempAccumulationShader.SetInt("position", positionTexture.Unit);
-            tempAccumulationShader.SetInt("normal", normalTexture.Unit);
-            tempAccumulationShader.SetInt("albedo", albedoTexture.Unit);
-            tempAccumulationShader.SetInt("weightS", spatialWeightsTexture.Unit);
-            tempAccumulationShader.SetInt("outgoingrS", spatialRadianceTexture.Unit);
-            tempAccumulationShader.SetInt("prevN", prevNormalDepthTexture.Unit);
-            tempAccumulationShader.SetInt("prevAcc", prevAccumulationTexture.Unit);
-            tempAccumulationShader.SetInt("prevvar", varianceTextureB.Unit);
-            tempAccumulationShader.SetInt("prevden", denoiseTextureB.Unit);
+            //tempAccumulationShader.SetInt("color", colorTexture.Handle);
+            tempAccumulationShader.SetInt("position", positionTexture.Handle);
+            tempAccumulationShader.SetInt("normal", normalTexture.Handle);
+            tempAccumulationShader.SetInt("albedo", albedoTexture.Handle);
+            tempAccumulationShader.SetInt("weightS", spatialWeightsTexture.Handle);
+            tempAccumulationShader.SetInt("outgoingrS", spatialRadianceTexture.Handle);
+            tempAccumulationShader.SetInt("prevN", prevNormalDepthTexture.Handle);
+            tempAccumulationShader.SetInt("prevAcc", prevAccumulationTexture.Handle);
+            tempAccumulationShader.SetInt("prevvar", varianceTextureB.Handle);
+            tempAccumulationShader.SetInt("prevden", denoiseTextureB.Handle);
 
             denoiseShader.Use();
-            denoiseShader.SetInt("color", temporalRadianceTexture.Unit);
-            //denoiseShader.SetInt("position", positionTexture.Unit);
-            denoiseShader.SetInt("normal", normalTexture.Unit);
-            denoiseShader.SetInt("albedo", albedoTexture.Unit);
-            denoiseShader.SetInt("secondpos", secondaryPositionTexture.Unit);
-            denoiseShader.SetInt("reflN", reflectionTexture.Unit);
-            denoiseShader.SetInt("reflectionAlb", secondaryAlbedoTexture.Unit);
-            denoiseShader.SetInt("holdinfo", holdInfoTexture.Unit);
-            denoiseShader.SetInt("watpos", waterPositionTexture.Unit);
-            denoiseShader.SetInt("watnorm", waterNormalTexture.Unit);
-            denoiseShader.SetInt("tempacc", tempAccumulationTexture.Unit);
-            denoiseShader.SetInt("sstexden", sssDenoiseTexture.Unit);
-            denoiseShader.SetInt("colorTex", colorTexture.Unit);
+            denoiseShader.SetInt("color", temporalRadianceTexture.Handle);
+            //denoiseShader.SetInt("position", positionTexture.Handle);
+            denoiseShader.SetInt("normal", normalTexture.Handle);
+            denoiseShader.SetInt("albedo", albedoTexture.Handle);
+            denoiseShader.SetInt("secondpos", secondaryPositionTexture.Handle);
+            denoiseShader.SetInt("reflN", reflectionTexture.Handle);
+            denoiseShader.SetInt("reflectionAlb", secondaryAlbedoTexture.Handle);
+            denoiseShader.SetInt("holdinfo", holdInfoTexture.Handle);
+            denoiseShader.SetInt("watpos", waterPositionTexture.Handle);
+            denoiseShader.SetInt("watnorm", waterNormalTexture.Handle);
+            denoiseShader.SetInt("tempacc", tempAccumulationTexture.Handle);
+            denoiseShader.SetInt("sstexden", sssDenoiseTexture.Handle);
+            denoiseShader.SetInt("colorTex", colorTexture.Handle);
             // Ping-pong textures are set each frame, omitted here
 
             taaShader.Use();
-            //taaShader.SetInt("color", colorTexture.Unit); //TODO: review. This was commented out.
-            taaShader.SetInt("position", positionTexture.Unit);
-            taaShader.SetInt("normal", normalTexture.Unit);
-            taaShader.SetInt("albedo", albedoTexture.Unit);
-            taaShader.SetInt("secondpos", secondaryPositionTexture.Unit);
-            //taaShader.SetInt("Acc", tempAccumulationTexture.Unit);
-            taaShader.SetInt("den1", denoiseTextureB.Unit); //den2 bound here
-            taaShader.SetInt("prevTAA", prevTaaTexture.Unit);
-            taaShader.SetInt("reflAlb", secondaryAlbedoTexture.Unit);
-            taaShader.SetInt("colorfog", fogColorTexture.Unit);
-            //taaShader.SetInt("holdinfo", holdInfoTexture.Unit);
-            taaShader.SetInt("suntex", sunTexture.Unit);
-            taaShader.SetInt("skyTex", skyTexture.Unit);
-            taaShader.SetInt("watpos", waterPositionTexture.Unit);
-            taaShader.SetInt("watnorm", waterNormalTexture.Unit);
-            taaShader.SetInt("worl", worleyNoiseTexture.Unit);
-            taaShader.SetInt("sssT", sssDenoiseTexture.Unit);
-            taaShader.SetInt("sssT2", sssTexture.Unit);
-            taaShader.SetInt("prevN", prevNormalDepthTexture.Unit);
-            taaShader.SetInt("holdinfo", holdInfoTexture.Unit);
-            taaShader.SetInt("color", colorTexture.Unit);
-            taaShader.SetInt("var", varianceTextureA.Unit);
+            //taaShader.SetInt("color", colorTexture.Handle); //TODO: review. This was commented out.
+            taaShader.SetInt("position", positionTexture.Handle);
+            taaShader.SetInt("normal", normalTexture.Handle);
+            taaShader.SetInt("albedo", albedoTexture.Handle);
+            taaShader.SetInt("secondpos", secondaryPositionTexture.Handle);
+            //taaShader.SetInt("Acc", tempAccumulationTexture.Handle);
+            taaShader.SetInt("den1", denoiseTextureB.Handle); //den2 bound here
+            taaShader.SetInt("prevTAA", prevTaaTexture.Handle);
+            taaShader.SetInt("reflAlb", secondaryAlbedoTexture.Handle);
+            taaShader.SetInt("colorfog", fogColorTexture.Handle);
+            //taaShader.SetInt("holdinfo", holdInfoTexture.Handle);
+            taaShader.SetInt("suntex", sunTexture.Handle);
+            taaShader.SetInt("skyTex", skyTexture.Handle);
+            taaShader.SetInt("watpos", waterPositionTexture.Handle);
+            taaShader.SetInt("watnorm", waterNormalTexture.Handle);
+            taaShader.SetInt("worl", worleyNoiseTexture.Handle);
+            taaShader.SetInt("sssT", sssDenoiseTexture.Handle);
+            taaShader.SetInt("sssT2", sssTexture.Handle);
+            taaShader.SetInt("prevN", prevNormalDepthTexture.Handle);
+            taaShader.SetInt("holdinfo", holdInfoTexture.Handle);
+            taaShader.SetInt("color", colorTexture.Handle);
+            taaShader.SetInt("var", varianceTextureA.Handle);
+            taaShader.SetInt("CLOOOOUDS", cloudTextureX.Handle);
 
             upscaleShader.Use();
-            upscaleShader.SetInt("TAA", taaTexture.Unit);
+            upscaleShader.SetInt("TAA", taaTexture.Handle);
 
             previousFrameCopyShader.Use();
-            previousFrameCopyShader.SetInt("normal", normalTexture.Unit);
-            previousFrameCopyShader.SetInt("Acc", tempAccumulationTexture.Unit);
-            previousFrameCopyShader.SetInt("TAA", taaTexture.Unit);
+            previousFrameCopyShader.SetInt("normal", normalTexture.Handle);
+            previousFrameCopyShader.SetInt("Acc", tempAccumulationTexture.Handle);
+            previousFrameCopyShader.SetInt("TAA", taaTexture.Handle);
 
             previousTemporalCopyShader.Use();
-            previousTemporalCopyShader.SetInt("tempWeights", temporalWeightsTexture.Unit);
-            previousTemporalCopyShader.SetInt("tempOutL", temporalRadianceTexture.Unit);
-            previousTemporalCopyShader.SetInt("tempPos", temporalPositionTexture.Unit);
-            previousTemporalCopyShader.SetInt("spatWe", spatialWeightsTexture.Unit);
-            previousTemporalCopyShader.SetInt("spatLO", spatialRadianceTexture.Unit);
+            previousTemporalCopyShader.SetInt("tempWeights", temporalWeightsTexture.Handle);
+            previousTemporalCopyShader.SetInt("tempOutL", temporalRadianceTexture.Handle);
+            previousTemporalCopyShader.SetInt("tempPos", temporalPositionTexture.Handle);
+            previousTemporalCopyShader.SetInt("spatWe", spatialWeightsTexture.Handle);
+            previousTemporalCopyShader.SetInt("spatLO", spatialRadianceTexture.Handle);
 
             finalCompositeShader.Use();
-            finalCompositeShader.SetInt("color", prevSpatialWeightsTexture.Unit);
-            finalCompositeShader.SetInt("normal", normalTexture.Unit);
-            finalCompositeShader.SetInt("albedo", albedoTexture.Unit);
-            finalCompositeShader.SetInt("TAA", upscaleTexture.Unit); //TODO: review. "TAA" sampler is bound to "upscale" here.
-            finalCompositeShader.SetInt("fogLO", taaTexture.Unit); //TODO: review. "fogLO" sampler is bound to "TAA" here.
-            finalCompositeShader.SetInt("watpos", waterPositionTexture.Unit);
-            finalCompositeShader.SetInt("position", positionTexture.Unit);
-            finalCompositeShader.SetInt("var1", varianceTextureB.Unit);
-
+            finalCompositeShader.SetInt("color", prevSpatialWeightsTexture.Handle);
+            finalCompositeShader.SetInt("normal", normalTexture.Handle);
+            finalCompositeShader.SetInt("albedo", albedoTexture.Handle);
+            finalCompositeShader.SetInt("TAA", upscaleTexture.Handle); //TODO: review. "TAA" sampler is bound to "upscale" here.
+            finalCompositeShader.SetInt("fogLO", taaTexture.Handle); //TODO: review. "fogLO" sampler is bound to "TAA" here.
+            finalCompositeShader.SetInt("watpos", waterPositionTexture.Handle);
+            finalCompositeShader.SetInt("position", positionTexture.Handle);
+            finalCompositeShader.SetInt("var1", varianceTextureB.Handle);
+            finalCompositeShader.SetInt("clll", cloudTextureX.Handle);
 
 
             GL.BindVertexArray(fullscreenQuadVao);
@@ -498,17 +535,23 @@ namespace RealTimeFractalRendererLibrary
             frameTimer.Start();
 
             // Setup compute textures and dispatch compute shaders as needed
-            GL.BindImageTexture(0, worleyNoiseTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(7, worleyNoiseTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.R16f);
             worleyNoiseShader.Use();
-            GL.DispatchCompute(64, 64, 64);
+            GL.DispatchCompute(128, 128, 64);
 
             GL.BindImageTexture(0, radianceCachePositionTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
             GL.BindImageTexture(1, radianceCacheNormalTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
             GL.BindImageTexture(2, radianceCacheRadianceTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
             GL.BindImageTexture(3, radianceCacheFogTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
             GL.BindImageTexture(4, sunTexture.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(5, Cloud3DTex.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
+            GL.BindImageTexture(6, Cloud3DTexPrev.Handle, 0, true, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba16f);
 
-            
+            cloudShader.Use();
+            cloudShader.SetInt("skytex", skyTexture.Handle);
+            cloudShader.SetInt("suntex", sunTexture.Handle);
+
+
             isRendererInitialized = true;
         }
 
@@ -523,9 +566,23 @@ namespace RealTimeFractalRendererLibrary
             var viewMatrix = camera.GetViewMatrix();
             var projectionMatrix = camera.GetProjectionMatrix();
 
-            RenderInitializationPass(viewMatrix, projectionMatrix);
             RenderSkyPass();
             RenderSunPass(lightViewMatrix, lightProjectionMatrix, LightDirection, lightPosition);
+
+            cloudShader.Use();
+            cloudShader.SetVector3(LightDirection, "ldir");
+            cloudShader.SetFloat(CloudCoverage, "cloudCoverage");
+            cloudShader.SetFloat(frameIndex, "time");
+            cloudShader.SetMatrix4(lightProjectionMatrix, "lightproj");
+            cloudShader.SetMatrix4(lightViewMatrix, "lightview");
+            cloudShader.SetVector3(camera.Position, "viewPos");
+
+            GL.DispatchCompute(32, 32, 16);
+            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+
+
+
+            RenderInitializationPass(viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix);
             RenderRadianceCachePass(lightViewMatrix, lightProjectionMatrix, LightDirection);
             RenderGeometryPass(viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix, LightDirection);
             RenderTemporalResamplingPass();
@@ -540,6 +597,7 @@ namespace RealTimeFractalRendererLibrary
             RenderFinalCompositePass(viewMatrix, projectionMatrix);
 
             UpdatePreviousFrameData(viewMatrix, projectionMatrix);
+            
             frameIndex += 1.0f;
         }
 
@@ -562,7 +620,7 @@ namespace RealTimeFractalRendererLibrary
             return (lightViewMatrix, lightProjectionMatrix, lightPosition);
         }
 
-        private void RenderInitializationPass(Matrix4 viewMatrix, Matrix4 projectionMatrix)
+        private void RenderInitializationPass(Matrix4 viewMatrix, Matrix4 projectionMatrix, Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix)
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, gBufferFramebuffer);
             GL.Viewport(0, 0, (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale));
@@ -573,6 +631,10 @@ namespace RealTimeFractalRendererLibrary
             initializationShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
             initializationShader.SetFloat(frameIndex, "time");
             initializationShader.SetVector3(camera.Position, "viewPos");
+            initializationShader.SetVector3(LightDirection, "ldir");
+            initializationShader.SetFloat(CloudCoverage, "cloudCoverage");
+            initializationShader.SetMatrix4(lightProjectionMatrix, "lightproj");
+            initializationShader.SetMatrix4(lightViewMatrix, "lightview");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
             GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
         }

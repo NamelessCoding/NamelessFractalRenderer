@@ -7,11 +7,15 @@ layout(location = 3) out vec4 holdinfo;
 layout(location = 4) out vec4 colorfog;
 layout(location = 5) out vec4 watpos;
 layout(location = 6) out vec4 watnorm;
+layout(location = 7) out vec4 clll;
 
 in vec2 texCoord;
 
 layout(binding = 0, Rgba32f) uniform image3D rcpos;
 layout(binding = 1, Rgba32f) uniform image3D rcnorm;
+layout(binding = 5, Rgba16f) uniform image3D colX;
+layout(binding = 7, r16f) uniform image3D worleyS;
+
 uniform sampler2D skytex;
 
 uniform mat4 invview;
@@ -19,8 +23,12 @@ uniform mat4 invproj;
 uniform vec2 wh;
 
 uniform vec3 viewPos;
+uniform vec3 ldir;
+uniform float cloudCoverage;
+uniform sampler2D suntex;
 
-
+uniform mat4 lightproj;
+uniform mat4 lightview;
 struct Level {
     uint isEmpty;
 };
@@ -60,20 +68,39 @@ uint to1DHigh(uint x, uint y, uint z){
 uint to1DRad(uint x, uint y, uint z, uint w){
   return (x + y*32 + z*32*32 + w*32*32*32);
 }
+vec3 shadowS(vec3 pos) {
+  vec4 sspace = lightproj * lightview * vec4(pos, 1.);
+  sspace.xyz /= sspace.w;
+
+  vec3 coords = sspace.xyz * 0.5 + 0.5;
+
+  // float currDepth = texelFetch(suntex, ivec2(2048.*coords), 0).r;
+  float currDepth = texture2D(suntex, coords.xy).r;
+  // vec3 currPos = texture2D(suntex, coords.xy).xyz;
+  vec3 col = vec3(1.);
+  if (coords.z > currDepth + 0.0025 && coords.x >= 0. && coords.x <= 1. &&
+      coords.y >= 0. && coords.y <= 1.) {
+    col = vec3(0.);
+  }
 
 
 
-vec2 boxIntersection(in vec3 ro, in vec3 rd, vec3 boxSize) {
-  vec3 m = 1.0 / rd;
-  vec3 n = m * ro;
-  vec3 k = abs(m) * boxSize;
-  vec3 t1 = -n - k;
-  vec3 t2 = -n + k;
-  float tN = max(max(t1.x, t1.y), t1.z);
-  float tF = min(min(t2.x, t2.y), t2.z);
-  if (tN > tF || tF < 0.0)
-    return vec2(-1.0);
-  return vec2(tN, tF);
+  return col;
+}
+// /https://github.com/btmxh/glsl-intersect/blob/master/3d/intersection/rayAABB.glsl
+
+bool rayAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out vec2 result) {
+    vec3 rayInvDir = 1.0 / rayDir;
+    vec3 tbot = rayInvDir * (boxMin - rayOrigin);
+    vec3 ttop = rayInvDir * (boxMax - rayOrigin);
+    vec3 tmin = min(ttop, tbot);
+    vec3 tmax = max(ttop, tbot);
+    vec2 t = max(tmin.xx, tmin.yz);
+    float t0 = max(t.x, t.y);
+    t = min(tmax.xx, tmax.yz);
+    float t1 = min(t.x, t.y);
+    result = vec2(t0, t1);
+    return t1 > max(t0, 0.0);
 }
 /*
 bool traceNewTestBasic(inout vec3 p, vec3 d, float times) {
@@ -237,6 +264,45 @@ vec2 jitter() {
   return ((R2(float(int(time) % 1000)) * 2. - 1.) / (wh * 2. * RESOLUTION));
 }
 
+vec3 modul(vec3 pp){
+
+return vec3(mod(pp.xy*1., 1024), mod(pp.z*0.5, 512));
+}
+
+float remap3(float x, float a, float b, float c, float d)
+{
+    return (((x - a) / (b - a)) * (d - c)) + c;
+}
+float dens(vec3 p){
+
+p *= 2.;
+float f2 =  imageLoad(worleyS,ivec3(modul(p))).x;
+
+
+    
+    float cloud = f2;
+
+  float densityL= max(max(cloud - (cloudCoverage)  , 0.) - max(modul(p).z - 30.,0.)/40., 0.);
+
+    float Srb = clamp(
+      remap3(clamp(p.z / 1125., 0., 0.09), 0., 0.09, 0., 1.), 0., 1.);//a *= clamp(abs(length(p)-6500.)*0.00013, 0.0, 1.);
+//densityL *= Srb;
+  densityL = clamp(densityL, 0., 1.);
+	    densityL = 1.0 - pow(1.0 - densityL, 4.);
+      return densityL;
+
+}
+float PM(float cost, float g){
+float a = 3./(8.*3.14159);
+float b = (1.0-g*g)*(1.0+cost*cost);
+float c = (2.0+g*g)*pow(1.0+g*g-2.*g*cost, 3./2.);
+return a*(b/c);
+}
+
+float PR(float cost){
+return (3./(16.*3.14159))*(1.0+cost*cost);
+}
+
 void main() {
   vec2 fragCoord = texCoord * wh;
 
@@ -270,7 +336,10 @@ void main() {
   vec3 wi = dir;
   // dir = dir.xzy;
   vec3 pos =
-      viewPos; // +
+viewPos;
+
+
+      // +
                // (vec3(rndf(seedCam),rndf(seedCam),rndf(seedCam))*2.0-1.0)*0.001;
 
   /*
@@ -419,7 +488,7 @@ void main() {
       albedos = texture2D(skytex, TX).rgb * 4.;
     }
     // albedos = vec3(1.);
-    Depth = 100.;
+    Depth = 10000.;
     // }
   }
 
@@ -455,6 +524,108 @@ void main() {
 
   position = vec4(positions, isEM);
   normal = vec4(normals, Depth);
+
+
+    pos =  viewPos; 
+        float maxXY = 300.;
+  float maxZ = 100.;
+  //vec2 bbb = boxIntersection(pos, dircam, vec3(maxXY.xx/2., maxZ/2.));
+      //clll
+//.bool rayAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out vec2 result) {
+vec2 bbb = vec2(0.);
+  vec4 colClouds = vec4(0.,0.,0.,1.);
+
+  if(rayAABB(pos.xzy, wi.xzy, vec3(-maxXY.xx/2., 0.), vec3(maxXY.xx/2., maxZ), bbb)){
+    vec3 startPos = pos.xzy ;
+   
+
+
+    vec3 endPos = pos.xzy + wi.xzy*min(Depth, bbb.y);
+    int iter = 200;
+
+    float stepS = length(endPos - startPos)/float(iter);
+    vec3 accum = vec3(0.);
+
+    float ttt = 1.;
+    vec3 accumH = vec3(0.);
+    vec3 rayDirection = ldir.xzy;
+        rayDirection.y *= -1.;
+
+        rayDirection = normalize(rayDirection);
+        vec2 a = normalize(rayDirection.xy);
+        float  x = (a.y < 0.)?2.*3.14159 - acos(a.x):acos(a.x);
+        x /= 2.*3.14159;
+       float   y = acos(rayDirection.z)/3.14159;
+        vec2 TX = vec2(x,y); 
+        vec3 sky2 =  texture2D(skytex, TX).rgb * 12.;
+  sky2 = mix(vec3(0.9, 0.7, 0.2), vec3(1.), ldir.y);
+
+
+    for(int i =0; i < iter; i++){
+      startPos += stepS*wi.xzy;
+
+// /  vec3 worldPos = vec3((pos.xy/512. - 0.5)*maxXY, (pos.z/256.)*maxZ);
+
+      vec3 idPos = vec3((startPos.xy/(maxXY)+0.5)*256., ((startPos.z)/maxZ)*128.); 
+      idPos = vec3(clamp(idPos.xy, 0., 256.), clamp(idPos.z, 0., 128.));
+      //float dens2 = max(imageLoad(colX, ivec3(idPos)).x,0.);
+      float dens2 = dens(startPos);
+
+          startPos += .4*(vec3(rndf(r), rndf(r), rndf(r))*2.-1.)*max(dens2,0.02);
+
+
+      if(dens2 > 0.){
+        
+          float accum2 = 0.;
+          vec3 cam2 = startPos;
+          vec3 lig = ldir.xzy;
+          if(rayAABB(cam2, lig, vec3(-maxXY.xx/2., 0.), vec3(maxXY.xx/2., maxZ), bbb)){
+            vec3 startPos2 = cam2;
+            vec3 endPos2 = cam2 + lig*bbb.y;
+            int iter2 = 40;
+
+            for(int k = 0; k < iter2; k++){
+              float densityL = dens(startPos2);
+              
+          
+                    // accum2 += ph(cam2.z, 1300.)*30.;
+              accum2 += densityL * 2.4 ;
+              startPos2 += lig*1.15;
+              
+            }
+          }
+        vec3 finCol = vec3(0.);
+      vec3 camz = startPos;
+      for(int k = 0; k < 11; k++){
+        camz = startPos + 12.*(vec3(rndf(r), rndf(r), rndf(r))*2.-1.);
+        vec3 idPos2 = vec3((camz.xy/(maxXY)+0.5)*256., ((camz.z)/maxZ)*128.); 
+        idPos2 = vec3(mod(idPos2.xy, 256.), mod(idPos2.z, 128.));
+        finCol+=max(imageLoad(colX, ivec3(idPos2)).xyz,0.)*dens2;
+
+      }
+       vec3 pm2 = vec3((PM(max(dot(wi.xzy, lig), 0.), pow(0.76, 1.))).xxx) * 13.  +                   
+			                   vec3((PM(max(dot(wi.xzy, lig), 0.), -pow(0.5, 1.))).xxx) * 5.;
+        accum += dens2*ttt*mix(finCol*0.2, finCol, exp(-accum2));
+       // accumH += dens2*ttt*exp(-accum2*2.5)*sky2*pm2*shadowS(startPos.xzy);
+        //accum += dens2*ttt*exp(-accum2*0.1);
+                      ttt *= pow(1.-dens2,1.);
+
+      }
+
+
+
+    }
+
+
+
+    colClouds = max(vec4((accum*14.+accumH*22.)*0.014, ttt),0.);
+  }
+clll = colClouds;
+
+
+
+
+
   albedo = vec4(albedos, isk2);
   holdinfo = vec4(issubb, vec3(max(firstRough * firstRough, 0.001)));
 

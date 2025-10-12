@@ -16,6 +16,8 @@ uniform sampler2D debuggedTexture;
 
 uniform sampler2D position;
 
+uniform sampler2D clll;
+
 uniform mat4 projection;
 
 uniform vec2 wh;
@@ -379,7 +381,7 @@ vec3 agxLook(vec3 val) {
   // Punchy
   slope = vec3(1.0);
   power = vec3(1.35, 1.35, 1.35);
-  sat = 1.4;
+  sat = 1.2;
 #endif
 
   // ASC CDL
@@ -705,7 +707,7 @@ void main() {
   float avgLuma =
       pow(textureLod(fogLO, texCoord, ceil(log2(max(wh.x, wh.y))*0.95)).a, 2.);
   float EV100 = log2(avgLuma * 100. / 65.);
-  float exposure = clamp((1.) * exp2(EV100), 0.000018, 1.);
+  float exposure = clamp((1.5) * exp2(EV100), 0.000018, 1.);
   col = max(col, 0.);
   col /= exposure;
   col *= brightness;
@@ -717,7 +719,7 @@ void main() {
 //col = texture2D(var1, texCoord).xxx;
 
 if(brightness >= 1.0 || true  ){
-  if (texture2D(albedo, texCoord).w < 0.5) {
+  if (texture2D(albedo, texCoord).w < 0.5 && false) {
    /* col = srgb_to_oklch(col);
     col.z *= 1.1;
     col.y *= 1.1;
@@ -727,9 +729,7 @@ if(brightness >= 1.0 || true  ){
     col = tonemap(col);
 
   } else {
-    col = srgb_to_oklch(col);
-    col.x *= 0.83;
-    col = oklch_to_srgb(col);
+
     col = do_agx(vec4(col, 1.)).xyz;
 
   }
