@@ -666,6 +666,7 @@ void main() {
     color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
   } else {
     color2 = texture2D(fogLO, texCoord).xyz;
+    
   }
   // color2 = texture2D(fogLO, texCoord).xyz;
 

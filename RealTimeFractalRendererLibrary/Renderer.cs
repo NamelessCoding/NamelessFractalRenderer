@@ -1,6 +1,5 @@
 ﻿
 using Common;
-using FFX_FSR2;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -16,40 +15,8 @@ namespace RealTimeFractalRendererLibrary
 {
     public class Renderer
     {
-        //https://github.com/BoyBaykiller/IDKEngine/blob/f3b44f69c514ef885e162871277c8f1de65e33e2/IDKEngine/Source/UnmanagedArray.cs#L7
-
-        public unsafe struct UnmanagedArray<T> : IDisposable
-        {
-            public nint Length { get; private set; }
-            public T* Elements { get; private set; }
-
-            public UnmanagedArray(nuint count)
-                : this((nint)count)
-            {
-            }
-
-            public UnmanagedArray(nint count)
-            {
-                Elements = (T*)NativeMemory.AllocZeroed((nuint)(sizeof(T) * count));
-                Length = count;
-            }
-
-            public readonly ref T this[nint index]
-            {
-                get
-                {
-                    Debug.Assert(index >= 0 && index < Length, "Index out of bounds");
-
-                    return ref Elements[index];
-                }
-            }
-
-            public readonly void Dispose()
-            {
-                NativeMemory.Free(Elements);
-            }
-        }
-
+      
+      
 
 
         #region Fields
@@ -59,14 +26,19 @@ namespace RealTimeFractalRendererLibrary
         private int gBufferFramebuffer, mainFramebuffer, radianceCacheSsbo;
         private int temporalFramebuffer, spatialFramebuffer, previousFrameFramebuffer, previousTemporalFramebuffer, tempAccumulationFramebuffer, denoiseFramebufferA, denoiseFramebufferB, spatialPrepassFramebuffer;
         private int skyFramebuffer, sunFramebuffer, upscaleFramebuffer, taaFramebuffer;
-        private int taabefFramebuffer;
-        private Shader fsrDATA = default!;
+        private int upscale1;
+        private int upscale2;
+        private int upscale3;
 
-     
-        private readonly TextureBinding finalTexture = new(nameof(finalTexture));
-        private readonly TextureBinding motionVectorsTexture = new(nameof(motionVectorsTexture));
-        private readonly TextureBinding depthTexture = new(nameof(depthTexture));
-        private readonly TextureBinding taaBefo = new(nameof(taaBefo));
+        private Shader ups1 = default!;
+        private Shader ups2 = default!;
+        private Shader ups3 = default!;
+
+
+        private readonly TextureBinding upscaleTex1 = new(nameof(upscaleTex1));
+        private readonly TextureBinding upscaleTex2 = new(nameof(upscaleTex2));
+        private readonly TextureBinding upscaleTex3 = new(nameof(upscaleTex3));
+
 
         // Shaders
         private Shader initializationShader = default!;
@@ -155,7 +127,7 @@ namespace RealTimeFractalRendererLibrary
         public Camera Camera => camera;
         public int OutputFramebuffer { get; set; } = 0;
         private Vector3 previousCameraPosition = new(0.0f, 0.0f, 0.0f);
-        private Vector2 renderResolution = new(1920.0f, 1080.0f);
+        private Vector2 renderResolution = new(1920.0f/2.0f, 1080.0f/2.0f);
         private Matrix4 previousViewMatrix, previousProjectionMatrix;
         private Stopwatch frameTimer = default!;
         private float frameIndex = 0.0f;
@@ -292,70 +264,12 @@ namespace RealTimeFractalRendererLibrary
             return fboHandle;
         }
 
-        public static int GetRecommendedSampleCount(int renderWidth, int displayWith)
-        {
-            return FSR2.GetJitterPhaseCount(renderWidth, displayWith);
-        }
-
-        public static float GetRecommendedMipmapBias(int renderWidth, int displayWith)
-        {
-            return MathF.Log2((float)renderWidth / displayWith) - 1.0f;
-        }
-        public bool IsSharpening;
-        public float Sharpness;
-
-
-        private FSR2.Context fsr2Context;
-        private UnmanagedArray<byte> fsr2ScratchMemory;
-        private bool isFsr2Initialized = false;
-
-        [UnmanagedCallersOnly]
-        private static unsafe void* GetProcAddress(byte* name)
-        {
-            return (void*)GLFW.GetProcAddressRaw(name);
-        }
-
-
-
-        [UnmanagedCallersOnly]
-        private static unsafe void Fsr2Message(FSR2Interface.MsgType type, char* message)
-        {
-            //Logger.Log(Logger.LogLevel.Warn, $"FSR2: {type} {new string(message)}");
-            string msg = new string(message);
-            float whatever = 0.0f;
-        }
-       
-        public unsafe void SetSize(Vector2i inputSize, Vector2i outputSize)
-        {
-
-
-            if (isFsr2Initialized)
-            {
-                // FSR2.ContextDestroy(ref fsr2Context);
-            }
-
-            FSR2.ContextDescription contextDesc = new FSR2.ContextDescription
-            {
-                Flags = FSR2.InitializationFlagBits.EnableDisplayResolutionMotionVectors | FSR2.InitializationFlagBits.EnableHighDynamicRange | FSR2.InitializationFlagBits.EnableAutoExposure | FSR2.InitializationFlagBits.EnableDebugChecking | FSR2.InitializationFlagBits.AllowNullDeviceAndCommandList,
-                MaxRenderSize = new FSR2Types.Dimensions2D() { Width = (uint)inputSize.X, Height = (uint)inputSize.Y },
-                DisplaySize = new FSR2Types.Dimensions2D() { Width = (uint)outputSize.X, Height = (uint)outputSize.Y },
-                FpMessage = &Fsr2Message,
-            };
-            fsr2ScratchMemory = new UnmanagedArray<byte>(FSR2.GL.GetScratchMemorySize());
-            FSR2.GL.GetInterface(out contextDesc.Callbacks, fsr2ScratchMemory.Elements, (nuint)fsr2ScratchMemory.Length, &GetProcAddress);
-            FSR2.ContextCreate(out fsr2Context, contextDesc);
-            isFsr2Initialized = true;
-        }
-
-
-
         public void Load(Vector2i resolution)
         {
             
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            SetSize(new Vector2i(960, 540), new Vector2i(1920, 1080));
-            IsSharpening = true;
-            Sharpness = 0.5f;
+            //SetSize(new Vector2i(960, 540), new Vector2i(1920, 1080));
+      
             if (UseNativeResolution)
             {
                 renderScale = 1.0f;
@@ -383,10 +297,10 @@ namespace RealTimeFractalRendererLibrary
             Configure3DTexture(radianceCacheNormalTexture, 180, 180, 180, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             Configure3DTexture(radianceCacheRadianceTexture, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             Configure2DTexture(colorTexture, false);
-            Configure2DTexture(depthTexture, true, PixelInternalFormat.R16f);
-            Configure2DTexture(motionVectorsTexture, true, PixelInternalFormat.Rg16f);
-            Configure2DTexture(finalTexture, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
-            Configure2DTexture(taaBefo, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToBorder);
+           
+            Configure2DTexture(upscaleTex1, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
+            Configure2DTexture(upscaleTex2, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
+            Configure2DTexture(upscaleTex3, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
 
             Configure2DTexture(cloudTextureX, false);
 
@@ -449,11 +363,14 @@ namespace RealTimeFractalRendererLibrary
             denoiseFramebufferB = CreateFramebufferObject(denoiseTextureA, varianceTextureA, fogColorTexture, secondaryAlbedoTexture, sssDenoiseTexture);
             tempAccumulationFramebuffer = CreateFramebufferObject(tempAccumulationTexture, denoiseTextureA, varianceTextureA);
             spatialPrepassFramebuffer = CreateFramebufferObject(prevTemporalWeightsTexture, prevTemporalRadianceTexture, prevTemporalPositionTexture);
-            taabefFramebuffer = CreateFramebufferObject(depthTexture, motionVectorsTexture, taaBefo);
-            fsrDATA = new Shader("swap2.vert", "swap2 - Copy.frag");
-            fsrDATA.Use();
-            fsrDATA.SetInt("pos", positionTexture.Unit);
-            fsrDATA.SetInt("taa", taaTexture.Unit);
+            upscale1 = CreateFramebufferObject(upscaleTex1);
+            upscale2 = CreateFramebufferObject(upscaleTex2);
+            upscale3 = CreateFramebufferObject(upscaleTex3);
+
+            ups1 = new Shader("swap2.vert", "swap2 - Copy.frag");
+            ups2 = new Shader("swap2.vert", "swap2 - Copy - Copy.frag");
+            ups3 = new Shader("swap2.vert", "swap2 - Copy - Copy (2).frag");
+
             // Compile shaders
             skyShader = new Shader("sky.vert", "sky.frag");
             sunShader = new Shader("sun.vert", "sun.frag", true);
@@ -479,6 +396,14 @@ namespace RealTimeFractalRendererLibrary
             fullscreenQuadVbo = GL.GenBuffer();
             fullscreenQuadVao = GL.GenVertexArray();
             fullscreenQuadEbo = GL.GenBuffer();
+
+            ups1.Use();
+            ups1.SetInt("col", taaTexture.Handle);
+            ups2.Use();
+            ups2.SetInt("col", upscaleTex1.Handle);
+            ups3.Use();
+            ups3.SetInt("col", upscaleTex2.Handle);
+            ups3.SetInt("orig", taaTexture.Handle);
 
 
             initializationShader.Use();
@@ -622,7 +547,7 @@ namespace RealTimeFractalRendererLibrary
             finalCompositeShader.SetInt("normal", normalTexture.Handle);
             finalCompositeShader.SetInt("albedo", albedoTexture.Handle);
             finalCompositeShader.SetInt("TAA", upscaleTexture.Handle); //TODO: review. "TAA" sampler is bound to "upscale" here.
-            finalCompositeShader.SetInt("fogLO", taaTexture.Handle); //TODO: review. "fogLO" sampler is bound to "TAA" here.
+            finalCompositeShader.SetInt("fogLO", upscaleTex3.Handle); //TODO: review. "fogLO" sampler is bound to "TAA" here.
             finalCompositeShader.SetInt("watpos", waterPositionTexture.Handle);
             finalCompositeShader.SetInt("position", positionTexture.Handle);
             finalCompositeShader.SetInt("var1", varianceTextureB.Handle);
@@ -714,55 +639,25 @@ namespace RealTimeFractalRendererLibrary
             double rndmX = rnd.NextDouble();
             double rndmY = rnd.NextDouble();
 
+            GL.Viewport(0, 0, (int)(1920.0f), (int)(1080.0f));
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale1);
+            ups1.Use();
+            ups1.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
 
 
-            /*
-                        Vector2i renderSize = new Vector2i(960, 540);
-                        Vector2 jitter = new Vector2((float)rndmX, (float)rndmY) / 2.0f * renderSize;
-
-                        //prepare fsr2
-              
-                        fsrDATA.Use();
-                        fsrDATA.SetMatrix4(previousViewMatrix, "prevview");
-                        fsrDATA.SetMatrix4(previousProjectionMatrix, "prevproj");
-                        fsrDATA.SetMatrix4(viewMatrix, "view");
-                        fsrDATA.SetMatrix4(projectionMatrix, "proj");
-                        fsrDATA.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
-                        GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-
-                        GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-                        GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-
-                        FSR2.DispatchDescription dispatchDesc = new FSR2.DispatchDescription()
-                        {
-                            Color = FSR2.GL.GetTextureResource((uint)taaBefo.Handle, (uint)renderSize.X, (uint)renderSize.Y, (uint)SizedInternalFormat.Rgba16f),
-                            Depth = FSR2.GL.GetTextureResource((uint)depthTexture.Handle, (uint)renderSize.X, (uint)renderSize.Y, (uint)SizedInternalFormat.R16f),
-                            MotionVectors = FSR2.GL.GetTextureResource((uint)motionVectorsTexture.Handle, (uint)renderSize.X, (uint)renderSize.Y, (uint)SizedInternalFormat.Rg16f),
-                            Exposure = new FSR2Types.Resource(),
-                            Reactive = new FSR2Types.Resource(),
-                            TransparencyAndComposition = new FSR2Types.Resource(),
-                            Output = FSR2.GL.GetTextureResource((uint)finalTexture.Handle, (uint)1920, (uint)1080, (uint)SizedInternalFormat.Rgba16f),
-                            JitterOffset = new FSR2Types.FloatCoords2D() { X = jitter.X, Y = jitter.Y },
-                            MotionVectorScale = new FSR2Types.FloatCoords2D() { X = renderSize.X, Y = renderSize.Y },
-                            RenderSize = new FSR2Types.Dimensions2D() { Width = (uint)renderSize.X, Height = (uint)renderSize.Y },
-                            EnableSharpening = IsSharpening,
-                            Sharpness = Sharpness,
-                            FrameTimeDelta = 1.0f,
-                            PreExposure = 1.0f,
-                            Reset = false,
-                            CameraNear = 0.01f,
-                            CameraFar = 100.0f,
-                            CameraFovAngleVertical = camera.Fov,
-                            ViewSpaceToMetersFactor = 1,
-                        };
-                        FSR2Error.ErrorCode err = FSR2.ContextDispatch(ref fsr2Context, dispatchDesc);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale2);
+            ups2.Use();
+            ups2.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
 
 
-
-                        GL.ColorMask(true, true, true, true);
-                        GL.Disable(EnableCap.FramebufferSrgb);
-                        GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
-                      */
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale3);
+            ups3.Use();
+            ups3.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+           
 
             RenderFinalCompositePass(viewMatrix, projectionMatrix);
 
@@ -806,7 +701,6 @@ namespace RealTimeFractalRendererLibrary
             initializationShader.SetMatrix4(lightProjectionMatrix, "lightproj");
             initializationShader.SetMatrix4(lightViewMatrix, "lightview");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
         }
 
         private void RenderSkyPass()
@@ -848,7 +742,6 @@ namespace RealTimeFractalRendererLibrary
             radianceCacheShader.SetMatrix4(lightProjectionMatrix, "lightproj");
             radianceCacheShader.SetMatrix4(lightViewMatrix, "lightview");
             GL.DispatchCompute(45, 45, 45);
-            GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
         }
 
         private void RenderGeometryPass(Matrix4 viewMatrix, Matrix4 projectionMatrix, Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightDirection)
@@ -1011,7 +904,7 @@ namespace RealTimeFractalRendererLibrary
         private void RenderFinalCompositePass(Matrix4 viewMatrix, Matrix4 projectionMatrix)
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, OutputFramebuffer);
-            GL.Viewport(0, 0, (int)(renderResolution.X * DefaultScale), (int)(renderResolution.Y * DefaultScale));
+            GL.Viewport(0, 0, (int)(1920.0f), (int)(1080.0f));
             GL.Disable(EnableCap.DepthTest);
             finalCompositeShader.Use();
             finalCompositeShader.SetMatrix4(projectionMatrix, "projection");

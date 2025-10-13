@@ -535,7 +535,7 @@ viewPos;
 vec2 bbb = vec2(0.);
   vec4 colClouds = vec4(0.,0.,0.,1.);
 
-  if(rayAABB(pos.xzy, wi.xzy, vec3(-maxXY.xx/2., 0.), vec3(maxXY.xx/2., maxZ), bbb)){
+  if(rayAABB(pos.xzy, wi.xzy, vec3(-maxXY.xx/2., 0.), vec3(maxXY.xx/2., maxZ), bbb) && false){
     vec3 startPos = pos.xzy ;
    
 

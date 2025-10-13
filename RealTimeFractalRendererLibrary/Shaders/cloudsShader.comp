@@ -240,6 +240,8 @@ void main() {
                 uint(pos.z) * uint(9240) + uint(time) * uint(26699)) |
            uint(1);
 
+
+return;
   float density = dens(worldPos);
 
 

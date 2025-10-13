@@ -1074,7 +1074,7 @@ float map(vec3 p, float iTime) {
 issubsurface = false;
 cccc=vec3(1.,0.,0.);
 l=12.;
-return length(p)-20.;
+//return length(p)-20.;
  
   //return mm;
 //p.y *= -1.;

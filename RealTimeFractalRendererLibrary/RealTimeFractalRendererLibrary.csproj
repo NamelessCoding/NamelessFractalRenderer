@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,6 +36,8 @@
     <None Remove="Shaders\sun.vert" />
     <None Remove="Shaders\swap.frag" />
     <None Remove="Shaders\swap.vert" />
+    <None Remove="Shaders\swap2 - Copy - Copy %282%29.frag" />
+    <None Remove="Shaders\swap2 - Copy - Copy.frag" />
     <None Remove="Shaders\swap2 - Copy.frag" />
     <None Remove="Shaders\swap2.frag" />
     <None Remove="Shaders\swap2.vert" />
@@ -120,6 +122,12 @@
     <EmbeddedResource Include="Shaders\swap.vert">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Shaders\swap2 - Copy - Copy (2).frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Shaders\swap2 - Copy - Copy.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="Shaders\swap2 - Copy.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
@@ -171,7 +179,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FFX_FSR2" Version="1.0.3" />
     <PackageReference Include="OpenTK.GLWpfControl" Version="4.2.3" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
