@@ -766,6 +766,7 @@ namespace RealTimeFractalRendererLibrary
             sunShader.SetMatrix4(lightViewMatrix, "lightview");
             sunShader.SetFloat(ShadowMapResolution, "scale");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+
         }
 
         private void RenderRadianceCachePass(Matrix4 lightViewMatrix, Matrix4 lightProjectionMatrix, Vector3 lightDirection)
