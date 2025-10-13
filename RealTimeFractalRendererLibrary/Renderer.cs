@@ -701,8 +701,11 @@ namespace RealTimeFractalRendererLibrary
 
             for (int i = 0; i < Textures2D.Count; i++) { 
                 TextureBinding tex = Textures2D[i];
-                Configure2DTexture(tex, false, PixelInternalFormat.Rgba32f, tex.minFilter, tex.magFilter, 
-                    TextureWrapMode.ClampToEdge, tex.isCustomSize, (int)tex.customSize.X, (int)tex.customSize.Y, true);
+                if (!tex.isCustomSize) {
+                    Configure2DTexture(tex, false, PixelInternalFormat.Rgba32f, tex.minFilter, tex.magFilter,
+                        TextureWrapMode.ClampToEdge, tex.isCustomSize, (int)tex.customSize.X, (int)tex.customSize.Y, true);
+                }
+                
             }
 
 
