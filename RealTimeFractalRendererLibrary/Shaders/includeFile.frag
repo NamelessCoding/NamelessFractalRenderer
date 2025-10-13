@@ -1060,7 +1060,7 @@ float deTT( vec3 p ) {
     return Precision*(l)*pow(Scale, -float(i));
 }
 //tuk
-float map(vec3 p, float iTime) {
+float mapsfgegey3425(vec3 p, float iTime) {
   float ls = 0.;
    p = p.xzy;
   isWat = 0.;
@@ -1072,8 +1072,8 @@ float map(vec3 p, float iTime) {
   rough = 1.;
   cccc = vec3(0.5);
 issubsurface = false;
-cccc=vec3(1.,0.,0.);
-l=12.;
+//cccc=vec3(1.,0.,0.);
+//l=12.;
 //return length(p)-20.;
  
   //return mm;
@@ -1955,7 +1955,7 @@ float de234(vec3 p){
     }
     return length(p)/s;
   }
-float map3453546747(vec3 p, float iTime){
+float map(vec3 p, float iTime){
   p.y -= 22.;
   p = p.xzy;
   p.z *= -1.;

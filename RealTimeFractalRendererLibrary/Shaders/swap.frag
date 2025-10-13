@@ -2,7 +2,6 @@
 
 layout(location = 0) out vec4 prevN;
 layout(location = 1) out vec4 prevAcc;
-layout(location = 2) out vec4 prevTAA;
 
 in vec2 texCoord;
 
@@ -27,5 +26,4 @@ void main() {
 
   prevN = texture2D(normal, texCoord);
   prevAcc = texture2D(Acc, texCoord);
-  prevTAA = texture2D(TAA, texCoord);
 }

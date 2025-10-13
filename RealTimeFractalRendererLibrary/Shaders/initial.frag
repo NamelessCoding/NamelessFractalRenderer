@@ -320,14 +320,14 @@ void main() {
    //smallOffset = vec2(0.);
   //+jitter()
   vec4 p22 =
-      vec4((clamp(texCoord + smallOffset, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
+      vec4((clamp(texCoord , 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
   // p22.xy += smallOffset*1.;
 
   vec3 dir = (invproj * p22).xyz / (invproj * p22).w;
   dir = normalize(mat3(invview) * dir);
 
   vec4 p22cam =
-      vec4((clamp(vec2(0.5) + smallOffset, 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
+      vec4((clamp(vec2(0.5) , 0., 1.) * 2.0 - 1.0), 0.0, 1.0);
   // p22.xy += smallOffset*1.;
 
   vec3 dircam = (invproj * p22cam).xyz / (invproj * p22cam).w;

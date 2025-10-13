@@ -64,7 +64,7 @@ uniform sampler2D secondpos;
 
 // uniform sampler2D Acc;
 uniform sampler2D den1;
-uniform sampler2D prevTAA;
+
 uniform sampler2D reflAlb;
 uniform sampler2D colorfog;
 uniform sampler2D holdinfo;
@@ -533,6 +533,30 @@ vec4 fog2(vec3 pos, vec3 dir, vec2 TC, inout uint r) {
   return vec4(accum*0.1, volAbs);
 }
 
+// Trig Constants
+const float c_pi = 2.0 * acos(0.0);
+const float c_tau = 2.0 * c_pi;
+
+// 1D low discrepancy noise
+const float c_phi = (1.0 + sqrt(5.0)) / 2.0;
+
+// 2D low discrepancy noise
+const float c_rho_1 = (
+    2.0 * cosh(acosh(3.0 * sqrt(3.0) / 2.0) / 3.0) / sqrt(3.0)
+);
+
+const float c_rho_2 = c_rho_1 * c_rho_1; 
+
+const vec2 c_rho = vec2(c_rho_1, c_rho_2);
+const vec2 c_inv_rho = vec2(1.0) / c_rho;
+
+// Calculate offset for TAA Frames
+vec2 offset(int frame) {
+    // https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
+    vec2 x = float(frame) * c_inv_rho;
+    return fract(x) - 0.5;
+}
+
 void main() {
   vec2 iResolution = wh;
   vec2 fragCoord = texCoord * wh;
@@ -549,10 +573,8 @@ void main() {
   vec2 TC = floor((texCoord * iResolution.xy) * RESOLUTION) /
             (RESOLUTION * iResolution.xy);
   //  TC += jitter();
-  TC = texCoord;
+  TC = texCoord + offset(int(time))/iResolution.xy;
  uint seedCam = uint(time);
-  vec2 smallOffset =
-      ((vec2(rndf(seedCam), rndf(seedCam))) * 2. - 1.) / iResolution;
 
   vec4 wp = texture2D(watpos, TC);
   vec4 wn = texture2D(watnorm, TC);
@@ -591,7 +613,6 @@ void main() {
       ((vec2(rndf(seedCamPrev), rndf(seedCamPrev))) * 2. - 1.) / iResolution;
   // smallOffset2 = vec2(0.);
 
-  ProjectedCoordinates -= smallOffset2 * 1.;
 
   ProjectedCoordinates *= 1.0;
   ProjectedCoordinates = max(ProjectedCoordinates, 0.);
@@ -774,51 +795,51 @@ ind += clamp(spec , 0., 1000.);
 col = col*max(texture2D(CLOOOOUDS, TC).w,0.) + max(texture2D(CLOOOOUDS, TC).xyz,0.)*0.2;
 
 
-  float depth = texture2D(normal, TC).w;
+  // float depth = texture2D(normal, TC).w;
 
-  vec3 prevCol = clamp(texture2D(prevTAA, ProjectedCoordinates).xyz, 0., 10.);
-  vec3 minCol = (vec3(9999.));
-  vec3 maxCol = (vec3(0.));
-  for (int i = 0; i < 9; i++) {
-    vec2 coords = vec2(float(i % 3) - 1., float(i / 3) - 1.);
-    vec3 currSample =
-        clamp(texture2D(prevTAA, (ProjectedCoordinates * iResolution + coords) /
-                                     iResolution)
-                  .xyz,
-              0., 10.);
-    minCol = min(minCol, currSample);
-    maxCol = max(maxCol, currSample);
-  }
-  prevCol = ClipAABB(prevCol, minCol, maxCol);
+  // vec3 prevCol = clamp(texture2D(prevTAA, ProjectedCoordinates).xyz, 0., 10.);
+  // vec3 minCol = (vec3(9999.));
+  // vec3 maxCol = (vec3(0.));
+  // for (int i = 0; i < 9; i++) {
+  //   vec2 coords = vec2(float(i % 3) - 1., float(i / 3) - 1.);
+  //   vec3 currSample =
+  //       clamp(texture2D(prevTAA, (ProjectedCoordinates * iResolution + coords) /
+  //                                    iResolution)
+  //                 .xyz,
+  //             0., 10.);
+  //   minCol = min(minCol, currSample);
+  //   maxCol = max(maxCol, currSample);
+  // }
+  // prevCol = ClipAABB(prevCol, minCol, maxCol);
 
-  // if(ProjectedCoordinates.x >= 0. && ProjectedCoordinates.x <= 1. &&
-  // ProjectedCoordinates.y >= 0. && ProjectedCoordinates.y <= 1.0){
-  vec2 velocity = (TC - ProjectedCoordinates.xy) * iResolution;
+  // // if(ProjectedCoordinates.x >= 0. && ProjectedCoordinates.x <= 1. &&
+  // // ProjectedCoordinates.y >= 0. && ProjectedCoordinates.y <= 1.0){
+  // vec2 velocity = (TC - ProjectedCoordinates.xy) * iResolution;
 
-  // blend only if we are inside of bounds
-  float blendFactor =
-      float(ProjectedCoordinates.x > 0.0 && ProjectedCoordinates.x < 1.0 &&
-            ProjectedCoordinates.y > 0.0 && ProjectedCoordinates.y < 1.0);
-  blendFactor *= exp(-length(velocity) * 0.9) * 0.6 + 0.3;
+  // // blend only if we are inside of bounds
+  // float blendFactor =
+  //     float(ProjectedCoordinates.x > 0.0 && ProjectedCoordinates.x < 1.0 &&
+  //           ProjectedCoordinates.y > 0.0 && ProjectedCoordinates.y < 1.0);
+  // blendFactor *= exp(-length(velocity) * 0.9) * 0.6 + 0.3;
 
-  // if(texture2D(color, TC).w > 0.5){
+  // // if(texture2D(color, TC).w > 0.5){
 
-    vec4 normDiff = texture2D(normal, TC);
-    vec4 normDiffprev = texture2D(prevN, ProjectedCoordinates);
-    float normWeight = pow(max(dot(normDiff.xyz, normDiffprev.xyz),0.), 1.);
-    float depthWeight = pow(exp(-abs(normDiff.w - normDiffprev.w)*0.1), 1.);
+  //   vec4 normDiff = texture2D(normal, TC);
+  //   vec4 normDiffprev = texture2D(prevN, ProjectedCoordinates);
+  //   float normWeight = pow(max(dot(normDiff.xyz, normDiffprev.xyz),0.), 1.);
+  //   float depthWeight = pow(exp(-abs(normDiff.w - normDiffprev.w)*0.1), 1.);
 
-  if (texture2D(albedo, TC).w < 0.5 && texture2D(position, TC).w < 0.5 && wp.w < 0.5) {
-    col = mix(col, prevCol, clamp(blendFactor, 0.0, 1.));
-  }else{
-    col = mix(col, prevCol, clamp(blendFactor*0.2, 0.0, 1.));
-  }
-  //}
+  // if (texture2D(albedo, TC).w < 0.5 && texture2D(position, TC).w < 0.5 && wp.w < 0.5) {
+  //   col = mix(col, prevCol, clamp(blendFactor, 0.0, 1.));
+  // }else{
+  //   col = mix(col, prevCol, clamp(blendFactor*0.2, 0.0, 1.));
+  // }
+  // //}
 
-  //}
-  TAA = vec4(col, clamp(sqrt(lum(ind)) * 0.05 +
-                            texture2D(prevTAA, ProjectedCoordinates).w * 0.95,
-                        0., 0.99));
+  // //}
+
+
+  TAA = vec4(col, 1.);
 
   prevPosition = texture2D(position, TC);
   prevSecondPosition = texture2D(secondpos, TC);

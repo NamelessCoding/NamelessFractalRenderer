@@ -169,41 +169,32 @@ namespace RealTimeFractalRendererLibrary
     int customWidth = 0,
     int customHeight = 0)
         {
-            GL.ActiveTexture(TextureUnit.Texture0 + textureS.Unit);
+            GL.ActiveTexture(TextureUnit.Texture0 );
             GL.BindTexture(TextureTarget.Texture2D, textureS.Handle);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)wrapMode);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)wrapMode);
+            
 
-            if (scaleToRenderResolution && !useCustomSize)
+            if (useCustomSize)
             {
                 GL.TexImage2D(
-                    TextureTarget.Texture2D, 0,
-                    internalFormat,
-                    (int)(renderResolution.X * renderScale), (int)(renderResolution.Y * renderScale), 0,
-                    PixelFormat.Rgba,
-                    PixelType.UnsignedByte, IntPtr.Zero);
+                   TextureTarget.Texture2D, 0,
+                   internalFormat,
+                   customWidth, customHeight, 0,
+                   PixelFormat.Rgba,
+                   PixelType.UnsignedByte, IntPtr.Zero);
             }
-            else if (!useCustomSize)
-            {
+            else {
                 GL.TexImage2D(
-                    TextureTarget.Texture2D, 0,
-                    internalFormat,
-                    (int)(renderResolution.X), (int)(renderResolution.Y), 0,
-                    PixelFormat.Rgba,
-                    PixelType.UnsignedByte, IntPtr.Zero);
+                        TextureTarget.Texture2D, 0,
+                        internalFormat,
+                        (int)(renderResolution.X), (int)(renderResolution.Y), 0,
+                        PixelFormat.Rgba,
+                        PixelType.UnsignedByte, IntPtr.Zero);
             }
-            else
-            {
-                GL.TexImage2D(
-                    TextureTarget.Texture2D, 0,
-                    internalFormat,
-                    customWidth, customHeight, 0,
-                    PixelFormat.Rgba,
-                    PixelType.UnsignedByte, IntPtr.Zero);
-            }
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, textureBorderColor);
+
+           
+         //   GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, textureBorderColor);
         }
 
         private void Configure3DTexture(
@@ -298,10 +289,7 @@ namespace RealTimeFractalRendererLibrary
             Configure3DTexture(radianceCacheRadianceTexture, 180, 180, 180, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.MirroredRepeat);
             Configure2DTexture(colorTexture, false);
            
-            Configure2DTexture(upscaleTex1, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
-            Configure2DTexture(upscaleTex2, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
-            Configure2DTexture(upscaleTex3, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear, TextureWrapMode.ClampToEdge, true, 1920, 1080);
-
+            
             Configure2DTexture(cloudTextureX, false);
 
             Configure2DTexture(sssTexture, false);
@@ -319,8 +307,8 @@ namespace RealTimeFractalRendererLibrary
             Configure2DTexture(temporalPositionTexture, false, PixelInternalFormat.Rgba32f);
             Configure2DTexture(spatialWeightsTexture, false);
             Configure2DTexture(spatialRadianceTexture, false);
-            Configure2DTexture(taaTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
-            Configure2DTexture(upscaleTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(taaTexture, true, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest);
+            Configure2DTexture(upscaleTexture, true, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.Repeat, true, 1920, 1080);
             Configure2DTexture(upscaleTextureB, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
             Configure2DTexture(prevTemporalWeightsTexture, false);
             Configure2DTexture(prevTemporalRadianceTexture, false);
@@ -329,12 +317,19 @@ namespace RealTimeFractalRendererLibrary
             Configure2DTexture(prevSpatialRadianceTexture, false);
             Configure2DTexture(prevNormalDepthTexture, true, PixelInternalFormat.Rgba32f);
             Configure2DTexture(prevAccumulationTexture, true);
-            Configure2DTexture(prevTaaTexture, true, PixelInternalFormat.Rgba16f, TextureMinFilter.LinearMipmapLinear, TextureMagFilter.Linear);
+            Configure2DTexture(prevTaaTexture, false, PixelInternalFormat.Rgba16f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.ClampToBorder,true ,1920, 1080);
             Configure2DTexture(denoiseTextureA, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             Configure2DTexture(denoiseTextureB, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             Configure2DTexture(varianceTextureA, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             Configure2DTexture(varianceTextureB, true, PixelInternalFormat.Rgba16f, TextureMinFilter.Linear, TextureMagFilter.Linear);
             Configure2DTexture(tempAccumulationTexture);
+            Configure2DTexture(upscaleTex1, false, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.ClampToEdge, true, 1920, 1080);
+            Configure2DTexture(upscaleTex2, false, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.ClampToEdge, true, 1920 , 1080 );
+            Configure2DTexture(upscaleTex3, false, PixelInternalFormat.Rgba32f, TextureMinFilter.Nearest, TextureMagFilter.Nearest, TextureWrapMode.ClampToEdge, true, 1920 , 1080 );
+
+
+            
+
             // stb_image loads from the top-left pixel, whereas OpenGL loads from the bottom-left, causing the texture to be flipped vertically.
             // This will correct that, making the texture display properly.
             StbImage.stbi_set_flip_vertically_on_load(1);
@@ -357,13 +352,13 @@ namespace RealTimeFractalRendererLibrary
             spatialFramebuffer = CreateFramebufferObject(spatialWeightsTexture, spatialRadianceTexture, fogPositionTexture);
             taaFramebuffer = CreateFramebufferObject(taaTexture);
             upscaleFramebuffer = CreateFramebufferObject(upscaleTexture);
-            previousFrameFramebuffer = CreateFramebufferObject(prevNormalDepthTexture, prevAccumulationTexture, prevTaaTexture);
+            previousFrameFramebuffer = CreateFramebufferObject(prevNormalDepthTexture, prevAccumulationTexture);
             previousTemporalFramebuffer = CreateFramebufferObject(prevTemporalWeightsTexture, prevTemporalRadianceTexture, prevTemporalPositionTexture, prevSpatialWeightsTexture, prevSpatialRadianceTexture);
             denoiseFramebufferA = CreateFramebufferObject(denoiseTextureB, varianceTextureB, fogColorTextureB, secondaryAlbedoTexture, sssDenoiseTexture);
             denoiseFramebufferB = CreateFramebufferObject(denoiseTextureA, varianceTextureA, fogColorTexture, secondaryAlbedoTexture, sssDenoiseTexture);
             tempAccumulationFramebuffer = CreateFramebufferObject(tempAccumulationTexture, denoiseTextureA, varianceTextureA);
             spatialPrepassFramebuffer = CreateFramebufferObject(prevTemporalWeightsTexture, prevTemporalRadianceTexture, prevTemporalPositionTexture);
-            upscale1 = CreateFramebufferObject(upscaleTex1);
+            upscale1 = CreateFramebufferObject(upscaleTex1,prevTaaTexture);
             upscale2 = CreateFramebufferObject(upscaleTex2);
             upscale3 = CreateFramebufferObject(upscaleTex3);
 
@@ -398,9 +393,14 @@ namespace RealTimeFractalRendererLibrary
             fullscreenQuadEbo = GL.GenBuffer();
 
             ups1.Use();
-            ups1.SetInt("col", taaTexture.Handle);
+            ups1.SetInt("col", upscaleTex3.Handle);
+            ups1.SetInt("prevTAA", prevTaaTexture.Handle);
+            ups1.SetInt("position", positionTexture.Handle);
+            ups1.SetInt("norm", normalTexture.Handle);
+            ups1.SetInt("prevnorm", prevNormalDepthTexture.Handle);
+
             ups2.Use();
-            ups2.SetInt("col", upscaleTex1.Handle);
+            ups2.SetInt("col", upscaleTexture.Handle);
             ups3.Use();
             ups3.SetInt("col", upscaleTex2.Handle);
             ups3.SetInt("orig", taaTexture.Handle);
@@ -510,7 +510,6 @@ namespace RealTimeFractalRendererLibrary
             taaShader.SetInt("secondpos", secondaryPositionTexture.Handle);
             //taaShader.SetInt("Acc", tempAccumulationTexture.Handle);
             taaShader.SetInt("den1", denoiseTextureB.Handle); //den2 bound here
-            taaShader.SetInt("prevTAA", prevTaaTexture.Handle);
             taaShader.SetInt("reflAlb", secondaryAlbedoTexture.Handle);
             taaShader.SetInt("colorfog", fogColorTexture.Handle);
             //taaShader.SetInt("holdinfo", holdInfoTexture.Handle);
@@ -546,8 +545,8 @@ namespace RealTimeFractalRendererLibrary
             finalCompositeShader.SetInt("color", prevSpatialWeightsTexture.Handle);
             finalCompositeShader.SetInt("normal", normalTexture.Handle);
             finalCompositeShader.SetInt("albedo", albedoTexture.Handle);
-            finalCompositeShader.SetInt("TAA", upscaleTexture.Handle); //TODO: review. "TAA" sampler is bound to "upscale" here.
-            finalCompositeShader.SetInt("fogLO", upscaleTex3.Handle); //TODO: review. "fogLO" sampler is bound to "TAA" here.
+            finalCompositeShader.SetInt("TAA", taaTexture.Handle); //TODO: review. "TAA" sampler is bound to "upscale" here.
+            finalCompositeShader.SetInt("fogLO", upscaleTex1.Handle); //TODO: review. "fogLO" sampler is bound to "TAA" here.
             finalCompositeShader.SetInt("watpos", waterPositionTexture.Handle);
             finalCompositeShader.SetInt("position", positionTexture.Handle);
             finalCompositeShader.SetInt("var1", varianceTextureB.Handle);
@@ -568,7 +567,7 @@ namespace RealTimeFractalRendererLibrary
             GL.EnableVertexAttribArray(texCoordLocation);
             GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
 
-            camera = new Camera(Vector3.UnitZ * 3, resolution.X / (float)resolution.Y);
+            camera = new Camera(Vector3.UnitZ * 3, renderResolution.X / (float)renderResolution.Y);
             frameTimer = new Stopwatch();
             frameTimer.Start();
 
@@ -629,35 +628,45 @@ namespace RealTimeFractalRendererLibrary
             RenderTempAccumulationPass();
             RenderDenoisePass();
             RenderTaaPass(viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix, LightDirection);
-            RenderUpscalePass();
             RenderPreviousFrameCopyPass();
             RenderPreviousTemporalCopyPass();
 
+            RenderUpscalePass();
 
-            Random rnd = new Random();
 
-            double rndmX = rnd.NextDouble();
-            double rndmY = rnd.NextDouble();
+          
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale2);
 
             GL.Viewport(0, 0, (int)(1920.0f), (int)(1080.0f));
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale1);
-            ups1.Use();
-            ups1.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
-            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale2);
             ups2.Use();
-            ups2.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
+            ups2.SetVector2(new Vector2(1920.0f , 1080.0f ), "wh");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+
 
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale3);
+
+            GL.Viewport(0, 0, (int)(1920.0f), (int)(1080.0f));
+
             ups3.Use();
-            ups3.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
+            ups3.SetVector2(new Vector2(1920.0f , 1080.0f ), "wh");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-           
+
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscale1);
+
+            GL.Viewport(0, 0, (int)(1920.0f), (int)(1080.0f));
+
+            ups1.Use();
+            ups1.SetFloat(frameIndex, "time");
+            ups1.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
+            ups1.SetMatrix4(previousViewMatrix, "prevview");
+            ups1.SetMatrix4(previousProjectionMatrix, "prevproj");
+            GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
+
+
 
             RenderFinalCompositePass(viewMatrix, projectionMatrix);
 
@@ -866,19 +875,19 @@ namespace RealTimeFractalRendererLibrary
             taaShader.SetMatrix4(viewMatrix, "view");
             taaShader.SetMatrix4(projectionMatrix, "proj");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(taaTexture.Handle);
+            //GL.GenerateTextureMipmap(taaTexture.Handle);
         }
 
         private void RenderUpscalePass()
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, upscaleFramebuffer);
-            GL.Viewport(0, 0, (int)(renderResolution.X * DefaultScale), (int)(renderResolution.Y * DefaultScale));
+            GL.Viewport(0, 0, (int)(1920), (int)(1080));
             GL.Disable(EnableCap.DepthTest);
             upscaleShader.Use();
-            upscaleShader.SetVector2(new Vector2(renderResolution.X * DefaultScale, renderResolution.Y * DefaultScale), "wh");
+            upscaleShader.SetVector2(new Vector2(1920.0f, 1080.0f), "wh");
             upscaleShader.SetFloat(DefaultScale, "scale");
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(upscaleTexture.Handle);
+            //GL.GenerateTextureMipmap(upscaleTexture.Handle);
         }
 
         private void RenderPreviousFrameCopyPass()
@@ -888,7 +897,6 @@ namespace RealTimeFractalRendererLibrary
             GL.Disable(EnableCap.DepthTest);
             previousFrameCopyShader.Use();
             GL.DrawElements(PrimitiveType.Triangles, fullscreenQuadIndices.Length, DrawElementsType.UnsignedInt, 0);
-            GL.GenerateTextureMipmap(prevTaaTexture.Handle);
             GL.GenerateTextureMipmap(upscaleTextureB.Handle);
         }
 

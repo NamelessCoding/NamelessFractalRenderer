@@ -605,6 +605,201 @@ vec3 lodbloom(vec2 iResolution, float lod) {
   return accumBloom;
 }
 
+vec3 SampTex(vec2 fragCoord){
+
+// Scale constants
+    vec4 scale = vec4(
+        1. / vec2(textureSize(fogLO, 0)),
+        vec2(textureSize(fogLO, 0)) / wh.xy
+    );
+    
+    // Source position in fractions of a texel
+    vec2 src_pos = scale.zw * fragCoord;
+    // Source bottom left texel centre
+    vec2 src_centre = floor(src_pos - .5) + .5;
+    // f is position. f.x runs left to right, y bottom to top, z right to left, w top to bottom
+    vec4 f; f.zw = 1. - (f.xy = src_pos - src_centre);
+    // Calculate weights in x and y in parallel.
+    // These polynomials are piecewise approximation of Lanczos kernel
+    // Calculator here: https://gist.github.com/going-digital/752271db735a07da7617079482394543
+    vec4 l2_w0_o3 = ((1.5672 * f - 2.6445) * f + 0.0837) * f + 0.9976;
+    vec4 l2_w1_o3 = ((-0.7389 * f + 1.3652) * f - 0.6295) * f - 0.0004;
+
+    vec4 w1_2 = l2_w0_o3;
+    vec2 w12 = w1_2.xy + w1_2.zw;
+    vec4 wedge = l2_w1_o3.xyzw * w12.yxyx;
+    // Calculate texture read positions. tc12 uses bilinear interpolation to do 4 reads in 1.
+    vec2 tc12 = scale.xy * (src_centre + w1_2.zw / w12);
+    vec2 tc0 = scale.xy * (src_centre - 1.);
+    vec2 tc3 = scale.xy * (src_centre + 2.);
+    // Sharpening adjustment
+    // Thanks mad_gooze for the normalization fix.
+    float sum = wedge.x + wedge.y + wedge.z + wedge.w + w12.x * w12.y;    
+    wedge /= sum;
+    vec3 col = vec3(
+        texture(fogLO, vec2(tc12.x, tc0.y)).rgb * wedge.y +
+        texture(fogLO, vec2(tc0.x, tc12.y)).rgb * wedge.x +
+        texture(fogLO, tc12.xy).rgb * (w12.x * w12.y) +
+        texture(fogLO, vec2(tc3.x, tc12.y)).rgb * wedge.z +
+        texture(fogLO, vec2(tc12.x, tc3.y)).rgb * wedge.w
+    );
+return max(col,0.);
+}
+
+#define UP_LEFT      0
+#define UP           1
+#define UP_RIGHT     2
+#define LEFT         3
+#define CENTER       4
+#define RIGHT        5
+#define DOWN_LEFT    6
+#define DOWN         7
+#define DOWN_RIGHT   8
+vec2 KERNEL_STEP_MAT[] = vec2[9](
+    vec2(-1.0, 1.0), vec2(0.0, 1.0), vec2(1.0, 1.0),
+    vec2(-1.0, 0.0), vec2(0.0, 0.0), vec2(1.0, 0.0),
+    vec2(-1.0, -1.0), vec2(0.0, -1.0), vec2(1.0, -1.0)
+);
+
+/* in order to accelerate exploring along tangent bidirectional, step by an increasing amount of pixels QUALITY(i) 
+   the max step count is 12
+    +-----------------+---+---+---+---+---+---+---+---+---+---+---+---+
+    |step index       | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |10 |11 |
+    +-----------------+---+---+---+---+---+---+---+---+---+---+---+---+
+    |step pixels count|1.0|1.0|1.0|1.0|1.0|1.5|2.0|2.0|2.0|2.0|4.0|8.0|
+    +-----------------+---+---+---+---+---+---+---+---+---+---+---+---+
+*/
+#define STEP_COUNT_MAX   12
+float QUALITY(int i) {
+    if (i < 5) return 1.0;
+    if (i == 5) return 1.5;
+    if (i < 10) return 2.0;
+    if (i == 10) return 4.0;
+    if (i == 11) return 8.0;
+}
+
+
+// L = 0.299 * R + 0.587 * G + 0.114 * B
+float RGB2LUMA(vec3 color) {
+    return dot(vec3(0.299, 0.578, 0.114), color);
+}
+
+
+#define EDGE_THRESHOLD_MIN  0.0312
+#define EDGE_THRESHOLD_MAX  0.125
+#define SUBPIXEL_QUALITY    0.75
+#define GRADIENT_SCALE      0.25
+
+vec4 fxaa_3_11(sampler2D color_buffer, vec2 uv, vec2 uv_step) {
+    // get luma of kernel
+    float luma_mat[9];
+    for (int i = 0; i < 9; i++) {
+        luma_mat[i] = RGB2LUMA(texture(color_buffer, uv + uv_step * KERNEL_STEP_MAT[i]).xyz);
+    }
+    
+    // detecting where to apply FXAA, return the pixel color if not
+    float luma_min = min(luma_mat[CENTER], min(min(luma_mat[UP], luma_mat[DOWN]), min(luma_mat[LEFT], luma_mat[RIGHT])));
+    float luma_max = max(luma_mat[CENTER], max(max(luma_mat[UP], luma_mat[DOWN]), max(luma_mat[LEFT], luma_mat[RIGHT])));
+    float luma_range = luma_max - luma_min;
+    if(luma_range < max(EDGE_THRESHOLD_MIN, luma_max * EDGE_THRESHOLD_MAX)) return texture(color_buffer, uv);
+    
+    // choosing edge tangent
+    // horizontal: |(upleft-left)-(left-downleft)|+2*|(up-center)-(center-down)|+|(upright-right)-(right-downright)|
+    // vertical: |(upright-up)-(up-upleft)|+2*|(right-center)-(center-left)|+|(downright-down)-(down-downleft)|
+    float luma_horizontal = 
+        abs(luma_mat[UP_LEFT] + luma_mat[DOWN_LEFT] - 2.0 * luma_mat[LEFT])
+        + 2.0 * abs(luma_mat[UP] + luma_mat[DOWN] - 2.0 * luma_mat[CENTER])
+        + abs(luma_mat[UP_RIGHT] + luma_mat[DOWN_RIGHT] - 2.0 * luma_mat[RIGHT]);
+    float luma_vertical = 
+        abs(luma_mat[UP_LEFT] + luma_mat[UP_RIGHT] - 2.0 * luma_mat[UP])
+        + 2.0 * abs(luma_mat[LEFT] + luma_mat[RIGHT] - 2.0 * luma_mat[CENTER])
+        + abs(luma_mat[DOWN_LEFT] + luma_mat[DOWN_RIGHT] - 2.0 * luma_mat[DOWN]);
+    bool is_horizontal = luma_horizontal > luma_vertical;
+    
+    // choosing edge normal 
+    float gradient_down_left = (is_horizontal ? luma_mat[DOWN] : luma_mat[LEFT]) - luma_mat[CENTER];
+    float gradient_up_right = (is_horizontal ? luma_mat[UP] : luma_mat[RIGHT]) - luma_mat[CENTER];
+    bool is_down_left = abs(gradient_down_left) > abs(gradient_up_right);
+    
+    // get the tangent uv step vector and the normal uv step vector
+    vec2 step_tangent = (is_horizontal ? vec2(1.0, 0.0) : vec2(0.0, 1.0)) * uv_step;
+    vec2 step_normal =  (is_down_left ? -1.0 : 1.0) * (is_horizontal ? vec2(0.0, 1.0) : vec2(1.0, 0.0)) * uv_step;
+    
+    // get the change rate of gradient in normal per pixel
+    float gradient = is_down_left ? gradient_down_left : gradient_up_right;
+    
+    // start at middle point of tangent edge
+    vec2 uv_start = uv + 0.5 * step_normal;
+    float luma_average_start = luma_mat[CENTER] + 0.5 * gradient;    
+    //return vec4(luma_average_start, luma_average_start,luma_average_start, 1.0);
+    
+    // explore along tangent bidirectional until reach the edge both
+    vec2 uv_pos = uv_start + step_tangent;
+    vec2 uv_neg = uv_start - step_tangent;
+    
+    //return texture(iChannel0, uv_neg);
+    
+    float delta_luma_pos = RGB2LUMA(texture(color_buffer, uv_pos).rgb) - luma_average_start;
+    float delta_luma_neg = RGB2LUMA(texture(color_buffer, uv_neg).rgb) - luma_average_start;
+    
+    bool reached_pos = abs(delta_luma_pos) > GRADIENT_SCALE * abs(gradient);
+    bool reached_neg = abs(delta_luma_neg) > GRADIENT_SCALE * abs(gradient);
+    bool reached_both = reached_pos && reached_neg;
+    
+    if (!reached_pos) uv_pos += step_tangent;
+    if (!reached_neg) uv_neg -= step_tangent;
+    
+    if (!reached_both) {
+        for(int i = 2; i < STEP_COUNT_MAX; i++){
+            if(!reached_pos) delta_luma_pos = RGB2LUMA(texture(color_buffer, uv_pos).rgb) - luma_average_start;
+            if(!reached_neg) delta_luma_neg = RGB2LUMA(texture(color_buffer, uv_neg).rgb) - luma_average_start;
+            
+            bool reached_pos = abs(delta_luma_pos) > GRADIENT_SCALE * abs(gradient);
+            bool reached_neg = abs(delta_luma_neg) > GRADIENT_SCALE * abs(gradient);
+            bool reached_both = reached_pos && reached_neg;
+            
+            if (!reached_pos) uv_pos += (QUALITY(i) * step_tangent);
+            if (!reached_neg) uv_neg -= (QUALITY(i) * step_tangent);
+            
+            if (reached_both) break;
+        }
+    }
+    
+    //return texture(iChannel0, uv_neg);
+    
+    // estimating offset
+    float length_pos = max(abs(uv_pos - uv_start).x, abs(uv_pos - uv_start).y);
+    float length_neg = max(abs(uv_neg - uv_start).x, abs(uv_neg - uv_start).y);
+    bool is_pos_near = length_pos < length_neg;
+    
+    float pixel_offset = -1.0 * (is_pos_near ? length_pos : length_neg) / (length_pos + length_neg) + 0.5;
+    
+    // no offset if the bidirectional point is too far
+    if(((is_pos_near ? delta_luma_pos : delta_luma_neg) < 0.0) == (luma_mat[CENTER] < luma_average_start)) pixel_offset = 0.0;
+    
+    // subpixel antialiasing
+    float luma_average_center = 0.0;
+    float average_weight_mat[] = float[9](
+        1.0, 2.0, 1.0,
+        2.0, 0.0, 2.0,
+        1.0, 2.0, 1.0
+    );
+    for (int i = 0; i < 9; i++) luma_average_center += average_weight_mat[i] * luma_mat[i];
+    luma_average_center /= 12.0;
+    
+    float subpixel_luma_range = clamp(abs(luma_average_center - luma_mat[CENTER]) / luma_range, 0.0, 1.0);
+    float subpixel_offset = (-2.0 * subpixel_luma_range + 3.0) * subpixel_luma_range * subpixel_luma_range;
+    subpixel_offset = subpixel_offset * subpixel_offset * SUBPIXEL_QUALITY;
+    
+    // use the max offset between subpixel offset with before
+    pixel_offset = max(pixel_offset, subpixel_offset);
+    
+    
+    return texture(color_buffer, uv + pixel_offset * step_normal);
+}
+
+
+
 void main() {
     if(enableTextureDebugging != 0)
     {
@@ -665,8 +860,50 @@ void main() {
   if (enableBlur != 0) {
     color2 = blur3(texCoord, depthCenter, fc, wh, r, mixen, wp);
   } else {
-    color2 = texture2D(fogLO, texCoord).xyz;
-    
+   
+
+
+        vec3  col = SampTex( texCoord*wh).xyz;
+ float max_g = col.y;
+    float min_g = col.y;
+
+    vec4 uvoff = vec4(1,0,1,-1);
+    vec3 colw;
+    vec3 col1 = SampTex(texCoord*wh+uvoff.yw).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw = col1;
+    col1 = SampTex(texCoord*wh+uvoff.xy).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw += col1;
+    col1 = SampTex(texCoord*wh+uvoff.yz).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw += col1;
+    col1 = SampTex(texCoord*wh-uvoff.xy).xyz;
+    max_g = max(max_g, col1.y);
+    min_g = min(min_g, col1.y);
+    colw += col1;
+    float d_min_g = min_g;
+    float d_max_g = 1.-max_g;
+    float A;
+    max_g = max(0., max_g);
+    if (d_max_g < d_min_g) {
+        A = d_max_g / max_g;
+    } else {
+        A = d_min_g / max_g;
+    }
+    A = sqrt(max(0., A));
+    A *= mix(-.125, -.2, 1.);
+    vec3 col_out = (col + colw * A) / (1.+4.*A);
+        color2 =  col_out;
+        //vec4 fxaa_3_11(sampler2D color_buffer, vec2 uv, vec2 uv_step) {
+
+color2 = fxaa_3_11(fogLO, texCoord, 1./wh).rgb;
+        color2 =  col_out;
+
+
   }
   // color2 = texture2D(fogLO, texCoord).xyz;
 
@@ -710,8 +947,8 @@ void main() {
   float EV100 = log2(avgLuma * 100. / 65.);
   float exposure = clamp((1.5) * exp2(EV100), 0.000018, 1.);
   col = max(col, 0.);
-  col /= exposure;
-  col *= brightness;
+  //col /= exposure;
+  col *= brightness*12.;
 
   uint seedCam = uint(time);
   vec2 smallOffset =

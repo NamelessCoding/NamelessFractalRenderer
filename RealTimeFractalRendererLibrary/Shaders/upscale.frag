@@ -23,106 +23,15 @@ uint wang_hash(inout uint seed) {
 float rndf(inout uint state) { return float(wang_hash(state)) / 4294967296.0; }
 ///////////////////////////
 
-float halton(int i, float b) {
-  float f = 1.;
-  float r = 0.;
+const ivec2 I_ZERO = ivec2(0);
+const ivec2 I_ONE  = ivec2(1);
 
-  while (float(i) > 0.) {
-    f = f / max(b, 0.0000001);
-    r = r + f * float(i % int(b));
-    i = i / int(b);
-  }
-  return r;
-}
 
-// from wrigher
-vec2 halton_2_3(int idx) {
-  float u = halton(idx + 1, 2.0) - 0.5;
-  float v = halton(idx + 1, 3.0) - 0.5;
-  return vec2(u, v);
-}
-const float phi2 = 1.32471795724474602596090885447809734; // root of X^3-X-1=0.
-const float phi2sq = phi2 * phi2;
-
-#define dot2(a) dot(a, a)
-#define sinc(x) (sin(x) / x)
-
-float lacnzos(float x, float s) {
-  float xpi = acos(-1.) * x;
-  float xpis = s * xpi;
-  return x == 0. ? 1. : sinc(xpi) * sinc(xpis);
-}
-float RENDERSCALE = 0.5;
-
-#define EXPOSURE 15.0
-
-#define BLOOM_FACTOR 0.6
-
-#define ROTATION
-
-#define DOWNSAMPLE_BLUR_RADIUS 5
-
-#define UPSAMPLE_BLUR
-#define OPTIMIZED_UPSAMPLE_BLUR
-
-#define MAX_LOD 6
-
-#define STEPS 512
-#define MAX_DIST 100.
-#define EPS 1e-4
-
-#define PI (acos(-1.))
-#define TAU (PI * 2.)
-float gaussian(vec2 i, float sigma) {
-  return exp(-dot(i, i) / (2.0 * sigma * sigma));
-}
-
-vec3 lodbloom(vec2 iResolution, float lod) {
-
-  vec3 accumBloom = vec3(0.);
-  const float atrous_kernel_weights[25] = {
-      1.0 / 273.0, 4.0 / 273.0,  7.0 / 273.0,  4.0 / 273.0,  1.0 / 273.0,
-      4.0 / 273.0, 16.0 / 273.0, 26.0 / 273.0, 16.0 / 273.0, 4.0 / 273.0,
-      7.0 / 273.0, 26.0 / 273.0, 41.0 / 273.0, 26.0 / 273.0, 7.0 / 273.0,
-      4.0 / 273.0, 16.0 / 273.0, 26.0 / 273.0, 16.0 / 273.0, 4.0 / 273.0,
-      1.0 / 273.0, 4.0 / 273.0,  7.0 / 273.0,  4.0 / 273.0,  1.0 / 273.0};
-  for (int i = 0; i < 25; i++) {
-    vec2 coords2 = vec2(float(i % 5) - 2., float(i / 5) - 2.) * 5.;
-    vec2 newCords = (texCoord * scale * iResolution + coords2) / iResolution;
-    accumBloom +=
-        clamp(textureLod(TAA, newCords, ceil(log2(max(wh.x, wh.y)) * lod)).xyz,
-              0., 1.) *
-        atrous_kernel_weights[i];
-  }
-  return accumBloom;
-}
 
 void main() {
   vec2 iResolution = wh;
 
-  // vec3 col = texture2D(TAA, texCoord).xyz;
-
-  // upbefore
-  // vec2 currJitter = jitter();
-
-  /*
-  vec3 View = texture2D(position, texCoord).xyz;
-  vec4 Projected = vec4(View.xyz, 1.); // + vec4(cameraOffset, 0.);
-  Projected = prevview * Projected;
-  Projected = prevproj * Projected;
-  Projected /= Projected.w;
-  vec2 ProjectedCoordinates = Projected.xy * 0.5 + 0.5;
-  */
-
-  // vec3 lodbloom(vec2 iResolution, float lod){
-
-  vec3 bloom = lodbloom(iResolution, 0.2);
-  //bloom += lodbloom(iResolution, 0.3);
-  //bloom += lodbloom(iResolution, 0.4);
-  //bloom += lodbloom(iResolution, 0.5);
- // bloom += lodbloom(iResolution, 0.6);
-  //bloom += lodbloom(iResolution, 0.7);
-
-  // upp = vec4(clamp(texture(TAA, texCoord).xyz,0.,1000.), 1.);
-  upp = vec4(bloom / 6., 0.);
+  	ivec2 iU = ivec2(texCoord*iResolution);
+   	//Copy Original Texel
+    upp = all(equal( iU&1 , I_ZERO)) ? texelFetch(TAA,iU>>1,0) : upp-upp;
 }
