@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,6 +18,13 @@ namespace RealTimeFractalRendererLibrary
         private static int unitCounter = 1;
 
         public int Handle { get; private init; }
+        public bool isCustomSize { get; set; } = false;
+
+
+        public TextureMinFilter minFilter { get; set; } = TextureMinFilter.Nearest;
+        public TextureMagFilter magFilter { get; set; } = TextureMagFilter.Nearest;
+        public Vector2 customSize { get; set; } = Vector2.Zero;
+
         public string Name { get; private init; }
         public TextureTarget Target { get; private init; }
 

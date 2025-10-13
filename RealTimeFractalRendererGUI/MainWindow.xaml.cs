@@ -21,7 +21,7 @@ namespace RealTimeFractalRendererGUI
         public Renderer Renderer => renderer;
         private Renderer renderer = default!;
         private bool isRendererInitialized = false;
-        private bool resolutionChanged = true;
+        private bool resolutionChanged = false;
         private readonly KeyboardHelper input = default!;
         private bool _firstMove = true;
         private Point _lastPos;
